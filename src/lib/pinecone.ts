@@ -31,16 +31,18 @@ export async function upsertDocument(doc: VectorDocument) {
   const index = await getIndex();
   const vector = await getEmbedding(doc.text);
 
-  await index.upsert([
-    {
-      id: doc.id,
-      values: vector,
-      metadata: {
-        text: doc.text,
-        ...doc.metadata,
+  await index.upsert({
+    records: [
+      {
+        id: doc.id,
+        values: vector,
+        metadata: {
+          text: doc.text,
+          ...doc.metadata,
+        },
       },
-    },
-  ]);
+    ],
+  });
 }
 
 /**
@@ -61,4 +63,12 @@ export async function querySimilarDocuments(query: string, topK: number = 3) {
     score: match.score,
     metadata: match.metadata,
   }));
+}
+
+/**
+ * 특정 ID의 문서를 Pinecone에서 삭제합니다.
+ */
+export async function deleteDocument(id: string) {
+  const index = await getIndex();
+  await index.deleteOne({ id });
 }

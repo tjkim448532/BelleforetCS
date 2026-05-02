@@ -7,9 +7,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock-gemini-
  */
 export async function getEmbedding(text: string): Promise<number[]> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
     const result = await model.embedContent(text);
-    return result.embedding.values;
+    // Pinecone 인덱스가 768차원이므로, MRL(Matryoshka Representation Learning) 속성을 이용해 768차원으로 잘라서 반환합니다.
+    return result.embedding.values.slice(0, 768);
   } catch (error) {
     console.error('Error generating embedding:', error);
     throw new Error('Failed to generate embedding');
@@ -22,10 +23,11 @@ export async function getEmbedding(text: string): Promise<number[]> {
 export async function generateAnswer(query: string, context: string): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction: `당신은 '벨포레(Belle Foret)' 리조트의 고객 및 직원을 위한 공식 AI 지식 응답 시스템입니다. 
-제공된 [컨텍스트] 정보만을 사용하여 사용자의 [질문]에 정확하고 친절하게 답변하세요.
-컨텍스트에 없는 내용을 지어내거나 일반적인 지식으로 답변하지 마세요. 컨텍스트만으로 답변할 수 없는 경우, "죄송합니다. 제공된 정보만으로는 해당 질문에 답변할 수 없습니다."라고 응답하세요.
+ 제공된 [컨텍스트] 정보만을 사용하여 사용자의 [질문]에 정확하고 친절하게 답변하세요.
+ 컨텍스트에 없는 내용을 지어내거나 일반적인 지식으로 답변하지 마세요. 컨텍스트만으로 답변할 수 없는 경우, "죄송합니다. 제공된 정보만으로는 해당 질문에 답변할 수 없습니다."라고 응답하세요.
+ 항상 공손하고 전문적인 한국어 존댓말을 사용하세요.
 
 [컨텍스트]
 ${context}`

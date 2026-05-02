@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, Plus, Save } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import Papa from 'papaparse';
 
 export default function FacilitiesAdmin() {
   const [formData, setFormData] = useState({
@@ -13,6 +14,33 @@ export default function FacilitiesAdmin() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  
+  // Bulk Upload State
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage'>('single');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [bulkProgress, setBulkProgress] = useState({ total: 0, current: 0, failed: 0 });
+  const [bulkErrors, setBulkErrors] = useState<{row: number, error: string}[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Manage Data State
+  const [facilities, setFacilities] = useState<any[]>([]);
+  const [loadingManage, setLoadingManage] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const fetchFacilities = async () => {
+    setLoadingManage(true);
+    try {
+      const res = await fetch('/api/admin/facility');
+      if (res.ok) {
+        const data = await res.json();
+        setFacilities(data.facilities || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch facilities', e);
+    } finally {
+      setLoadingManage(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -37,15 +65,136 @@ export default function FacilitiesAdmin() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error('등록에 실패했습니다.');
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || '등록에 실패했습니다.');
+      }
 
       setMessage('성공적으로 등록되고 시스템에 학습되었습니다!');
       setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
     } catch (error: any) {
       setMessage(error.message || '오류가 발생했습니다.');
+      setLoading(false);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const payload = {
+        ...formData,
+        id: editingId,
+        tags: typeof formData.tags === 'string' ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : formData.tags,
+        status: 'approved'
+      };
+
+      const response = await fetch('/api/admin/facility', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error('업데이트 실패');
+      
+      alert('성공적으로 수정 및 재학습되었습니다!');
+      setEditingId(null);
+      setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
+      fetchFacilities();
+    } catch (error: any) {
+      alert(error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('정말로 삭제하시겠습니까? (AI 학습 데이터도 함께 삭제됩니다)')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/facility?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('삭제 실패');
+      
+      alert('삭제되었습니다.');
+      fetchFacilities();
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const data = results.data as Record<string, string>[];
+        setBulkProgress({ total: data.length, current: 0, failed: 0 });
+        setBulkErrors([]);
+        setIsUploading(true);
+
+        let current = 0;
+        let failed = 0;
+        const errors: {row: number, error: string}[] = [];
+
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          
+          // 헤더 이름 매핑 (시설명, 카테고리, 위치, 설명, 태그)
+          const payload = {
+            name: row['시설명'] || '',
+            category: row['카테고리'] || '기타',
+            location: row['위치'] || '',
+            description: row['설명'] || '',
+            tags: (row['태그'] || '').split(',').map(t => t.trim()).filter(Boolean),
+            status: 'approved'
+          };
+
+          if (!payload.name || !payload.description) {
+            failed++;
+            errors.push({ row: i + 1, error: '시설명 또는 설명 누락 (필수 항목)' });
+            current++;
+            setBulkProgress({ total: data.length, current, failed });
+            continue;
+          }
+
+          try {
+            const response = await fetch('/api/admin/facility', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+              const errData = await response.json();
+              throw new Error(errData.error || '등록 실패');
+            }
+          } catch (err: any) {
+            failed++;
+            errors.push({ row: i + 1, error: err.message || '업로드 중 오류 발생' });
+          }
+
+          current++;
+          setBulkProgress({ total: data.length, current, failed });
+
+          // API Rate Limit 방지 (분당 15회 = 1회당 4초 대기 + 안전마진)
+          if (i < data.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 4500));
+          }
+        }
+
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      },
+      error: (error) => {
+        alert('CSV 파일 파싱 중 오류가 발생했습니다: ' + error.message);
+      }
+    });
   };
 
   return (
@@ -57,8 +206,46 @@ export default function FacilitiesAdmin() {
         </p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex space-x-4 mb-6 border-b dark:border-neutral-800">
+        <button
+          onClick={() => setActiveTab('single')}
+          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'single'
+              ? 'border-green-500 text-green-600 dark:text-green-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          개별 입력
+        </button>
+        <button
+          onClick={() => setActiveTab('bulk')}
+          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'bulk'
+              ? 'border-green-500 text-green-600 dark:text-green-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          엑셀 일괄 업로드
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('manage');
+            fetchFacilities();
+          }}
+          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'manage'
+              ? 'border-green-500 text-green-600 dark:text-green-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          등록된 데이터 관리
+        </button>
+      </div>
+
       <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {activeTab === 'single' ? (
+          <form onSubmit={editingId ? handleUpdate : handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">시설명</label>
@@ -151,6 +338,157 @@ export default function FacilitiesAdmin() {
             </button>
           </div>
         </form>
+        ) : activeTab === 'bulk' ? (
+          <div className="space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center">
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                CSV 업로드 가이드
+              </h3>
+              <p className="mt-2 text-sm text-blue-700 dark:text-blue-400">
+                구글 시트나 엑셀에서 데이터를 작성한 후 <strong>.csv</strong> 파일로 다운로드하여 업로드하세요.<br/>
+                첫 번째 줄(헤더)은 반드시 아래 이름을 사용해야 합니다:<br/>
+                <code className="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded text-xs font-bold mt-2 inline-block">
+                  시설명, 카테고리, 위치, 설명, 태그
+                </code>
+              </p>
+              <p className="mt-2 text-xs text-blue-600 dark:text-blue-500">
+                * AI 무료 요금제 제한(분당 15회) 방지를 위해 <strong>데이터 1건당 약 4.5초의 학습 시간</strong>이 소요됩니다. (창을 닫지 마세요)
+              </p>
+            </div>
+
+            <div className="border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-lg p-8 text-center relative hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
+              <input
+                type="file"
+                accept=".csv"
+                ref={fileInputRef}
+                onChange={handleBulkUpload}
+                disabled={isUploading}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                id="csv-upload"
+              />
+              <div className={`flex flex-col items-center justify-center pointer-events-none ${isUploading ? 'opacity-50' : ''}`}>
+                <Upload className="w-10 h-10 text-gray-400 mb-3" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  CSV 파일 선택 또는 드래그 앤 드롭
+                </span>
+                <span className="text-xs text-gray-500 mt-1">.csv 확장자만 지원</span>
+              </div>
+            </div>
+
+            {(isUploading || bulkProgress.total > 0) && (
+              <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-neutral-800">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    업로드 진행 상황 {bulkProgress.current} / {bulkProgress.total}
+                  </span>
+                  <span className="text-gray-500">
+                    {Math.round((bulkProgress.current / (bulkProgress.total || 1)) * 100)}%
+                  </span>
+                </div>
+                
+                <div className="w-full bg-gray-200 dark:bg-neutral-800 rounded-full h-2.5">
+                  <div 
+                    className="bg-green-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${(bulkProgress.current / (bulkProgress.total || 1)) * 100}%` }}
+                  ></div>
+                </div>
+
+                <div className="flex space-x-4 text-sm">
+                  <span className="text-green-600 dark:text-green-400">성공: {bulkProgress.current - bulkProgress.failed}건</span>
+                  <span className="text-red-600 dark:text-red-400">실패: {bulkProgress.failed}건</span>
+                </div>
+
+                {isUploading && (
+                  <p className="text-sm text-gray-500 animate-pulse flex items-center">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    데이터를 순차적으로 AI에 학습시키는 중입니다...
+                  </p>
+                )}
+
+                {!isUploading && bulkProgress.total > 0 && (
+                  <p className="text-sm text-green-600 font-medium">
+                    일괄 업로드가 완료되었습니다!
+                  </p>
+                )}
+
+                {bulkErrors.length > 0 && (
+                  <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-100 dark:border-red-800 max-h-40 overflow-y-auto">
+                    <h4 className="text-sm font-medium text-red-800 dark:text-red-400 mb-2 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" /> 실패 상세 내역
+                    </h4>
+                    <ul className="text-xs text-red-700 dark:text-red-300 space-y-1 list-disc list-inside">
+                      {bulkErrors.map((err, idx) => (
+                        <li key={idx}>Row {err.row}: {err.error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">등록된 시설 목록</h3>
+              <button onClick={fetchFacilities} className="text-sm text-green-600 hover:text-green-700">새로고침</button>
+            </div>
+            
+            {loadingManage ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+              </div>
+            ) : facilities.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">등록된 데이터가 없습니다.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+                  <thead className="bg-gray-50 dark:bg-neutral-800">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">시설명</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명 요약</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-700">
+                    {facilities.map((fac) => (
+                      <tr key={fac.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800/50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{fac.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fac.category}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{fac.description}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => {
+                              setFormData({
+                                name: fac.name,
+                                category: fac.category,
+                                location: fac.location || '',
+                                description: fac.description,
+                                tags: Array.isArray(fac.tags) ? fac.tags.join(', ') : (fac.tags || '')
+                              });
+                              setEditingId(fac.id);
+                              setActiveTab('single');
+                            }}
+                            className="text-blue-600 hover:text-blue-900 mr-4"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleDelete(fac.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            삭제
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
