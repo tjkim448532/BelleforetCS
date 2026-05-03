@@ -160,6 +160,7 @@ export default function FacilitiesAdmin() {
             errors.push({ row: i + 1, error: '시설명 또는 설명 누락 (필수 항목)' });
             current++;
             setBulkProgress({ total: data.length, current, failed });
+            setBulkErrors([...errors]);
             continue;
           }
 
@@ -177,6 +178,7 @@ export default function FacilitiesAdmin() {
           } catch (err: any) {
             failed++;
             errors.push({ row: i + 1, error: err.message || '업로드 중 오류 발생' });
+            setBulkErrors([...errors]);
           }
 
           current++;
@@ -189,6 +191,7 @@ export default function FacilitiesAdmin() {
         }
 
         setIsUploading(false);
+        setBulkErrors(errors);
         if (fileInputRef.current) fileInputRef.current.value = '';
       },
       error: (error) => {
