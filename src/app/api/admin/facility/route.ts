@@ -123,19 +123,30 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const idParam = searchParams.get('id');
+    const idsParam = searchParams.get('ids');
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    let idsToDelete: string[] = [];
+
+    if (idsParam) {
+      idsToDelete = idsParam.split(',').filter(Boolean);
+    } else if (idParam) {
+      idsToDelete = [idParam];
     }
 
-    // Firebase 삭제
-    await adminDb.collection('facilities').doc(id).delete();
+    if (idsToDelete.length === 0) {
+      return NextResponse.json({ error: 'ID or IDs are required' }, { status: 400 });
+    }
 
-    // Pinecone 삭제
-    await deleteDocument(id);
+    // 여러 개 순차 삭제
+    for (const id of idsToDelete) {
+      // Firebase 삭제
+      await adminDb.collection('facilities').doc(id).delete();
+      // Pinecone 삭제
+      await deleteDocument(id);
+    }
 
-    return NextResponse.json({ success: true, id });
+    return NextResponse.json({ success: true, deletedCount: idsToDelete.length, ids: idsToDelete });
   } catch (error: any) {
     console.error('Error deleting facility:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -27,6 +27,16 @@ export default function FacilitiesAdmin() {
   const [facilities, setFacilities] = useState<any[]>([]);
   const [loadingManage, setLoadingManage] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // 날짜 포맷팅 헬퍼
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
 
   const fetchFacilities = async () => {
     setLoadingManage(true);
@@ -121,8 +131,35 @@ export default function FacilitiesAdmin() {
       
       alert('삭제되었습니다.');
       fetchFacilities();
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
     } catch (error: any) {
       alert(error.message);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) {
+      alert('삭제할 항목을 선택해주세요.');
+      return;
+    }
+    
+    if (!confirm(`선택한 ${selectedIds.length}개의 항목을 정말로 삭제하시겠습니까? (AI 학습 데이터도 함께 삭제됩니다)`)) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/facility?ids=${selectedIds.join(',')}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('일괄 삭제 실패');
+      
+      alert('선택한 항목들이 삭제되었습니다.');
+      setSelectedIds([]);
+      fetchFacilities();
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -256,6 +293,7 @@ export default function FacilitiesAdmin() {
           onClick={() => {
             setActiveTab('manage');
             fetchFacilities();
+            setSelectedIds([]);
           }}
           className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'manage'
@@ -485,8 +523,23 @@ export default function FacilitiesAdmin() {
         ) : (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">등록된 시설 목록</h3>
-              <button onClick={fetchFacilities} className="text-sm text-green-600 hover:text-green-700">새로고침</button>
+              <div className="flex items-center space-x-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">등록된 시설 목록</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">총 {facilities.length}개</span>
+              </div>
+              <div className="flex space-x-3">
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={isDeleting}
+                    className="inline-flex items-center text-sm px-3 py-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+                    선택 삭제 ({selectedIds.length})
+                  </button>
+                )}
+                <button onClick={fetchFacilities} className="text-sm px-3 py-1.5 text-green-600 hover:text-green-700 bg-green-50 rounded-md border border-green-200 transition-colors">새로고침</button>
+              </div>
             </div>
             
             {loadingManage ? (
@@ -496,22 +549,52 @@ export default function FacilitiesAdmin() {
             ) : facilities.length === 0 ? (
               <div className="text-center py-10 text-gray-500">등록된 데이터가 없습니다.</div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto border rounded-lg dark:border-neutral-700">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
                   <thead className="bg-gray-50 dark:bg-neutral-800">
                     <tr>
+                      <th className="px-6 py-3 text-left w-12">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          checked={facilities.length > 0 && selectedIds.length === facilities.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(facilities.map(f => f.id));
+                            } else {
+                              setSelectedIds([]);
+                            }
+                          }}
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">시설명</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명 요약</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">등록일</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-700">
                     {facilities.map((fac) => (
                       <tr key={fac.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800/50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                            checked={selectedIds.includes(fac.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds(prev => [...prev, fac.id]);
+                              } else {
+                                setSelectedIds(prev => prev.filter(id => id !== fac.id));
+                              }
+                            }}
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{fac.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fac.category}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{fac.description}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={fac.description}>{fac.description}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(fac.createdAt)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => {
