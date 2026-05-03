@@ -40,6 +40,9 @@ export default function AdminLogin() {
       router.push('/admin/facilities');
       router.refresh(); // 미들웨어 리프레시
     } catch (err: any) {
+      // 서버에서 거부했거나 구글 로그인 창을 닫은 경우 등
+      // 클라이언트에 남아있는 로그인 상태 찌꺼기를 확실히 제거
+      await signOut(auth).catch(() => {});
       setError(err.message);
     } finally {
       setLoading(false);
