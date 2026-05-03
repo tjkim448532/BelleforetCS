@@ -86,6 +86,7 @@ export default function FacilitiesAdmin() {
       setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
     } catch (error: any) {
       setMessage(error.message || '오류가 발생했습니다.');
+    } finally {
       setLoading(false);
     }
   };
