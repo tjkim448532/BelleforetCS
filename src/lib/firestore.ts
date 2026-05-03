@@ -40,6 +40,15 @@ export interface OperationalNotice {
   updatedAt?: unknown;
 }
 
+export interface ChatLog {
+  id?: string;
+  question: string;
+  answer: string;
+  contextUsed: string[];
+  ip?: string;
+  timestamp: string;
+}
+
 const FACILITIES_COL = 'facilities';
 const SCHEDULES_COL = 'schedules';
 const PRICING_COL = 'pricing';
