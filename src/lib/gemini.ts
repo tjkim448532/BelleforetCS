@@ -49,3 +49,36 @@ ${context}`
     throw new Error('Failed to generate answer');
   }
 }
+
+/**
+ * 관리자의 지시어에 따라 원본 텍스트를 수정하고 요약을 반환합니다.
+ */
+export async function smartEditFacilityDescription(original: string, instruction: string): Promise<{summary: string, updatedText: string}> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: `당신은 텍스트 편집 보조 AI입니다. 사용자가 제공한 [원본 텍스트]를 [수정 지시]에 맞게 수정하세요.
+응답은 반드시 아래 JSON 형식으로만 반환해야 합니다. 마크다운(\`\`\`json) 기호 없이 순수한 JSON 텍스트만 출력하세요.
+{
+  "summary": "어떤 부분을 어떻게 수정했는지 간결한 한 줄 요약",
+  "updatedText": "수정이 모두 반영된 전체 텍스트본 (기존 텍스트의 맥락 유지)"
+}`
+    });
+
+    const prompt = `[원본 텍스트]\n${original}\n\n[수정 지시]\n${instruction}`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+      }
+    });
+
+    const responseText = result.response.text();
+    return JSON.parse(responseText);
+  } catch (error) {
+    console.error('Error in smartEditFacilityDescription:', error);
+    throw new Error('Failed to execute smart edit');
+  }
+}

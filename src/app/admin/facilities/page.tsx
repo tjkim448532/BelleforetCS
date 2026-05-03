@@ -37,6 +37,11 @@ export default function FacilitiesAdmin() {
   const [newCat, setNewCat] = useState('');
   const [editCat, setEditCat] = useState<{old: string, new: string} | null>(null);
 
+  // Smart Edit State
+  const [smartEditInstruction, setSmartEditInstruction] = useState('');
+  const [smartEditResult, setSmartEditResult] = useState<{summary: string, updatedText: string} | null>(null);
+  const [isSmartEditing, setIsSmartEditing] = useState(false);
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -113,6 +118,42 @@ export default function FacilitiesAdmin() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSmartEdit = async () => {
+    if (!smartEditInstruction.trim()) {
+      alert('수정 지시어를 입력해주세요.');
+      return;
+    }
+    
+    setIsSmartEditing(true);
+    setSmartEditResult(null);
+    try {
+      const res = await fetch('/api/admin/facility/smart-edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originalText: formData.description,
+          instruction: smartEditInstruction
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setSmartEditResult(data);
+    } catch (e: any) {
+      alert(e.message || 'AI 수정 중 오류가 발생했습니다.');
+    } finally {
+      setIsSmartEditing(false);
+    }
+  };
+
+  const applySmartEdit = () => {
+    if (smartEditResult) {
+      setFormData(prev => ({ ...prev, description: smartEditResult.updatedText }));
+      setSmartEditResult(null);
+      setSmartEditInstruction('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -168,6 +209,8 @@ export default function FacilitiesAdmin() {
       alert('성공적으로 수정 및 재학습되었습니다!');
       setEditingId(null);
       setIsEditModalOpen(false);
+      setSmartEditResult(null);
+      setSmartEditInstruction('');
       setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
       fetchFacilities();
     } catch (error: unknown) {
@@ -670,6 +713,8 @@ export default function FacilitiesAdmin() {
                                 tags: Array.isArray(fac.tags) ? fac.tags.join(', ') : (fac.tags || '')
                               });
                               setEditingId(fac.id || null);
+                              setSmartEditResult(null);
+                              setSmartEditInstruction('');
                               setIsEditModalOpen(true);
                             }}
                             className="text-blue-600 hover:text-blue-900 mr-4"
@@ -799,7 +844,11 @@ export default function FacilitiesAdmin() {
                 <button
                   type="button"
                   className="text-gray-400 bg-white dark:bg-neutral-900 hover:text-gray-500 focus:outline-none"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSmartEditResult(null);
+                    setSmartEditInstruction('');
+                  }}
                 >
                   <span className="sr-only">닫기</span>
                   <X className="w-6 h-6" />
@@ -855,6 +904,57 @@ export default function FacilitiesAdmin() {
                     onChange={handleChange}
                     className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
                   />
+
+                  {/* AI 스마트 편집 영역 */}
+                  <div className="mt-3 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                    <label className="block text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-2">
+                      ✨ AI 수정 지시 (예: 오전 9시 오픈을 10시로 변경해줘)
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={smartEditInstruction}
+                        onChange={(e) => setSmartEditInstruction(e.target.value)}
+                        placeholder="여기에 원하는 수정 사항을 편하게 적어주세요."
+                        className="flex-1 rounded-md border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSmartEdit}
+                        disabled={isSmartEditing || !smartEditInstruction.trim()}
+                        className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 shrink-0 transition-colors"
+                      >
+                        {isSmartEditing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : 'AI 제안 받기'}
+                      </button>
+                    </div>
+
+                    {smartEditResult && (
+                      <div className="mt-3 p-3 bg-white dark:bg-neutral-900 rounded border border-indigo-200 dark:border-indigo-700 shadow-sm animate-in fade-in slide-in-from-top-2">
+                        <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 mb-1">
+                          ✅ 요약: {smartEditResult.summary}
+                        </p>
+                        <div className="text-sm text-gray-700 dark:text-gray-300 mb-3 bg-gray-50 dark:bg-neutral-800 p-2 rounded max-h-40 overflow-y-auto whitespace-pre-wrap">
+                          {smartEditResult.updatedText}
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => setSmartEditResult(null)}
+                            className="text-xs px-2 py-1 text-gray-500 hover:text-gray-700"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={applySmartEdit}
+                            className="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded font-medium transition-colors"
+                          >
+                            이 제안으로 본문 교체하기
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -879,7 +979,11 @@ export default function FacilitiesAdmin() {
                   <button
                     type="button"
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                    onClick={() => setIsEditModalOpen(false)}
+                    onClick={() => {
+                      setIsEditModalOpen(false);
+                      setSmartEditResult(null);
+                      setSmartEditInstruction('');
+                    }}
                   >
                     취소
                   </button>
