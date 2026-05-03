@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Database, Bell, Menu, X, BarChart2 } from 'lucide-react';
+import { LogOut, Database, Bell, Menu, X, BarChart2, Home } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { useState } from 'react';
@@ -72,6 +72,15 @@ export default function AdminLayout({
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Link
+                href="/"
+                target="_blank"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-neutral-600 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:text-gray-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors mr-1"
+                title="새 탭에서 첫 페이지 열기"
+              >
+                <Home className="w-4 h-4 mr-1.5" />
+                홈
+              </Link>
               <button
                 onClick={handleLogout}
                 className="hidden sm:inline-flex items-center px-3 py-1.5 border border-transparent text-sm leading-4 font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
@@ -120,6 +129,15 @@ export default function AdminLayout({
                   </Link>
                 );
               })}
+              <Link
+                href="/"
+                target="_blank"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center pl-3 pr-4 py-3 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-neutral-700"
+              >
+                <Home className="w-5 h-5 mr-3" />
+                서비스 홈 (새 탭)
+              </Link>
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
