@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle, X } from 'lucide-react';
 import Papa from 'papaparse';
 import { Facility } from '@/lib/firestore';
 
@@ -28,6 +28,7 @@ export default function FacilitiesAdmin() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loadingManage, setLoadingManage] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -113,6 +114,7 @@ export default function FacilitiesAdmin() {
       
       alert('성공적으로 수정 및 재학습되었습니다!');
       setEditingId(null);
+      setIsEditModalOpen(false);
       setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
       fetchFacilities();
     } catch (error: unknown) {
@@ -606,7 +608,7 @@ export default function FacilitiesAdmin() {
                                 tags: Array.isArray(fac.tags) ? fac.tags.join(', ') : (fac.tags || '')
                               });
                               setEditingId(fac.id || null);
-                              setActiveTab('single');
+                              setIsEditModalOpen(true);
                             }}
                             className="text-blue-600 hover:text-blue-900 mr-4"
                           >
@@ -628,6 +630,115 @@ export default function FacilitiesAdmin() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true" onClick={() => setIsEditModalOpen(false)}></div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-neutral-900 rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+              <div className="flex justify-between items-center mb-5 border-b dark:border-neutral-800 pb-3">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white" id="modal-title">
+                  시설 정보 수정 (AI 지식 덮어쓰기)
+                </h3>
+                <button
+                  type="button"
+                  className="text-gray-400 bg-white dark:bg-neutral-900 hover:text-gray-500 focus:outline-none"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  <span className="sr-only">닫기</span>
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">시설명</label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">카테고리</label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="레저">레저</option>
+                      <option value="숙박">숙박</option>
+                      <option value="식음">식음</option>
+                      <option value="기타">기타</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">위치</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">자연어 설명</label>
+                  <textarea
+                    name="description"
+                    required
+                    rows={5}
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">태그 (쉼표 구분)</label>
+                  <input
+                    type="text"
+                    name="tags"
+                    value={formData.tags}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse border-t dark:border-neutral-800 pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                  >
+                    {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 저장 중...</> : '저장 및 덮어쓰기'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={() => setIsEditModalOpen(false)}
+                  >
+                    취소
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
