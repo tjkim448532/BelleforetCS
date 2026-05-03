@@ -21,7 +21,7 @@ export const getIndex = async () => {
 export interface VectorDocument {
   id: string; // facility id or notice id
   text: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 /**

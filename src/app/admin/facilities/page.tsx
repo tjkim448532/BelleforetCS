@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import Papa from 'papaparse';
+import { Facility } from '@/lib/firestore';
 
 export default function FacilitiesAdmin() {
   const [formData, setFormData] = useState({
@@ -24,7 +25,7 @@ export default function FacilitiesAdmin() {
   const [csvText, setCsvText] = useState('');
 
   // Manage Data State
-  const [facilities, setFacilities] = useState<any[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loadingManage, setLoadingManage] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -84,8 +85,8 @@ export default function FacilitiesAdmin() {
 
       setMessage('성공적으로 등록되고 시스템에 학습되었습니다!');
       setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
-    } catch (error: any) {
-      setMessage(error.message || '오류가 발생했습니다.');
+    } catch (error: unknown) {
+      setMessage((error as Error).message || '오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -114,8 +115,8 @@ export default function FacilitiesAdmin() {
       setEditingId(null);
       setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
       fetchFacilities();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert((error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -133,8 +134,8 @@ export default function FacilitiesAdmin() {
       alert('삭제되었습니다.');
       fetchFacilities();
       setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert((error as Error).message);
     }
   };
 
@@ -157,8 +158,8 @@ export default function FacilitiesAdmin() {
       alert('선택한 항목들이 삭제되었습니다.');
       setSelectedIds([]);
       fetchFacilities();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert((error as Error).message);
     } finally {
       setIsDeleting(false);
     }
@@ -205,9 +206,9 @@ export default function FacilitiesAdmin() {
           const errData = await response.json();
           throw new Error(errData.error || '등록 실패');
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push({ row: i + 1, error: err.message || '업로드 중 오류 발생' });
+        errors.push({ row: i + 1, error: (err as Error).message || '업로드 중 오류 발생' });
         setBulkErrors([...errors]);
       }
 
@@ -253,7 +254,7 @@ export default function FacilitiesAdmin() {
       complete: async (results) => {
         await processBulkData(results.data as Record<string, string>[]);
       },
-      error: (error: any) => {
+      error: (error: Error) => {
         alert('CSV 텍스트 파싱 중 오류가 발생했습니다: ' + error.message);
       }
     });

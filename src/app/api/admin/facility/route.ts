@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       docRef = adminDb.collection('facilities').doc();
     }
 
-    const facilityData: any = {
+    const facilityData: Record<string, unknown> = {
       name,
       category: category || '기타',
       description,
@@ -55,9 +55,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, id: docRef.id, facility: facilityData, isUpdate });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating/updating facility:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -69,9 +69,9 @@ export async function GET() {
       ...doc.data()
     }));
     return NextResponse.json({ facilities });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching facilities:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -114,9 +114,9 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json({ success: true, id: docRef.id, facility: updatedFacility });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating facility:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -147,8 +147,8 @@ export async function DELETE(req: Request) {
     }
 
     return NextResponse.json({ success: true, deletedCount: idsToDelete.length, ids: idsToDelete });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting facility:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

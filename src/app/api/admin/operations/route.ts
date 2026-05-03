@@ -25,9 +25,9 @@ export async function POST(req: Request) {
     await docRef.set(noticeData);
 
     return NextResponse.json({ success: true, id: docRef.id, notice: noticeData });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating notice:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -39,9 +39,9 @@ export async function GET() {
       ...doc.data()
     }));
     return NextResponse.json({ notices });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching notices:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -67,9 +67,9 @@ export async function PUT(req: Request) {
     await docRef.update(updatedNotice);
 
     return NextResponse.json({ success: true, id: docRef.id, notice: updatedNotice });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating notice:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -85,8 +85,8 @@ export async function DELETE(req: Request) {
     await adminDb.collection('operational_notices').doc(id).delete();
 
     return NextResponse.json({ success: true, id });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting notice:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

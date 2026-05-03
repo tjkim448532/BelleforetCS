@@ -9,8 +9,8 @@ export interface Facility {
   location: string;
   tags: string[];
   status: 'pending' | 'approved';
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: unknown;
+  updatedAt?: unknown;
 }
 
 export interface Schedule {
@@ -36,8 +36,8 @@ export interface OperationalNotice {
   isActive: boolean;
   startDate?: string; // ISO string
   endDate?: string; // ISO string
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: unknown;
+  updatedAt?: unknown;
 }
 
 const FACILITIES_COL = 'facilities';

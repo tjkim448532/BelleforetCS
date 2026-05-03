@@ -39,11 +39,11 @@ export default function AdminLogin() {
       // 로그인 성공 시 관리자 메인(시설 관리)으로 이동
       router.push('/admin/facilities');
       router.refresh(); // 미들웨어 리프레시
-    } catch (err: any) {
+    } catch (err: unknown) {
       // 서버에서 거부했거나 구글 로그인 창을 닫은 경우 등
       // 클라이언트에 남아있는 로그인 상태 찌꺼기를 확실히 제거
       await signOut(auth).catch(() => {});
-      setError(err.message);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }

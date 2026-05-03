@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Save, Trash2, Edit2, Plus, AlertCircle } from 'lucide-react';
+import { OperationalNotice } from '@/lib/firestore';
 
 export default function OperationsAdmin() {
-  const [notices, setNotices] = useState<any[]>([]);
+  const [notices, setNotices] = useState<OperationalNotice[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingManage, setLoadingManage] = useState(false);
   const [message, setMessage] = useState('');
@@ -93,14 +94,14 @@ export default function OperationsAdmin() {
       setMessage(isEditing ? '성공적으로 수정되었습니다!' : '성공적으로 등록되었습니다!');
       resetForm();
       fetchNotices();
-    } catch (error: any) {
-      setMessage(error.message || '오류가 발생했습니다.');
+    } catch (error: unknown) {
+      setMessage((error as Error).message || '오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (notice: any) => {
+  const handleEdit = (notice: OperationalNotice) => {
     // Convert ISO string to local datetime-local format if present
     const formatForInput = (isoString: string) => {
       if (!isoString) return '';
@@ -137,13 +138,13 @@ export default function OperationsAdmin() {
         resetForm();
       }
       fetchNotices();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert((error as Error).message);
     }
   };
 
   // Check if a notice is currently active based on date and toggle
-  const checkIsCurrentlyActive = (notice: any) => {
+  const checkIsCurrentlyActive = (notice: OperationalNotice) => {
     if (!notice.isActive) return false;
     const now = new Date();
     if (notice.startDate && new Date(notice.startDate) > now) return false;

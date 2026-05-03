@@ -3,8 +3,43 @@ import { querySimilarDocuments } from '@/lib/pinecone';
 import { generateAnswer } from '@/lib/gemini';
 import { adminDb } from '@/lib/firebase/admin';
 
+// --- In-Memory Rate Limiter (도배 방지) ---
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+// 메모리 누수 방지를 위해 5분마다 만료된 데이터 청소
+setInterval(() => {
+  const nowMs = Date.now();
+  for (const [key, value] of rateLimitMap.entries()) {
+    if (nowMs >= value.resetTime) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    
+    // Rate Limiting 검사: 동일 IP에서 1분에 15회 초과 시 차단
+    const nowMs = Date.now();
+    const limitData = rateLimitMap.get(ip);
+    
+    if (limitData) {
+      if (nowMs < limitData.resetTime) {
+        limitData.count++;
+        if (limitData.count > 15) {
+          console.warn(`Rate limit exceeded for IP: ${ip}`);
+          return NextResponse.json({ 
+            answer: '너무 많은 질문을 연속으로 하셨습니다. 잠시 후 다시 시도해주세요.' 
+          }, { status: 429 });
+        }
+      } else {
+        rateLimitMap.set(ip, { count: 1, resetTime: nowMs + 60000 });
+      }
+    } else {
+      rateLimitMap.set(ip, { count: 1, resetTime: nowMs + 60000 });
+    }
+
     const data = await req.json();
     const { question } = data;
 
@@ -60,11 +95,12 @@ export async function POST(req: Request) {
       question,
       answer,
       contextUsed: similarDocs.map(d => d.id),
+      ip: ip, // IP 로깅 추가
       timestamp: new Date().toISOString(),
     });
 
     return NextResponse.json({ answer, contextUsed: similarDocs });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Chat API Error:', error);
     return NextResponse.json({ error: 'Failed to generate answer' }, { status: 500 });
   }

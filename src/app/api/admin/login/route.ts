@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Firebase Auth Error:', error);
     return NextResponse.json({ error: '인증 세션을 생성할 수 없습니다.' }, { status: 401 });
   }
