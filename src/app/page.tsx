@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings } from 'lucide-react';
+import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings, ThumbsUp, ThumbsDown } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  logId?: string;
+  feedback?: 'up' | 'down' | null;
 }
 
 export default function ChatPage() {
@@ -53,7 +55,9 @@ export default function ChatPage() {
       const aiMessage: Message = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant', 
-        content: data.answer || '답변을 가져오지 못했습니다.'
+        content: data.answer || '답변을 가져오지 못했습니다.',
+        logId: data.logId,
+        feedback: null
       };
       
       setMessages(prev => [...prev, aiMessage]);
@@ -72,6 +76,22 @@ export default function ChatPage() {
 
   const handleQuickQuestion = (q: string) => {
     handleSend(q);
+  };
+
+  const handleFeedback = async (messageId: string, logId: string, type: 'up' | 'down') => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, feedback: type } : msg
+    ));
+    
+    try {
+      await fetch('/api/chat/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logId, feedback: type }),
+      });
+    } catch (error) {
+      console.error('Feedback error:', error);
+    }
   };
 
   return (
@@ -97,8 +117,8 @@ export default function ChatPage() {
           <div
             key={msg.id}
             className={clsx(
-              "flex w-full",
-              msg.role === 'user' ? "justify-end" : "justify-start"
+              "flex w-full flex-col",
+              msg.role === 'user' ? "items-end" : "items-start"
             )}
           >
             <div className={clsx(
@@ -121,6 +141,31 @@ export default function ChatPage() {
                 <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
               </div>
             </div>
+            {/* Feedback Buttons for AI Messages */}
+            {msg.role === 'assistant' && msg.logId && (
+              <div className="flex items-center space-x-2 mt-2 ml-11">
+                <button 
+                  onClick={() => handleFeedback(msg.id, msg.logId!, 'up')}
+                  className={clsx(
+                    "p-1.5 rounded-md transition-colors",
+                    msg.feedback === 'up' ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                  )}
+                  title="도움이 되었어요"
+                >
+                  <ThumbsUp size={14} />
+                </button>
+                <button 
+                  onClick={() => handleFeedback(msg.id, msg.logId!, 'down')}
+                  className={clsx(
+                    "p-1.5 rounded-md transition-colors",
+                    msg.feedback === 'down' ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                  )}
+                  title="아쉬워요"
+                >
+                  <ThumbsDown size={14} />
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {isLoading && (

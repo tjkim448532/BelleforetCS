@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, AlertCircle, RefreshCw, Download, BarChart2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Download, BarChart2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { ChatLog } from '@/lib/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -224,6 +224,19 @@ export default function LogsAdmin() {
                         <div className="max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar-hide">
                           {log.answer}
                         </div>
+                        {log.feedback && (
+                          <div className="mt-2 flex items-center pt-2 border-t border-gray-200 dark:border-neutral-700">
+                            {log.feedback === 'up' ? (
+                              <span className="flex items-center text-xs text-green-600 font-medium">
+                                <ThumbsUp className="w-3.5 h-3.5 mr-1" /> 긍정적 피드백
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-xs text-red-600 font-medium">
+                                <ThumbsDown className="w-3.5 h-3.5 mr-1" /> 부정적 피드백 (오답/부족)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>

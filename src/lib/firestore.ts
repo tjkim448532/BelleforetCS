@@ -47,6 +47,7 @@ export interface ChatLog {
   contextUsed: string[];
   ip?: string;
   timestamp: string;
+  feedback?: 'up' | 'down';
 }
 
 const FACILITIES_COL = 'facilities';

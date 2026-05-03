@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     const answer = await generateAnswer(question, context);
 
     // 4. 질문 로그 저장 (데이터 분석용)
-    await adminDb.collection('chat_logs').add({
+    const logRef = await adminDb.collection('chat_logs').add({
       question,
       answer,
       contextUsed: similarDocs.map(d => d.id),
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       timestamp: new Date().toISOString(),
     });
 
-    return NextResponse.json({ answer, contextUsed: similarDocs });
+    return NextResponse.json({ answer, contextUsed: similarDocs, logId: logRef.id });
   } catch (error: unknown) {
     console.error('Chat API Error:', error);
     return NextResponse.json({ error: 'Failed to generate answer' }, { status: 500 });
