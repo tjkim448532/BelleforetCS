@@ -1,72 +1,189 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Bot, Settings, ArrowRight } from 'lucide-react';
+import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings } from 'lucide-react';
+import clsx from 'clsx';
 
-export default function Home() {
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: '안녕하세요! 벨포레 프론트 데스크 AI입니다. 시설 운영 시간, 요금, 위치 등 무엇이든 물어보세요.',
+    }
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async (text: string) => {
+    if (!text.trim()) return;
+
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: text };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text }),
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.json();
+      
+      const aiMessage: Message = { 
+        id: (Date.now() + 1).toString(), 
+        role: 'assistant', 
+        content: data.answer || '답변을 가져오지 못했습니다.'
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = { 
+        id: (Date.now() + 1).toString(), 
+        role: 'assistant', 
+        content: '앗, 시스템에 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickQuestion = (q: string) => {
+    handleSend(q);
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col font-sans text-neutral-100 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-green-600/20 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-teal-600/20 blur-[150px]" />
-      </div>
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-neutral-950 font-sans">
+      {/* Header */}
+      <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-6 py-4 flex items-center justify-between shadow-sm z-10">
+        <h1 className="text-xl font-bold text-green-700 dark:text-green-500 tracking-tight flex items-center">
+          <Bot className="mr-2" size={24} />
+          벨포레 AI 컨시어지
+        </h1>
+        <Link 
+          href="/admin/login" 
+          className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        >
+          <Settings size={16} className="mr-1" />
+          관리자 로그인
+        </Link>
+      </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 z-10 w-full max-w-5xl mx-auto">
-        
-        <div className="text-center mb-16 space-y-6 animate-fade-in-up">
-          <div className="inline-flex items-center justify-center p-3 bg-white/5 rounded-2xl ring-1 ring-white/10 mb-4 backdrop-blur-md">
-            <Bot className="w-8 h-8 text-green-400" />
+      {/* Chat Area */}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={clsx(
+              "flex w-full",
+              msg.role === 'user' ? "justify-end" : "justify-start"
+            )}
+          >
+            <div className={clsx(
+              "flex max-w-[80%] sm:max-w-[70%] items-end space-x-2",
+              msg.role === 'user' ? "flex-row-reverse space-x-reverse" : "flex-row"
+            )}>
+              <div className={clsx(
+                "flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center",
+                msg.role === 'user' ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+              )}>
+                {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
+              </div>
+              
+              <div className={clsx(
+                "px-4 py-3 rounded-2xl shadow-sm",
+                msg.role === 'user' 
+                  ? "bg-green-600 text-white rounded-br-sm" 
+                  : "bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm"
+              )}>
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
+              </div>
+            </div>
           </div>
-          <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-teal-300 to-green-500">
-            Belle Foret AI
-          </h1>
-          <p className="text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto font-light leading-relaxed">
-            벨포레의 운영 데이터를 학습하여 가장 빠르고 정확하게 안내하는 차세대 RAG 지식 응답 시스템입니다.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
-          {/* Chat Link Card */}
-          <Link href="/chat" className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-500/50 p-8 rounded-3xl transition-all duration-500 overflow-hidden backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative z-10 flex flex-col h-full justify-between space-y-8">
-              <div className="bg-green-500/20 w-14 h-14 rounded-2xl flex items-center justify-center ring-1 ring-green-500/30">
-                <Bot className="w-7 h-7 text-green-400" />
+        ))}
+        {isLoading && (
+          <div className="flex w-full justify-start">
+            <div className="flex items-end space-x-2">
+              <div className="flex-shrink-0 h-8 w-8 rounded-full bg-neutral-200 text-neutral-600 dark:bg-neutral-800 flex items-center justify-center">
+                <Bot size={18} />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2 flex items-center">
-                  고객용 챗봇 시작하기
-                  <ArrowRight className="ml-2 w-5 h-5 text-green-400 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                </h2>
-                <p className="text-neutral-400 leading-relaxed">
-                  시설 운영시간, 요금, 위치 등 방문객의 질문에 AI가 즉각적으로 응답합니다.
-                </p>
+              <div className="px-4 py-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-bl-sm">
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
               </div>
             </div>
-          </Link>
-
-          {/* Admin Link Card */}
-          <Link href="/admin/facilities" className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 p-8 rounded-3xl transition-all duration-500 overflow-hidden backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative z-10 flex flex-col h-full justify-between space-y-8">
-              <div className="bg-blue-500/20 w-14 h-14 rounded-2xl flex items-center justify-center ring-1 ring-blue-500/30">
-                <Settings className="w-7 h-7 text-blue-400" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2 flex items-center">
-                  관리자 시스템 (CMS)
-                  <ArrowRight className="ml-2 w-5 h-5 text-blue-400 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                </h2>
-                <p className="text-neutral-400 leading-relaxed">
-                  AI가 학습할 최신 운영 데이터를 입력하고 관리하는 전용 대시보드입니다.
-                </p>
-              </div>
-            </div>
-          </Link>
-        </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </main>
 
-      <footer className="py-8 text-center text-neutral-500 text-sm z-10 border-t border-white/5 mt-auto">
-        © 2026 Belle Foret AI Concierge System. Powered by Gemini.
+      {/* Input Area */}
+      <footer className="bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 p-4">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* Quick actions */}
+          <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+            <button 
+              onClick={() => handleQuickQuestion('목장 운영시간은 어떻게 되나요?')}
+              className="flex items-center flex-shrink-0 px-3 py-1.5 rounded-full border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 transition"
+            >
+              <Clock size={14} className="mr-1.5" /> 목장 운영시간
+            </button>
+            <button 
+              onClick={() => handleQuickQuestion('미디어아트 센터 요금이 얼마인가요?')}
+              className="flex items-center flex-shrink-0 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-100 transition"
+            >
+              <DollarSign size={14} className="mr-1.5" /> 미디어아트 요금
+            </button>
+            <button 
+              onClick={() => handleQuickQuestion('콘도 위치가 어디쯤인가요?')}
+              className="flex items-center flex-shrink-0 px-3 py-1.5 rounded-full border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-sm hover:bg-purple-100 transition"
+            >
+              <MapPin size={14} className="mr-1.5" /> 콘도 위치
+            </button>
+          </div>
+
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleSend(input); }} 
+            className="flex items-center bg-gray-100 dark:bg-neutral-800 rounded-full pr-1 overflow-hidden focus-within:ring-2 focus-within:ring-green-500 transition-shadow"
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="무엇이든 물어보세요..."
+              className="flex-1 bg-transparent px-6 py-4 outline-none text-neutral-800 dark:text-neutral-200 placeholder-neutral-400"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="p-3 mr-1 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-50 disabled:bg-neutral-400 transition"
+            >
+              <Send size={20} />
+            </button>
+          </form>
+        </div>
       </footer>
     </div>
   );
