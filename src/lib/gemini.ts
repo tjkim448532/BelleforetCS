@@ -125,3 +125,45 @@ export async function generateBibleCSV(facilitiesData: any[], currentDate: strin
     throw new Error('Failed to generate bible CSV');
   }
 }
+
+/**
+ * 실패한 대화 로그들을 분석하여 새로운 지식을 제안합니다.
+ */
+export async function analyzeFailedLogs(logs: any[]): Promise<any[]> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: `당신은 고객 서비스 및 데이터베이스 관리 전문가입니다.
+주어진 [실패한 대화 로그]는 챗봇이 제대로 답변하지 못했거나 고객이 불만족한 사례들입니다.
+이 로그들을 분석하여, 공통적인 고객의 불만이나 부족한 정보(Pain point)를 찾아내고,
+이를 해결하기 위해 시스템에 추가해야 할 '새로운 지식(Facility/FAQ 데이터)' 초안을 작성해주세요.
+
+응답은 반드시 아래 형식의 JSON 배열(Array)로만 반환해야 합니다. 마크다운 기호 없이 순수 JSON만 출력하세요.
+[
+  {
+    "problem": "고객들이 유모차 대여에 대해 자주 묻지만 정보가 없음",
+    "suggestedName": "유모차 및 휠체어 대여 안내",
+    "suggestedCategory": "기타",
+    "suggestedDescription": "벨포레 웰컴센터에서 유모차 및 휠체어를 무료로 대여하실 수 있습니다. (신분증 보관 필요)",
+    "suggestedTags": "유모차, 휠체어, 대여, 아이동반"
+  }
+]`
+    });
+
+    const prompt = `[실패한 대화 로그]\n${JSON.stringify(logs, null, 2)}\n\n이 로그들을 바탕으로 1~3개의 핵심적인 신규 지식을 제안해주세요.`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2, // 창의적이되 너무 벗어나지 않게
+        responseMimeType: "application/json",
+      }
+    });
+
+    const responseText = result.response.text();
+    return JSON.parse(responseText);
+  } catch (error) {
+    console.error('Error in analyzeFailedLogs:', error);
+    throw new Error('Failed to analyze failed logs');
+  }
+}

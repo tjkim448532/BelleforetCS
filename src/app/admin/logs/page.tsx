@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, AlertCircle, RefreshCw, Download, BarChart2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Download, BarChart2, ThumbsUp, ThumbsDown, Bot, Plus } from 'lucide-react';
 import { ChatLog } from '@/lib/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -13,6 +13,11 @@ export default function LogsAdmin() {
   // Delete States
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Suggestion States
+  const [analyzingSuggestions, setAnalyzingSuggestions] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [addingSuggestionIndex, setAddingSuggestionIndex] = useState<number | null>(null);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -112,6 +117,53 @@ export default function LogsAdmin() {
     }
   };
 
+  const handleAnalyzeSuggestions = async () => {
+    setAnalyzingSuggestions(true);
+    try {
+      const res = await fetch('/api/admin/logs/suggestions');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAiSuggestions(data.suggestions || []);
+      if (data.suggestions && data.suggestions.length === 0) {
+        alert('분석할 실패 로그가 없거나 보완이 필요한 지식이 발견되지 않았습니다.');
+      }
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setAnalyzingSuggestions(false);
+    }
+  };
+
+  const handleAddSuggestion = async (suggestion: any, index: number) => {
+    setAddingSuggestionIndex(index);
+    try {
+      const payload = {
+        name: suggestion.suggestedName,
+        category: suggestion.suggestedCategory || '기타',
+        location: '',
+        description: suggestion.suggestedDescription,
+        tags: (suggestion.suggestedTags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+        status: 'approved'
+      };
+
+      const response = await fetch('/api/admin/facility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error('지식 추가 실패');
+      
+      alert('성공적으로 지식이 추가되고 시스템에 즉시 학습되었습니다!');
+      // Remove the successfully added suggestion from the list
+      setAiSuggestions(prev => prev.filter((_, i) => i !== index));
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setAddingSuggestionIndex(null);
+    }
+  };
+
   // 차트 데이터 연산 (일자별 질문 수)
   const dailyData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -196,31 +248,76 @@ export default function LogsAdmin() {
         </div>
       )}
 
-      {/* AI Auto-suggest Alert */}
+      {/* AI Auto-suggest Alert & Panel */}
       {!loading && failedLogs.length > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-yellow-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                AI 지식 보강 필요 ({failedLogs.length}건 감지)
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-400">
-                <p>고객이 부정적인 피드백을 남겼거나 AI가 정보를 찾지 못해 답변을 못한 사례가 발견되었습니다.</p>
-                <p className="mt-1 font-semibold">"자주 묻는 키워드"를 확인하시고, 시스템에 미등록된 정보라면 시설 정보나 운영 공지를 추가해 주세요!</p>
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-5 rounded-r-lg shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex">
+              <div className="flex-shrink-0 mt-0.5">
+                <Bot className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div className="mt-4 flex space-x-3">
-                <a href="/admin/facilities" className="text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 underline">
-                  시설 정보 등록하기
-                </a>
-                <a href="/admin/operations" className="text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 underline">
-                  운영 공지 등록하기
-                </a>
+              <div className="ml-3">
+                <h3 className="text-base font-semibold text-indigo-900 dark:text-indigo-300">
+                  AI 지식 보완 제안 (오답 분석)
+                </h3>
+                <div className="mt-2 text-sm text-indigo-800 dark:text-indigo-200">
+                  <p>고객이 부정적인 피드백을 남겼거나 AI가 대답을 하지 못한 로그가 <strong>{failedLogs.length}건</strong> 감지되었습니다.</p>
+                  <p className="mt-1">AI가 실패 로그들을 정독하여 우리 시스템에 어떤 지식을 추가해야 할지 자동으로 분석해 드립니다.</p>
+                </div>
               </div>
             </div>
+            <button
+              onClick={handleAnalyzeSuggestions}
+              disabled={analyzingSuggestions}
+              className="whitespace-nowrap inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {analyzingSuggestions ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Bot className="w-4 h-4 mr-2" />}
+              {analyzingSuggestions ? 'AI가 반성 중...' : '🤖 AI 오답 노트 분석'}
+            </button>
           </div>
+
+          {/* Suggestions List */}
+          {aiSuggestions.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 border-b border-indigo-200 dark:border-indigo-800 pb-2">
+                ✨ AI가 제안하는 신규 지식 리스트
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {aiSuggestions.map((suggestion, idx) => (
+                  <div key={idx} className="bg-white dark:bg-neutral-800 rounded-lg p-4 border border-indigo-100 dark:border-indigo-900/50 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 mb-2">
+                          발견된 문제: {suggestion.problem}
+                        </span>
+                      </div>
+                      <h5 className="text-lg font-bold text-gray-900 dark:text-white mt-1">{suggestion.suggestedName}</h5>
+                      <span className="text-xs text-gray-500 bg-gray-100 dark:bg-neutral-700 px-2 py-0.5 rounded mt-1 inline-block">카테고리: {suggestion.suggestedCategory}</span>
+                      <p className="mt-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-900/50 p-3 rounded-md">
+                        {suggestion.suggestedDescription}
+                      </p>
+                      {suggestion.suggestedTags && (
+                        <p className="mt-3 text-xs text-indigo-600 dark:text-indigo-400">
+                          <strong>추천 태그:</strong> {suggestion.suggestedTags}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleAddSuggestion(suggestion, idx)}
+                      disabled={addingSuggestionIndex === idx}
+                      className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50"
+                    >
+                      {addingSuggestionIndex === idx ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 저장 및 학습 중...</>
+                      ) : (
+                        <><Plus className="w-4 h-4 mr-2" /> 이 지식 추가하기</>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
