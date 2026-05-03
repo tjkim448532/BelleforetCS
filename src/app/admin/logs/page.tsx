@@ -9,6 +9,10 @@ export default function LogsAdmin() {
   const [logs, setLogs] = useState<ChatLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Delete States
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -65,6 +69,49 @@ export default function LogsAdmin() {
     document.body.removeChild(link);
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('정말로 이 로그를 삭제하시겠습니까?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/logs?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('삭제 실패');
+      
+      alert('삭제되었습니다.');
+      fetchLogs();
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+    } catch (error: unknown) {
+      alert((error as Error).message);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) {
+      alert('삭제할 로그를 선택해주세요.');
+      return;
+    }
+    
+    if (!confirm(`선택한 ${selectedIds.length}개의 로그를 정말로 삭제하시겠습니까?`)) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/logs?ids=${selectedIds.join(',')}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('일괄 삭제 실패');
+      
+      alert('선택한 로그들이 삭제되었습니다.');
+      setSelectedIds([]);
+      fetchLogs();
+    } catch (error: unknown) {
+      alert((error as Error).message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // 차트 데이터 연산 (일자별 질문 수)
   const dailyData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -113,6 +160,16 @@ export default function LogsAdmin() {
           </p>
         </div>
         <div className="flex space-x-3">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="inline-flex items-center px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              선택 삭제 ({selectedIds.length})
+            </button>
+          )}
           <button
             onClick={exportToCSV}
             disabled={logs.length === 0}
@@ -231,14 +288,43 @@ export default function LogsAdmin() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
               <thead className="bg-gray-50 dark:bg-neutral-800">
                 <tr>
+                  <th className="px-6 py-4 text-left w-12">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      checked={logs.length > 0 && selectedIds.length === logs.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(logs.map(l => l.id as string).filter(Boolean));
+                        } else {
+                          setSelectedIds([]);
+                        }
+                      }}
+                    />
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">일시 / IP</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3">고객 질문</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">AI 답변</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">관리</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
                 {logs.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors align-top">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        checked={log.id ? selectedIds.includes(log.id) : false}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            if (log.id) setSelectedIds(prev => [...prev, log.id as string]);
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => id !== log.id));
+                          }
+                        }}
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-200">
                         {formatDate(log.timestamp)}
@@ -271,6 +357,14 @@ export default function LogsAdmin() {
                           </div>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => log.id && handleDelete(log.id)}
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        삭제
+                      </button>
                     </td>
                   </tr>
                 ))}
