@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     // 바로 활성화(승인) 상태로 요청이 왔다면 벡터화 진행
     if (facilityData.status === 'approved') {
-      const textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${description}\n태그: ${facilityData.tags.join(', ')}`;
+      const textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${description}\n태그: ${(facilityData.tags as string[]).join(', ')}`;
       
       await upsertDocument({
         id: docRef.id,

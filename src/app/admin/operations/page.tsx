@@ -103,7 +103,7 @@ export default function OperationsAdmin() {
 
   const handleEdit = (notice: OperationalNotice) => {
     // Convert ISO string to local datetime-local format if present
-    const formatForInput = (isoString: string) => {
+    const formatForInput = (isoString?: string) => {
       if (!isoString) return '';
       const date = new Date(isoString);
       // Adjust to local timezone for the input field
@@ -119,7 +119,7 @@ export default function OperationsAdmin() {
       startDate: formatForInput(notice.startDate),
       endDate: formatForInput(notice.endDate),
     });
-    setEditingId(notice.id);
+    setEditingId(notice.id || null);
     setIsEditing(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -312,7 +312,7 @@ export default function OperationsAdmin() {
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(notice.id)}
+                            onClick={() => notice.id && handleDelete(notice.id)}
                             className="p-1.5 text-gray-400 hover:text-red-600 rounded-md transition-colors"
                             title="삭제"
                           >

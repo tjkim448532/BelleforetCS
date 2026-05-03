@@ -562,7 +562,7 @@ export default function FacilitiesAdmin() {
                           checked={facilities.length > 0 && selectedIds.length === facilities.length}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedIds(facilities.map(f => f.id));
+                              setSelectedIds(facilities.map(f => f.id as string).filter(Boolean));
                             } else {
                               setSelectedIds([]);
                             }
@@ -582,10 +582,10 @@ export default function FacilitiesAdmin() {
                           <input
                             type="checkbox"
                             className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            checked={selectedIds.includes(fac.id)}
+                            checked={fac.id ? selectedIds.includes(fac.id) : false}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedIds(prev => [...prev, fac.id]);
+                                if (fac.id) setSelectedIds(prev => [...prev, fac.id as string]);
                               } else {
                                 setSelectedIds(prev => prev.filter(id => id !== fac.id));
                               }
@@ -594,7 +594,7 @@ export default function FacilitiesAdmin() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{fac.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fac.category}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(fac.createdAt)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(fac.createdAt as string | undefined)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => {
@@ -605,7 +605,7 @@ export default function FacilitiesAdmin() {
                                 description: fac.description,
                                 tags: Array.isArray(fac.tags) ? fac.tags.join(', ') : (fac.tags || '')
                               });
-                              setEditingId(fac.id);
+                              setEditingId(fac.id || null);
                               setActiveTab('single');
                             }}
                             className="text-blue-600 hover:text-blue-900 mr-4"
@@ -613,7 +613,7 @@ export default function FacilitiesAdmin() {
                             수정
                           </button>
                           <button
-                            onClick={() => handleDelete(fac.id)}
+                            onClick={() => fac.id && handleDelete(fac.id)}
                             className="text-red-600 hover:text-red-900"
                           >
                             삭제
