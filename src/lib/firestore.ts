@@ -29,9 +29,21 @@ export interface Pricing {
   conditions: string;
 }
 
+export interface OperationalNotice {
+  id?: string;
+  title: string;
+  content: string;
+  isActive: boolean;
+  startDate?: string; // ISO string
+  endDate?: string; // ISO string
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 const FACILITIES_COL = 'facilities';
 const SCHEDULES_COL = 'schedules';
 const PRICING_COL = 'pricing';
+const NOTICES_COL = 'operational_notices';
 
 // --- Facilities ---
 
@@ -106,4 +118,56 @@ export async function getPricingByFacility(facilityId: string) {
   const q = query(colRef, where('facilityId', '==', facilityId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pricing));
+}
+
+// --- Operational Notices ---
+
+export async function createNotice(data: Omit<OperationalNotice, 'id' | 'createdAt' | 'updatedAt'>) {
+  const colRef = collection(db, NOTICES_COL);
+  const docRef = doc(colRef);
+  
+  const newNotice = {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(docRef, newNotice);
+  return docRef.id;
+}
+
+export async function getAllNotices() {
+  const colRef = collection(db, NOTICES_COL);
+  const snapshot = await getDocs(colRef);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OperationalNotice));
+}
+
+export async function getActiveNotices() {
+  const colRef = collection(db, NOTICES_COL);
+  // Get all active notices
+  const q = query(colRef, where('isActive', '==', true));
+  const snapshot = await getDocs(q);
+  
+  const notices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OperationalNotice));
+  const now = new Date();
+  
+  // Filter by date range if provided
+  return notices.filter(notice => {
+    if (notice.startDate && new Date(notice.startDate) > now) return false;
+    if (notice.endDate && new Date(notice.endDate) < now) return false;
+    return true;
+  });
+}
+
+export async function updateNotice(id: string, data: Partial<OperationalNotice>) {
+  const docRef = doc(db, NOTICES_COL, id);
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteNotice(id: string) {
+  const docRef = doc(db, NOTICES_COL, id);
+  await deleteDoc(docRef);
 }

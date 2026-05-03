@@ -1,0 +1,202 @@
+[debug] [2026-05-03T03:29:57.557Z] ----------------------------------------------------------------------
+[debug] [2026-05-03T03:29:57.559Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\RESOLVE_01\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\firebase.js init hosting
+[debug] [2026-05-03T03:29:57.559Z] CLI Version:   15.16.0
+[debug] [2026-05-03T03:29:57.559Z] Platform:      win32
+[debug] [2026-05-03T03:29:57.559Z] Node Version:  v24.14.0
+[debug] [2026-05-03T03:29:57.559Z] Time:          Sun May 03 2026 12:29:57 GMT+0900 (한국 표준시)
+[debug] [2026-05-03T03:29:57.559Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  F:\앱_코딩소스\벨포레 CS
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[debug] [2026-05-03T03:30:22.590Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-03T03:30:22.590Z] > authorizing via signed-in user (tjkim448532@gmail.com)
+[debug] [2026-05-03T03:30:22.591Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:22.591Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:22.591Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=100
+[debug] [2026-05-03T03:30:23.280Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-05-03T03:30:23.280Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] 
+=== Hosting Setup
+[info] 
+[info] 
+=== App Hosting Setup
+[debug] [2026-05-03T03:30:44.077Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:44.077Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:44.077Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/belleforetcs/billingInfo [none]
+[debug] [2026-05-03T03:30:45.434Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/belleforetcs/billingInfo 200
+[debug] [2026-05-03T03:30:45.434Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/belleforetcs/billingInfo {"name":"projects/belleforetcs/billingInfo","projectId":"belleforetcs","billingAccountName":"billingAccounts/01FD89-D13CAD-0BA5F8","billingEnabled":true}
+[debug] [2026-05-03T03:30:45.435Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:45.435Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:45.435Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-05-03T03:30:45.435Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:46.590Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-05-03T03:30:46.590Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:46.590Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:46.590Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:46.590Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com:enable [none]
+[debug] [2026-05-03T03:30:46.590Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com:enable  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:47.930Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com:enable 200
+[debug] [2026-05-03T03:30:47.930Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/firebaseapphosting.googleapis.com:enable [omitted]
+[debug] [2026-05-03T03:30:57.950Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.950Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.950Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:57.951Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com [none]
+[debug] [2026-05-03T03:30:57.951Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:57.952Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/cloudbuild.googleapis.com [none]
+[debug] [2026-05-03T03:30:57.952Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/cloudbuild.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:57.953Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/secretmanager.googleapis.com [none]
+[debug] [2026-05-03T03:30:57.953Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/secretmanager.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:57.953Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/run.googleapis.com [none]
+[debug] [2026-05-03T03:30:57.953Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/run.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:57.954Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/artifactregistry.googleapis.com [none]
+[debug] [2026-05-03T03:30:57.954Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/artifactregistry.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:57.954Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/iam.googleapis.com [none]
+[debug] [2026-05-03T03:30:57.954Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/iam.googleapis.com  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:59.000Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com 200
+[debug] [2026-05-03T03:30:59.000Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:59.000Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:59.000Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:30:59.000Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com:enable [none]
+[debug] [2026-05-03T03:30:59.000Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com:enable  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:30:59.003Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/secretmanager.googleapis.com 200
+[debug] [2026-05-03T03:30:59.003Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/secretmanager.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:59.007Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/artifactregistry.googleapis.com 200
+[debug] [2026-05-03T03:30:59.007Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/artifactregistry.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:59.026Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/iam.googleapis.com 200
+[debug] [2026-05-03T03:30:59.026Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/iam.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:59.030Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/cloudbuild.googleapis.com 200
+[debug] [2026-05-03T03:30:59.030Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/cloudbuild.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:59.033Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/run.googleapis.com 200
+[debug] [2026-05-03T03:30:59.033Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/run.googleapis.com [omitted]
+[debug] [2026-05-03T03:30:59.966Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com:enable 200
+[debug] [2026-05-03T03:30:59.966Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/belleforetcs/services/developerconnect.googleapis.com:enable [omitted]
+[debug] [2026-05-03T03:31:09.981Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:09.981Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:09.981Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts/firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-05-03T03:31:09.981Z] >>> [apiv2][(partial)header] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts/firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com:testIamPermissions  x-goog-user-project=belleforetcs
+[debug] [2026-05-03T03:31:09.981Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts/firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-05-03T03:31:11.038Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts/firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com:testIamPermissions 404
+[debug] [2026-05-03T03:31:11.038Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts/firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com:testIamPermissions {"error":{"code":404,"message":"Unknown service account","status":"NOT_FOUND"}}
+[debug] [2026-05-03T03:31:11.039Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:11.039Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:11.039Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts [none]
+[debug] [2026-05-03T03:31:11.039Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts {"accountId":"firebase-app-hosting-compute","serviceAccount":{"displayName":"Firebase App Hosting compute service account","description":"Default service account used to run builds and deploys for Firebase App Hosting"}}
+[debug] [2026-05-03T03:31:11.880Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts 200
+[debug] [2026-05-03T03:31:11.880Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/belleforetcs/serviceAccounts [omitted]
+[debug] [2026-05-03T03:31:11.880Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:11.880Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:11.880Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:getIamPolicy [none]
+[debug] [2026-05-03T03:31:12.236Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:getIamPolicy 200
+[debug] [2026-05-03T03:31:12.237Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:getIamPolicy {"version":1,"etag":"BwZQ4XFCtvE=","bindings":[{"role":"roles/cloudbuild.builds.builder","members":["serviceAccount:732665193591@cloudbuild.gserviceaccount.com"]},{"role":"roles/cloudbuild.serviceAgent","members":["serviceAccount:service-732665193591@gcp-sa-cloudbuild.iam.gserviceaccount.com"]},{"role":"roles/containerregistry.ServiceAgent","members":["serviceAccount:service-732665193591@containerregistry.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:732665193591-compute@developer.gserviceaccount.com"]},{"role":"roles/firebase.managementServiceAgent","members":["serviceAccount:service-732665193591@gcp-sa-firebase.iam.gserviceaccount.com"]},{"role":"roles/firebase.sdkAdminServiceAgent","members":["serviceAccount:firebase-adminsdk-fbsvc@belleforetcs.iam.gserviceaccount.com"]},{"role":"roles/firebaserules.system","members":["serviceAccount:service-732665193591@firebase-rules.iam.gserviceaccount.com"]},{"role":"roles/firestore.serviceAgent","members":["serviceAccount:service-732665193591@gcp-sa-firestore.iam.gserviceaccount.com"]},{"role":"roles/iam.serviceAccountTokenCreator","members":["serviceAccount:firebase-adminsdk-fbsvc@belleforetcs.iam.gserviceaccount.com"]},{"role":"roles/owner","members":["user:tjkim448532@gmail.com"]},{"role":"roles/run.serviceAgent","members":["serviceAccount:service-732665193591@serverless-robot-prod.iam.gserviceaccount.com"]}]}
+[debug] [2026-05-03T03:31:12.237Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:12.237Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:31:12.237Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:setIamPolicy [none]
+[debug] [2026-05-03T03:31:12.237Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:setIamPolicy {"policy":{"version":1,"etag":"BwZQ4XFCtvE=","bindings":[{"role":"roles/cloudbuild.builds.builder","members":["serviceAccount:732665193591@cloudbuild.gserviceaccount.com"]},{"role":"roles/cloudbuild.serviceAgent","members":["serviceAccount:service-732665193591@gcp-sa-cloudbuild.iam.gserviceaccount.com"]},{"role":"roles/containerregistry.ServiceAgent","members":["serviceAccount:service-732665193591@containerregistry.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:732665193591-compute@developer.gserviceaccount.com"]},{"role":"roles/firebase.managementServiceAgent","members":["serviceAccount:service-732665193591@gcp-sa-firebase.iam.gserviceaccount.com"]},{"role":"roles/firebase.sdkAdminServiceAgent","members":["serviceAccount:firebase-adminsdk-fbsvc@belleforetcs.iam.gserviceaccount.com","serviceAccount:firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com"]},{"role":"roles/firebaserules.system","members":["serviceAccount:service-732665193591@firebase-rules.iam.gserviceaccount.com"]},{"role":"roles/firestore.serviceAgent","members":["serviceAccount:service-732665193591@gcp-sa-firestore.iam.gserviceaccount.com"]},{"role":"roles/iam.serviceAccountTokenCreator","members":["serviceAccount:firebase-adminsdk-fbsvc@belleforetcs.iam.gserviceaccount.com"]},{"role":"roles/owner","members":["user:tjkim448532@gmail.com"]},{"role":"roles/run.serviceAgent","members":["serviceAccount:service-732665193591@serverless-robot-prod.iam.gserviceaccount.com"]},{"role":"roles/firebaseapphosting.computeRunner","members":["serviceAccount:firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com"]},{"role":"roles/developerconnect.readTokenAccessor","members":["serviceAccount:firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com"]},{"role":"roles/storage.objectViewer","members":["serviceAccount:firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com"]}]},"updateMask":"bindings"}
+[debug] [2026-05-03T03:31:13.218Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:setIamPolicy 400
+[debug] [2026-05-03T03:31:13.218Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/belleforetcs:setIamPolicy {"error":{"code":400,"message":"Service account firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com does not exist.","status":"INVALID_ARGUMENT"}}
+[warn] !  Your App Hosting compute service account is still being provisioned in the background. If you encounter an error, please try again after a few moments. 
+[info] i  This command links your local project to Firebase App Hosting. You will be able to deploy your web app with `firebase deploy` after setup. 
+[info] i  === Set up your backend 
+[debug] [2026-05-03T03:32:01.167Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:01.167Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:01.167Z] >>> [apiv2][query] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations 
+[debug] [2026-05-03T03:32:02.395Z] <<< [apiv2][status] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations 200
+[debug] [2026-05-03T03:32:02.395Z] <<< [apiv2][body] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations {"locations":[{"name":"projects/belleforetcs/locations/asia-east1","locationId":"asia-east1","displayName":"Taiwan"},{"name":"projects/belleforetcs/locations/asia-southeast1","locationId":"asia-southeast1","displayName":"Singapore"},{"name":"projects/belleforetcs/locations/europe-west4","locationId":"europe-west4","displayName":"Netherlands"},{"name":"projects/belleforetcs/locations/us-central1","locationId":"us-central1","displayName":"Iowa"},{"name":"projects/belleforetcs/locations/us-east4","locationId":"us-east4","displayName":"Northern Virginia"},{"name":"projects/belleforetcs/locations/us-east5","locationId":"us-east5","displayName":"Columbus"}]}
+[info] +  Location set to asia-east1.
+ 
+[debug] [2026-05-03T03:32:25.849Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:25.849Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:25.849Z] >>> [apiv2][query] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends/belleforet-cs [none]
+[debug] [2026-05-03T03:32:26.062Z] <<< [apiv2][status] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends/belleforet-cs 404
+[debug] [2026-05-03T03:32:26.062Z] <<< [apiv2][body] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends/belleforet-cs {"error":{"code":404,"message":"Resource 'projects/belleforetcs/locations/asia-east1/backends/belleforet-cs' was not found","status":"NOT_FOUND","details":[{"@type":"type.googleapis.com/google.rpc.ResourceInfo","resourceName":"projects/belleforetcs/locations/asia-east1/backends/belleforet-cs"}]}}
+[info] +  Name set to belleforet-cs
+ 
+[debug] [2026-05-03T03:32:26.063Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:26.063Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:26.063Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps pageSize=100
+[debug] [2026-05-03T03:32:26.492Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps 200
+[debug] [2026-05-03T03:32:26.492Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps {"apps":[{"name":"projects/belleforetcs/webApps/1:732665193591:web:f8090194fd62d674675272","appId":"1:732665193591:web:f8090194fd62d674675272","displayName":"BelleforetCS","projectId":"belleforetcs","webId":"OWU1Nzc4OWItZjAzNi00Zjk0LTliMGItNDRkZWU3ZTA3NDYx","apiKeyId":"dd8c6bd3-718d-4ebf-8f12-c1f01c357a6a","state":"ACTIVE","expireTime":"1970-01-01T00:00:00Z","etag":"1_fa29cf97-f0b4-493b-aed4-d1014fa2c36f"}]}
+[debug] [2026-05-03T03:32:26.492Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:26.492Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:26.492Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps pageSize=100
+[debug] [2026-05-03T03:32:26.901Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps 200
+[debug] [2026-05-03T03:32:26.901Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps {"apps":[{"name":"projects/belleforetcs/webApps/1:732665193591:web:f8090194fd62d674675272","appId":"1:732665193591:web:f8090194fd62d674675272","displayName":"BelleforetCS","projectId":"belleforetcs","webId":"OWU1Nzc4OWItZjAzNi00Zjk0LTliMGItNDRkZWU3ZTA3NDYx","apiKeyId":"dd8c6bd3-718d-4ebf-8f12-c1f01c357a6a","state":"ACTIVE","expireTime":"1970-01-01T00:00:00Z","etag":"1_fa29cf97-f0b4-493b-aed4-d1014fa2c36f"}]}
+[debug] [2026-05-03T03:32:26.901Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:26.901Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:26.902Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps [none]
+[debug] [2026-05-03T03:32:26.902Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps {"displayName":"belleforet-cs"}
+[debug] [2026-05-03T03:32:28.445Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps 200
+[debug] [2026-05-03T03:32:28.445Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/belleforetcs/webApps {"name":"operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2"}
+[debug] [2026-05-03T03:32:28.446Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:28.446Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:28.446Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 [none]
+[debug] [2026-05-03T03:32:29.077Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 200
+[debug] [2026-05-03T03:32:29.077Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 {"name":"operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2"}
+[debug] [2026-05-03T03:32:29.578Z] [Create Web app Poller] Retrying task index 0
+[debug] [2026-05-03T03:32:29.578Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:29.578Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:29.578Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 [none]
+[debug] [2026-05-03T03:32:30.104Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 200
+[debug] [2026-05-03T03:32:30.104Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 {"name":"operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2"}
+[debug] [2026-05-03T03:32:31.112Z] [Create Web app Poller] Retrying task index 0
+[debug] [2026-05-03T03:32:31.112Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:31.112Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:31.112Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 [none]
+[debug] [2026-05-03T03:32:31.711Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 200
+[debug] [2026-05-03T03:32:31.711Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 {"name":"operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2"}
+[debug] [2026-05-03T03:32:33.721Z] [Create Web app Poller] Retrying task index 0
+[debug] [2026-05-03T03:32:33.721Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:33.721Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:33.721Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 [none]
+[debug] [2026-05-03T03:32:34.296Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 200
+[debug] [2026-05-03T03:32:34.296Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2 {"name":"operations/workflows/NzNmZTllOTAtZjliNi00Y2FiLWIzYTktNTBjMDNmMWVmMWY2","done":true,"response":{"@type":"type.googleapis.com/google.firebase.service.v1beta1.WebApp","name":"projects/belleforetcs/webApps/1:732665193591:web:ca2712312c0ed4eb675272","appId":"1:732665193591:web:ca2712312c0ed4eb675272","displayName":"belleforet-cs","projectId":"belleforetcs","webId":"NjllOTU0NTgtMGU4OC00MmUyLWI0NWYtYmNjOGY5OTk3MjU4","apiKeyId":"dd8c6bd3-718d-4ebf-8f12-c1f01c357a6a","state":"ACTIVE","expireTime":"1970-01-01T00:00:00Z","etag":"1_01719a19-cc70-4382-8c12-db278bb3e0f1"}}
+[info] +  Created a new Firebase web app named "belleforet-cs" 
+[debug] [2026-05-03T03:32:34.301Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:34.301Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:34.301Z] >>> [apiv2][query] POST https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends backendId=belleforet-cs
+[debug] [2026-05-03T03:32:34.301Z] >>> [apiv2][body] POST https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends {"servingLocality":"GLOBAL_ACCESS","labels":{"deployment-tool":"cli-firebase"},"serviceAccount":"firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com","appId":"1:732665193591:web:ca2712312c0ed4eb675272"}
+[debug] [2026-05-03T03:32:36.419Z] <<< [apiv2][status] POST https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends 200
+[debug] [2026-05-03T03:32:36.419Z] <<< [apiv2][body] POST https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/backends {"name":"projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a","metadata":{"@type":"type.googleapis.com/google.firebase.apphosting.v1beta.OperationMetadata","createTime":"2026-05-03T03:32:37.026968057Z","target":"projects/belleforetcs/locations/asia-east1/backends/belleforet-cs","verb":"create","requestedCancellation":false,"apiVersion":"v1beta"},"done":false}
+[debug] [2026-05-03T03:32:36.419Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:36.419Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:36.420Z] >>> [apiv2][query] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a [none]
+[debug] [2026-05-03T03:32:36.540Z] <<< [apiv2][status] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a 200
+[debug] [2026-05-03T03:32:36.540Z] <<< [apiv2][body] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a {"name":"projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a","metadata":{"@type":"type.googleapis.com/google.firebase.apphosting.v1beta.OperationMetadata","createTime":"2026-05-03T03:32:37.026968057Z","target":"projects/belleforetcs/locations/asia-east1/backends/belleforet-cs","verb":"create","requestedCancellation":false,"apiVersion":"v1beta"},"done":false}
+[debug] [2026-05-03T03:32:37.051Z] [create-belleforetcs-asia-east1-belleforet-cs] Retrying task index 0
+[debug] [2026-05-03T03:32:37.051Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:37.051Z] Checked if tokens are valid: true, expires at: 1777782533846
+[debug] [2026-05-03T03:32:37.051Z] >>> [apiv2][query] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a [none]
+[debug] [2026-05-03T03:32:37.163Z] <<< [apiv2][status] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a 200
+[debug] [2026-05-03T03:32:37.163Z] <<< [apiv2][body] GET https://firebaseapphosting.googleapis.com/v1beta/projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a {"name":"projects/belleforetcs/locations/asia-east1/operations/operation-1777779155130-650e17707d99b-e0b6799e-b838a45a","metadata":{"@type":"type.googleapis.com/google.firebase.apphosting.v1beta.OperationMetadata","createTime":"2026-05-03T03:32:37.026968057Z","endTime":"2026-05-03T03:32:37.564965764Z","target":"projects/belleforetcs/locations/asia-east1/backends/belleforet-cs","verb":"create","requestedCancellation":false,"apiVersion":"v1beta"},"done":true,"response":{"@type":"type.googleapis.com/google.firebase.apphosting.v1beta.Backend","name":"projects/belleforetcs/locations/asia-east1/backends/belleforet-cs","createTime":"2026-05-03T03:32:37.020482532Z","updateTime":"2026-05-03T03:32:37.562740Z","labels":{"deployment-tool":"cli-firebase"},"uri":"belleforet-cs--belleforetcs.asia-east1.hosted.app","uid":"6e841a79-925d-4340-8fa8-8342dbfed850","etag":"vFYxXu1x_Jw503hrzltpMUWJHfMd87CCI9rZAkDs3lM","reconciling":false,"servingLocality":"GLOBAL_ACCESS","serviceAccount":"firebase-app-hosting-compute@belleforetcs.iam.gserviceaccount.com","appId":"1:732665193591:web:ca2712312c0ed4eb675272"}}
+[info] i  === Deploy local source setup 
+[info] +  Wrote configuration info to firebase.json 
+[info] i  Writing default settings to apphosting.yaml... 
+[info] +  Wrote F:\앱_코딩소스\벨포레 CS\apphosting.yaml 
+[info] +  Firebase initialization complete! 
+[info] 
+=== Agent Skills Setup
+[info] If you are using an AI coding agent, Firebase Agent Skills make it an expert at Firebase.

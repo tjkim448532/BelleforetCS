@@ -27,8 +27,30 @@ export async function POST(req: Request) {
       return `[문서 ${index + 1}]\n${doc.metadata?.text || ''}`;
     }).join('\n\n');
 
-    // (선택 사항) 관련 시설의 운영 시간이나 가격 정보를 Firestore에서 추가로 가져올 수도 있습니다.
-    // 여기서는 벡터에 포함된 text 기반으로만 응답을 생성합니다.
+    // --- 동적 운영 정보 (Operational Notices) 주입 ---
+    try {
+      const now = new Date();
+      const noticesSnapshot = await adminDb.collection('operational_notices')
+        .where('isActive', '==', true)
+        .get();
+
+      const activeNotices = noticesSnapshot.docs
+        .map(doc => doc.data())
+        .filter(notice => {
+          if (notice.startDate && new Date(notice.startDate) > now) return false;
+          if (notice.endDate && new Date(notice.endDate) < now) return false;
+          return true;
+        });
+
+      if (activeNotices.length > 0) {
+        const noticesText = activeNotices.map((n, i) => `- ${n.title}: ${n.content}`).join('\n');
+        context = `[🚨 현재 리조트 긴급/운영 상황 (최우선 적용 사항)]\n${noticesText}\n\n[기본 시설/운영 정보]\n${context}`;
+      }
+    } catch (noticeError) {
+      console.error('Error fetching operational notices:', noticeError);
+      // 공지사항 로드 실패 시 무시하고 진행
+    }
+    // ------------------------------------------------
 
     // 3. AI 모델에 컨텍스트와 질문 전달하여 응답 생성
     const answer = await generateAnswer(question, context);
