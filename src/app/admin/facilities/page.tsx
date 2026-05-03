@@ -21,6 +21,7 @@ export default function FacilitiesAdmin() {
   const [bulkProgress, setBulkProgress] = useState({ total: 0, current: 0, failed: 0 });
   const [bulkErrors, setBulkErrors] = useState<{row: number, error: string}[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [csvText, setCsvText] = useState('');
 
   // Manage Data State
   const [facilities, setFacilities] = useState<any[]>([]);
@@ -125,6 +126,67 @@ export default function FacilitiesAdmin() {
     }
   };
 
+  const processBulkData = async (data: Record<string, string>[]) => {
+    setBulkProgress({ total: data.length, current: 0, failed: 0 });
+    setBulkErrors([]);
+    setIsUploading(true);
+
+    let current = 0;
+    let failed = 0;
+    const errors: {row: number, error: string}[] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      
+      const payload = {
+        name: row['시설명'] || '',
+        category: row['카테고리'] || '기타',
+        location: row['위치'] || '',
+        description: row['설명'] || '',
+        tags: (row['태그'] || '').split(',').map(t => t.trim()).filter(Boolean),
+        status: 'approved'
+      };
+
+      if (!payload.name || !payload.description) {
+        failed++;
+        errors.push({ row: i + 1, error: '시설명 또는 설명 누락 (필수 항목)' });
+        current++;
+        setBulkProgress({ total: data.length, current, failed });
+        setBulkErrors([...errors]);
+        continue;
+      }
+
+      try {
+        const response = await fetch('/api/admin/facility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || '등록 실패');
+        }
+      } catch (err: any) {
+        failed++;
+        errors.push({ row: i + 1, error: err.message || '업로드 중 오류 발생' });
+        setBulkErrors([...errors]);
+      }
+
+      current++;
+      setBulkProgress({ total: data.length, current, failed });
+
+      if (i < data.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 4500));
+      }
+    }
+
+    setIsUploading(false);
+    setBulkErrors(errors);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setCsvText('');
+  };
+
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -133,69 +195,28 @@ export default function FacilitiesAdmin() {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const data = results.data as Record<string, string>[];
-        setBulkProgress({ total: data.length, current: 0, failed: 0 });
-        setBulkErrors([]);
-        setIsUploading(true);
-
-        let current = 0;
-        let failed = 0;
-        const errors: {row: number, error: string}[] = [];
-
-        for (let i = 0; i < data.length; i++) {
-          const row = data[i];
-          
-          // 헤더 이름 매핑 (시설명, 카테고리, 위치, 설명, 태그)
-          const payload = {
-            name: row['시설명'] || '',
-            category: row['카테고리'] || '기타',
-            location: row['위치'] || '',
-            description: row['설명'] || '',
-            tags: (row['태그'] || '').split(',').map(t => t.trim()).filter(Boolean),
-            status: 'approved'
-          };
-
-          if (!payload.name || !payload.description) {
-            failed++;
-            errors.push({ row: i + 1, error: '시설명 또는 설명 누락 (필수 항목)' });
-            current++;
-            setBulkProgress({ total: data.length, current, failed });
-            setBulkErrors([...errors]);
-            continue;
-          }
-
-          try {
-            const response = await fetch('/api/admin/facility', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-              const errData = await response.json();
-              throw new Error(errData.error || '등록 실패');
-            }
-          } catch (err: any) {
-            failed++;
-            errors.push({ row: i + 1, error: err.message || '업로드 중 오류 발생' });
-            setBulkErrors([...errors]);
-          }
-
-          current++;
-          setBulkProgress({ total: data.length, current, failed });
-
-          // API Rate Limit 방지 (분당 15회 = 1회당 4초 대기 + 안전마진)
-          if (i < data.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 4500));
-          }
-        }
-
-        setIsUploading(false);
-        setBulkErrors(errors);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        await processBulkData(results.data as Record<string, string>[]);
       },
       error: (error) => {
         alert('CSV 파일 파싱 중 오류가 발생했습니다: ' + error.message);
+      }
+    });
+  };
+
+  const handleBulkTextUpload = () => {
+    if (!csvText.trim()) {
+      alert('CSV 텍스트를 입력해주세요.');
+      return;
+    }
+    
+    Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        await processBulkData(results.data as Record<string, string>[]);
+      },
+      error: (error: any) => {
+        alert('CSV 텍스트 파싱 중 오류가 발생했습니다: ' + error.message);
       }
     });
   };
@@ -377,6 +398,37 @@ export default function FacilitiesAdmin() {
                 </span>
                 <span className="text-xs text-gray-500 mt-1">.csv 확장자만 지원</span>
               </div>
+            </div>
+
+            <div className="relative border-t border-gray-200 dark:border-neutral-800 pt-6">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-gray-200 dark:border-neutral-700"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white dark:bg-neutral-900 px-2 text-sm text-gray-500">또는 직접 붙여넣기</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <textarea
+                value={csvText}
+                onChange={(e) => setCsvText(e.target.value)}
+                placeholder="여기에 CSV 텍스트를 그대로 붙여넣으세요...&#10;예:&#10;시설명,카테고리,위치,설명,태그&#10;&quot;놀이기구&quot;,&quot;레저&quot;,,..."
+                rows={6}
+                disabled={isUploading}
+                className="block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 font-mono"
+              />
+              <button
+                onClick={handleBulkTextUpload}
+                disabled={isUploading || !csvText.trim()}
+                className="w-full inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+              >
+                {isUploading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 업로드 중...</>
+                ) : (
+                  <><Save className="w-4 h-4 mr-2" /> 붙여넣은 텍스트로 업로드 시작</>
+                )}
+              </button>
             </div>
 
             {(isUploading || bulkProgress.total > 0) && (
