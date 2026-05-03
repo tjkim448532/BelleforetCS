@@ -4,7 +4,7 @@ import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, serverT
 export interface Facility {
   id?: string;
   name: string;
-  category: '레저' | '숙박' | '식음' | '기타';
+  category: string;
   description: string;
   location: string;
   tags: string[];

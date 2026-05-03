@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle, X, Edit2, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import { Facility } from '@/lib/firestore';
 
@@ -17,7 +17,7 @@ export default function FacilitiesAdmin() {
   const [message, setMessage] = useState('');
   
   // Bulk Upload State
-  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage'>('single');
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage' | 'categories'>('single');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [bulkProgress, setBulkProgress] = useState({ total: 0, current: 0, failed: 0 });
   const [bulkErrors, setBulkErrors] = useState<{row: number, error: string}[]>([]);
@@ -31,6 +31,59 @@ export default function FacilitiesAdmin() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Categories State
+  const [categories, setCategories] = useState<string[]>(['레저', '숙박', '식음', '기타']);
+  const [newCat, setNewCat] = useState('');
+  const [editCat, setEditCat] = useState<{old: string, new: string} | null>(null);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/admin/categories');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.categories) setCategories(data.categories);
+        
+        // formData.category 값이 받아온 카테고리에 없으면 첫번째 값으로 설정
+        setFormData(prev => {
+          if (data.categories && data.categories.length > 0 && !data.categories.includes(prev.category)) {
+            return { ...prev, category: data.categories[0] };
+          }
+          return prev;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCategoryAction = async (action: 'add' | 'update' | 'delete', payload: any) => {
+    try {
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setCategories(data.categories);
+      if (action === 'update' && data.updatedCount > 0) {
+        alert(`카테고리가 변경되었으며, 기존에 해당 카테고리를 쓰던 시설 ${data.updatedCount}건이 모두 업데이트되었습니다.`);
+        fetchFacilities();
+      } else {
+        alert('카테고리가 성공적으로 반영되었습니다.');
+      }
+      setNewCat('');
+      setEditCat(null);
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
 
   // 날짜 포맷팅 헬퍼
   const formatDate = (dateString?: string) => {
@@ -307,6 +360,16 @@ export default function FacilitiesAdmin() {
         >
           등록된 데이터 관리
         </button>
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'categories'
+              ? 'border-green-500 text-green-600 dark:text-green-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          카테고리 관리
+        </button>
       </div>
 
       <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6">
@@ -333,10 +396,9 @@ export default function FacilitiesAdmin() {
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               >
-                <option value="레저">레저</option>
-                <option value="숙박">숙박</option>
-                <option value="식음">식음</option>
-                <option value="기타">기타</option>
+                {categories.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -629,6 +691,95 @@ export default function FacilitiesAdmin() {
             )}
           </div>
         )}
+        {activeTab === 'categories' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">카테고리 관리</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">시설을 분류할 카테고리를 자유롭게 추가하거나 이름을 변경할 수 있습니다.</p>
+              </div>
+              <div className="flex w-full sm:w-auto space-x-2">
+                <input
+                  type="text"
+                  value={newCat}
+                  onChange={(e) => setNewCat(e.target.value)}
+                  placeholder="새 카테고리 (예: 이벤트)"
+                  className="block w-full sm:w-48 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                />
+                <button
+                  onClick={() => handleCategoryAction('add', { category: newCat })}
+                  disabled={!newCat.trim()}
+                  className="inline-flex items-center justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors shrink-0"
+                >
+                  <Plus className="w-4 h-4 mr-1" /> 추가
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex items-start">
+              <AlertCircle className="w-5 h-5 mr-2 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">카테고리 수정 시 주의사항</p>
+                <p className="mt-1 text-blue-700 dark:text-blue-400">카테고리 이름을 수정하시면, <strong>해당 카테고리로 등록되어 있던 모든 기존 시설 데이터도 새로운 카테고리명으로 일괄 변경(마이그레이션)</strong>됩니다. 데이터 정합성을 위해 매우 유용한 기능입니다.</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg dark:border-neutral-700 overflow-hidden">
+              <ul className="divide-y divide-gray-200 dark:divide-neutral-700">
+                {categories.map(cat => (
+                  <li key={cat} className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
+                    {editCat?.old === cat ? (
+                      <div className="flex w-full items-center space-x-3">
+                        <input
+                          type="text"
+                          value={editCat.new}
+                          onChange={(e) => setEditCat({ ...editCat, new: e.target.value })}
+                          className="flex-1 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleCategoryAction('update', { oldCategory: cat, newCategory: editCat.new })}
+                          disabled={!editCat.new.trim() || editCat.new === cat}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          저장
+                        </button>
+                        <button
+                          onClick={() => setEditCat(null)}
+                          className="px-3 py-1.5 bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-gray-300 text-sm rounded-md hover:bg-gray-300 dark:hover:bg-neutral-600"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="font-medium text-gray-900 dark:text-white">{cat}</span>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setEditCat({ old: cat, new: cat })}
+                            className="p-1.5 text-gray-500 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 dark:bg-neutral-800 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                            title="수정"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCategoryAction('delete', { category: cat })}
+                            className="p-1.5 text-gray-500 hover:text-red-600 bg-gray-50 hover:bg-red-50 dark:bg-neutral-800 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+                {categories.length === 0 && (
+                  <li className="p-4 text-center text-gray-500 text-sm">등록된 카테고리가 없습니다.</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
@@ -676,10 +827,9 @@ export default function FacilitiesAdmin() {
                       onChange={handleChange}
                       className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
                     >
-                      <option value="레저">레저</option>
-                      <option value="숙박">숙박</option>
-                      <option value="식음">식음</option>
-                      <option value="기타">기타</option>
+                      {categories.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
