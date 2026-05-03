@@ -5,10 +5,10 @@ import { Loader2, Plus, Save, Upload, FileSpreadsheet, AlertCircle, X, Edit2, Tr
 import Papa from 'papaparse';
 import { Facility } from '@/lib/firestore';
 
-export default function FacilitiesAdmin() {
+export default function FAQsAdmin() {
   const [formData, setFormData] = useState({
     name: '',
-    category: '레저',
+    category: 'FAQ',
     location: '',
     description: '',
     tags: '',
@@ -107,8 +107,7 @@ export default function FacilitiesAdmin() {
       const res = await fetch('/api/admin/facility');
       if (res.ok) {
         const data = await res.json();
-        const filtered = (data.facilities || []).filter((f: any) => f.type !== 'faq');
-        setFacilities(filtered);
+        setFacilities(data.facilities || []);
       }
     } catch (e) {
       console.error('Failed to fetch facilities', e);
@@ -167,7 +166,7 @@ export default function FacilitiesAdmin() {
       const payload = {
         ...formData,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-        status: 'approved' // 테스트 시나리오를 위해 바로 승인 및 벡터화 트리거
+        status: 'approved', type: 'faq' // 테스트 시나리오를 위해 바로 승인 및 벡터화 트리거
       };
 
       const response = await fetch('/api/admin/facility', {
@@ -183,7 +182,7 @@ export default function FacilitiesAdmin() {
       }
 
       setMessage('성공적으로 등록되고 시스템에 학습되었습니다!');
-      setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
+      setFormData({ name: '', category: 'FAQ', location: '', description: '', tags: '' });
     } catch (error: unknown) {
       setMessage((error as Error).message || '오류가 발생했습니다.');
     } finally {
@@ -199,7 +198,7 @@ export default function FacilitiesAdmin() {
         ...formData,
         id: editingId,
         tags: typeof formData.tags === 'string' ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : formData.tags,
-        status: 'approved'
+        status: 'approved', type: 'faq'
       };
 
       const response = await fetch('/api/admin/facility', {
@@ -215,7 +214,7 @@ export default function FacilitiesAdmin() {
       setIsEditModalOpen(false);
       setSmartEditResult(null);
       setSmartEditInstruction('');
-      setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
+      setFormData({ name: '', category: 'FAQ', location: '', description: '', tags: '' });
       fetchFacilities();
     } catch (error: unknown) {
       alert((error as Error).message);
@@ -309,17 +308,17 @@ export default function FacilitiesAdmin() {
       const row = data[i];
       
       const payload = {
-        name: row['시설명'] || '',
+        name: row['질문 (Question)'] || '',
         category: row['카테고리'] || '기타',
-        location: row['위치'] || '',
+        location: row['관련 장소 (옵션)'] || '',
         description: row['설명'] || '',
         tags: (row['태그'] || '').split(',').map(t => t.trim()).filter(Boolean),
-        status: 'approved'
+        status: 'approved', type: 'faq'
       };
 
       if (!payload.name || !payload.description) {
         failed++;
-        errors.push({ row: i + 1, error: '시설명 또는 설명 누락 (필수 항목)' });
+        errors.push({ row: i + 1, error: '질문 (Question) 또는 설명 누락 (필수 항목)' });
         current++;
         setBulkProgress({ total: data.length, current, failed });
         setBulkErrors([...errors]);
@@ -394,7 +393,7 @@ export default function FacilitiesAdmin() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8 border-b pb-4">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">시설 정보 관리 (CMS)</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">FAQ (규정/정책) 관리 (CMS)</h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           벨포레의 시설 정보를 입력하세요. 입력된 정보는 AI가 학습하여 고객 질문 응답에 사용됩니다.
         </p>
@@ -453,7 +452,7 @@ export default function FacilitiesAdmin() {
           <form onSubmit={editingId ? handleUpdate : handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">시설명</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">질문 (Question)</label>
               <input
                 type="text"
                 name="name"
@@ -472,7 +471,7 @@ export default function FacilitiesAdmin() {
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               >
-                {categories.map(c => (
+                {['FAQ'].map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -480,7 +479,7 @@ export default function FacilitiesAdmin() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">위치</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">관련 장소 (옵션)</label>
             <input
               type="text"
               name="location"
@@ -492,7 +491,7 @@ export default function FacilitiesAdmin() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">자연어 설명 (AI가 이해할 내용)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">답변 (Answer)</label>
             <textarea
               name="description"
               required
@@ -553,7 +552,7 @@ export default function FacilitiesAdmin() {
                 구글 시트나 엑셀에서 데이터를 작성한 후 <strong>.csv</strong> 파일로 다운로드하여 업로드하세요.<br/>
                 첫 번째 줄(헤더)은 반드시 아래 이름을 사용해야 합니다:<br/>
                 <code className="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded text-xs font-bold mt-2 inline-block">
-                  시설명, 카테고리, 위치, 설명, 태그
+                  질문 (Question), 카테고리, 관련 장소 (옵션), 설명, 태그
                 </code>
               </p>
               <p className="mt-2 text-xs text-blue-600 dark:text-blue-500">
@@ -593,7 +592,7 @@ export default function FacilitiesAdmin() {
               <textarea
                 value={csvText}
                 onChange={(e) => setCsvText(e.target.value)}
-                placeholder="여기에 CSV 텍스트를 그대로 붙여넣으세요...&#10;예:&#10;시설명,카테고리,위치,설명,태그&#10;&quot;놀이기구&quot;,&quot;레저&quot;,,..."
+                placeholder="여기에 CSV 텍스트를 그대로 붙여넣으세요...&#10;예:&#10;질문 (Question),카테고리,관련 장소 (옵션),설명,태그&#10;&quot;놀이기구&quot;,&quot;레저&quot;,,..."
                 rows={6}
                 disabled={isUploading}
                 className="block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 font-mono"
@@ -717,7 +716,7 @@ export default function FacilitiesAdmin() {
                           }}
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">시설명</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">질문 (Question)</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">등록일</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
@@ -782,7 +781,7 @@ export default function FacilitiesAdmin() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">카테고리 관리</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">시설을 분류할 카테고리를 자유롭게 추가하거나 이름을 변경할 수 있습니다.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">FAQ를 분류할 카테고리를 자유롭게 추가하거나 이름을 변경할 수 있습니다.</p>
               </div>
               <div className="flex w-full sm:w-auto space-x-2">
                 <input
@@ -812,7 +811,7 @@ export default function FacilitiesAdmin() {
 
             <div className="border rounded-lg dark:border-neutral-700 overflow-hidden">
               <ul className="divide-y divide-gray-200 dark:divide-neutral-700">
-                {categories.map(cat => (
+                {['FAQ'].map(cat => (
                   <li key={cat} className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
                     {editCat?.old === cat ? (
                       <div className="flex w-full items-center space-x-3">
@@ -899,7 +898,7 @@ export default function FacilitiesAdmin() {
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">시설명</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">질문 (Question)</label>
                     <input
                       type="text"
                       name="name"
@@ -917,7 +916,7 @@ export default function FacilitiesAdmin() {
                       onChange={handleChange}
                       className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
                     >
-                      {categories.map(c => (
+                      {['FAQ'].map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
@@ -925,7 +924,7 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">위치</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">관련 장소 (옵션)</label>
                   <input
                     type="text"
                     name="location"

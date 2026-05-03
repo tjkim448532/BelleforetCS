@@ -5,7 +5,7 @@ import { upsertDocument, deleteDocument } from '@/lib/pinecone';
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { name, category, description, location, tags, status } = data;
+    const { name, category, description, location, tags, status, type } = data;
 
     if (!name || !description) {
       return NextResponse.json({ error: 'Name and description are required' }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       location: location || '',
       tags: tags || [],
       status: status || 'pending',
+      type: type || 'facility',
       updatedAt: new Date().toISOString(),
     };
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
         id: docRef.id,
         text: textToVectorize,
         metadata: {
-          type: 'facility',
+          type: (facilityData.type as string) || 'facility',
           name,
           category: facilityData.category,
         }
@@ -78,7 +79,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   try {
     const data = await req.json();
-    const { id, name, category, description, location, tags, status } = data;
+    const { id, name, category, description, location, tags, status, type } = data;
 
     if (!id || !name || !description) {
       return NextResponse.json({ error: 'ID, Name, and description are required' }, { status: 400 });
@@ -92,6 +93,7 @@ export async function PUT(req: Request) {
       location: location || '',
       tags: tags || [],
       status: status || 'approved',
+      type: type || 'facility',
       updatedAt: new Date().toISOString(),
     };
 

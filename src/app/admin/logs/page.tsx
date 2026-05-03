@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, AlertCircle, RefreshCw, Download, BarChart2, ThumbsUp, ThumbsDown, Bot, Plus } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Download, BarChart2, ThumbsUp, ThumbsDown, Bot, Plus, PieChart as PieChartIcon } from 'lucide-react';
 import { ChatLog } from '@/lib/firestore';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#64748b'];
 
 export default function LogsAdmin() {
   const [logs, setLogs] = useState<ChatLog[]>([]);
@@ -177,24 +179,31 @@ export default function LogsAdmin() {
       .map(([date, count]) => ({ date: date.slice(5), count })); // MM-DD
   }, [logs]);
 
-  // 주요 키워드 추출 (간단한 형태소 분석 대체)
+  // 주요 키워드 추출 (개선된 형태소 필터링)
   const keywordData = useMemo(() => {
-    const stopWords = ['있나요', '어디에', '어떻게', '알려줘', '무엇인가요', '어디인가요', '몇시까지', '있나요?', '수', '할', '있는', '어디서', '어디', '어떤', '무슨', '무엇', '얼마인가요', '되나요'];
+    const stopWords = [
+      '있나요', '어디에', '어떻게', '알려줘', '무엇인가요', '어디인가요', '몇시까지', '있나요?', '수', '할', '있는', 
+      '어디서', '어디', '어떤', '무슨', '무엇', '얼마인가요', '되나요', '안녕하세요', '벨포레', '리조트', '알려주세요', 
+      '궁금합니다', '대한', '대해', '부탁드립니다', '혹시', '여기', '저기', '그거', '이거'
+    ];
     const wordCounts: Record<string, number> = {};
     
     logs.forEach(log => {
-      const words = log.question.split(/[\s,?.!]+/);
-      words.forEach(w => {
-        if (w.length > 1 && !stopWords.includes(w)) {
-          wordCounts[w] = (wordCounts[w] || 0) + 1;
+      const words = log.question.split(/[\s,?.!가-힣]*(은|는|이|가|을|를|에|에서|의|로|으로)[\s,?.!]+/);
+      const rawWords = log.question.split(/[\s,?.!]+/);
+      
+      [...words, ...rawWords].forEach(w => {
+        const word = w.trim();
+        if (word.length > 1 && !stopWords.includes(word) && !word.match(/^(은|는|이|가|을|를|에|에서|의|로|으로)$/)) {
+          wordCounts[word] = (wordCounts[word] || 0) + 1;
         }
       });
     });
 
     return Object.entries(wordCounts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10) // Top 10
-      .map(([word, count]) => ({ word, count }));
+      .slice(0, 5) // Top 5
+      .map(([word, count]) => ({ name: word, value: count }));
   }, [logs]);
 
   // AI 답변 실패 및 불만족 데이터 추출 (제안 기능)
@@ -346,23 +355,39 @@ export default function LogsAdmin() {
           </div>
 
           <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl border border-gray-200 dark:border-neutral-800 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-              <BarChart2 className="w-5 h-5 mr-2 text-blue-600" />
-              자주 묻는 키워드 (Top 10)
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center justify-between">
+              <span className="flex items-center">
+                <PieChartIcon className="w-5 h-5 mr-2 text-blue-600" />
+                오늘의 핫 키워드 (Top 5)
+              </span>
             </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={keywordData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
-                  <XAxis type="number" allowDecimals={false} tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                  <YAxis dataKey="word" type="category" tick={{fontSize: 12}} axisLine={false} tickLine={false} width={80} />
-                  <Tooltip 
-                    cursor={{fill: 'rgba(0, 0, 0, 0.05)'}}
-                    contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}
-                  />
-                  <Bar dataKey="count" name="언급 횟수" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-64 flex items-center justify-center">
+              {keywordData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={keywordData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {keywordData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-gray-500 text-sm">추출할 수 있는 충분한 키워드 데이터가 없습니다.</p>
+              )}
             </div>
           </div>
         </div>

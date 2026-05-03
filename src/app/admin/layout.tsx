@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Database, Bell, Menu, X, BarChart2, Home } from 'lucide-react';
+import { LogOut, Database, Bell, Menu, X, BarChart2, Home, HelpCircle, Settings } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { useState } from 'react';
@@ -38,8 +38,10 @@ export default function AdminLayout({
 
   const navLinks = [
     { href: '/admin/facilities', label: '시설 정보 관리', icon: Database },
+    { href: '/admin/faqs', label: 'FAQ (정책/규정)', icon: HelpCircle },
     { href: '/admin/operations', label: '운영 현황 / 공지', icon: Bell },
     { href: '/admin/logs', label: '대화 로그 분석', icon: BarChart2 },
+    { href: '/admin/settings', label: '시스템 설정', icon: Settings },
   ];
 
   return (

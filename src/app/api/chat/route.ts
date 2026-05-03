@@ -87,8 +87,19 @@ export async function POST(req: Request) {
     }
     // ------------------------------------------------
 
-    // 3. AI 모델에 컨텍스트와 질문 전달하여 응답 생성
-    const answer = await generateAnswer(question, context);
+    // --- AI 페르소나 설정 가져오기 ---
+    let currentPersona = 'friendly';
+    try {
+      const settingsDoc = await adminDb.collection('settings').doc('system').get();
+      if (settingsDoc.exists) {
+        currentPersona = settingsDoc.data()?.persona || 'friendly';
+      }
+    } catch (e) {
+      console.error('Failed to fetch persona settings', e);
+    }
+
+    // 3. AI 모델에 컨텍스트, 질문, 페르소나 전달하여 응답 생성
+    const answer = await generateAnswer(question, context, currentPersona);
 
     // 4. 질문 로그 저장 (데이터 분석용) - 사용자 응답 지연을 막기 위해 비동기로 처리
     const logRef = adminDb.collection('chat_logs').doc();
