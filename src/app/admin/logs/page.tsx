@@ -98,6 +98,11 @@ export default function LogsAdmin() {
       .map(([word, count]) => ({ word, count }));
   }, [logs]);
 
+  // AI 답변 실패 및 불만족 데이터 추출 (제안 기능)
+  const failedLogs = useMemo(() => {
+    return logs.filter(log => log.feedback === 'down' || (log.contextUsed && log.contextUsed.length === 0) || log.answer.includes('제가 아는 정보가 없습니다'));
+  }, [logs]);
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       <div className="border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
@@ -131,6 +136,34 @@ export default function LogsAdmin() {
         <div className="p-4 bg-red-50 text-red-800 rounded-lg flex items-center border border-red-200">
           <AlertCircle className="w-5 h-5 mr-2" />
           {error}
+        </div>
+      )}
+
+      {/* AI Auto-suggest Alert */}
+      {!loading && failedLogs.length > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                AI 지식 보강 필요 ({failedLogs.length}건 감지)
+              </h3>
+              <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-400">
+                <p>고객이 부정적인 피드백을 남겼거나 AI가 정보를 찾지 못해 답변을 못한 사례가 발견되었습니다.</p>
+                <p className="mt-1 font-semibold">"자주 묻는 키워드"를 확인하시고, 시스템에 미등록된 정보라면 시설 정보나 운영 공지를 추가해 주세요!</p>
+              </div>
+              <div className="mt-4 flex space-x-3">
+                <a href="/admin/facilities" className="text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 underline">
+                  시설 정보 등록하기
+                </a>
+                <a href="/admin/operations" className="text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 underline">
+                  운영 공지 등록하기
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
