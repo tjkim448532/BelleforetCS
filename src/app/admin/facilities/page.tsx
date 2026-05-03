@@ -85,12 +85,12 @@ export default function FacilitiesAdmin() {
     }
   };
 
-  // 날짜 포맷팅 헬퍼
+  // 날짜 포맷팅 헬퍼 (시간 제외, 날짜만 표시)
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return '-';
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
   const fetchFacilities = async () => {
