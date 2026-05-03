@@ -787,11 +787,11 @@ export default function FacilitiesAdmin() {
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
           <div className="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             {/* Background overlay */}
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true" onClick={() => setIsEditModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-gray-900/50 backdrop-blur-sm" aria-hidden="true" onClick={() => setIsEditModalOpen(false)}></div>
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-neutral-900 rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+            <div className="relative inline-block w-full px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-neutral-900 rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-2xl sm:p-6 z-10">
               <div className="flex justify-between items-center mb-5 border-b dark:border-neutral-800 pb-3">
                 <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white" id="modal-title">
                   시설 정보 수정 (AI 지식 덮어쓰기)
