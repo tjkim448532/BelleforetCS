@@ -13,12 +13,15 @@ export async function POST(req: Request) {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const userEmail = decodedToken.email;
 
-    // 2. 관리자 이메일 권한 검증 (화이트리스트)
-    const adminEmailsEnv = process.env.ADMIN_EMAILS || '';
-    const allowedEmails = adminEmailsEnv.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    // 2. Firestore 'admin_users' 컬렉션에서 이메일 권한 검증
+    if (!userEmail) {
+      return NextResponse.json({ error: '유효한 이메일이 아닙니다.' }, { status: 403 });
+    }
 
-    // 환경 변수에 등록된 이메일이 없거나, 현재 로그인한 이메일이 목록에 없는 경우 차단
-    if (allowedEmails.length === 0 || !userEmail || !allowedEmails.includes(userEmail.toLowerCase())) {
+    const adminQuery = await adminDb.collection('admin_users').where('email', '==', userEmail.toLowerCase()).get();
+
+    // 일치하는 계정이 없으면 차단
+    if (adminQuery.empty) {
       console.warn(`Unauthorized login attempt: ${userEmail}`);
       return NextResponse.json({ error: '관리자로 등록되지 않은 구글 계정입니다.' }, { status: 403 });
     }

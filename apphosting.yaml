@@ -8,9 +8,3 @@ runConfig:
   # memoryMiB: 512
 
 # Environment variables and secrets.
-env:
-  - variable: ADMIN_EMAILS
-    value: tjkim448532@gmail.com
-    availability:
-      - BUILD
-      - RUNTIME
