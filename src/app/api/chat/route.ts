@@ -90,16 +90,21 @@ export async function POST(req: Request) {
     // 3. AI 모델에 컨텍스트와 질문 전달하여 응답 생성
     const answer = await generateAnswer(question, context);
 
-    // 4. 질문 로그 저장 (데이터 분석용)
-    const logRef = await adminDb.collection('chat_logs').add({
+    // 4. 질문 로그 저장 (데이터 분석용) - 사용자 응답 지연을 막기 위해 비동기로 처리
+    const logRef = adminDb.collection('chat_logs').doc();
+    const logId = logRef.id;
+    
+    logRef.set({
       question,
       answer,
       contextUsed: similarDocs.map(d => d.id),
       ip: ip, // IP 로깅 추가
       timestamp: new Date().toISOString(),
+    }).catch(error => {
+      console.error('Failed to save chat log in background:', error);
     });
 
-    return NextResponse.json({ answer, contextUsed: similarDocs, logId: logRef.id });
+    return NextResponse.json({ answer, contextUsed: similarDocs, logId });
   } catch (error: unknown) {
     console.error('Chat API Error:', error);
     return NextResponse.json({ error: 'Failed to generate answer' }, { status: 500 });
