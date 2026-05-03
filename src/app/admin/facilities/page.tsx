@@ -42,6 +42,9 @@ export default function FacilitiesAdmin() {
   const [smartEditResult, setSmartEditResult] = useState<{summary: string, updatedText: string} | null>(null);
   const [isSmartEditing, setIsSmartEditing] = useState(false);
 
+  // Export Bible State
+  const [isExporting, setIsExporting] = useState(false);
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -260,6 +263,35 @@ export default function FacilitiesAdmin() {
       alert((error as Error).message);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleExportBible = async () => {
+    try {
+      setIsExporting(true);
+      const response = await fetch('/api/admin/facility/export-bible');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '백서 추출 실패');
+      }
+
+      // CSV 텍스트로 다운로드
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Content-Disposition 헤더에서 파일명을 가져올 수도 있지만, 클라이언트에서도 바로 지정 가능합니다.
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `belleforet_bible_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error: unknown) {
+      alert(`백서 추출 중 오류가 발생했습니다: ${(error as Error).message}`);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -637,6 +669,14 @@ export default function FacilitiesAdmin() {
                 <span className="text-sm text-gray-500 dark:text-gray-400">총 {facilities.length}개</span>
               </div>
               <div className="flex space-x-3">
+                <button 
+                  onClick={handleExportBible} 
+                  disabled={isExporting || facilities.length === 0}
+                  className="inline-flex items-center text-sm px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-md hover:bg-yellow-100 border border-yellow-200 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {isExporting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <span className="mr-1.5">✨</span>}
+                  {isExporting ? 'AI 백서 추출 중...' : 'AI 데이터 백서 추출 (Excel)'}
+                </button>
                 {selectedIds.length > 0 && (
                   <button
                     onClick={handleBulkDelete}

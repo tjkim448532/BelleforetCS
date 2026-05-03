@@ -82,3 +82,46 @@ export async function smartEditFacilityDescription(original: string, instruction
     throw new Error('Failed to execute smart edit');
   }
 }
+
+/**
+ * 모든 시설 데이터를 AI를 통해 완벽한 데이터베이스 형태(CSV)로 추출합니다.
+ */
+export async function generateBibleCSV(facilitiesData: any[], currentDate: string): Promise<string> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: `당신은 데이터베이스 설계 및 정규화 전문가입니다.
+주어진 JSON 배열 형태의 [시설 데이터]를 분석하여 완벽한 정형 데이터베이스(CSV 형식)로 변환하세요.
+
+[Zero Data Loss 원칙 - 반드시 지킬 것]
+1. 환영 인사말이나 단순 중복 문구만 제거하세요.
+2. 운영시간, 가격, 신장 제한, 우대 조건, 할인, 환불 규정 등 구체적인 조건(Fact)은 절대 하나도 빠짐없이 '상세_특징_및_규정' 컬럼에 개조식(Bullet point)으로 기록하세요.
+3. [과거 이벤트 필터링]: 오늘 날짜는 "${currentDate}" 입니다. 설명글에 행사 기간이 명시되어 있고, 그 기한이 오늘 날짜보다 확실히 과거라면 해당 시설(이벤트)은 CSV 결과에서 아예 제외하세요.
+
+[CSV 컬럼 구조 (정확히 이 순서를 따를 것)]
+카테고리,시설명,위치,운영시간,이용요금,상세_특징_및_규정,검색태그
+
+- CSV 헤더를 첫 줄에 반드시 포함하세요.
+- 데이터 내의 쉼표(,)나 줄바꿈은 큰따옴표(" ")로 묶어서 CSV 포맷이 깨지지 않게 하세요.
+- 마크다운 기호(\`\`\`csv) 없이 순수한 CSV 텍스트만 출력하세요.`
+    });
+
+    const prompt = `[시설 데이터]\n${JSON.stringify(facilitiesData, null, 2)}`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1, // 매우 보수적이고 정확하게
+      }
+    });
+
+    let csvText = result.response.text();
+    // 마크다운 제거 (만약 출력되었다면)
+    csvText = csvText.replace(/^```(csv)?/i, '').replace(/```$/i, '').trim();
+    
+    return csvText;
+  } catch (error) {
+    console.error('Error in generateBibleCSV:', error);
+    throw new Error('Failed to generate bible CSV');
+  }
+}
