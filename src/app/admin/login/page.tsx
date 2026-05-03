@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Loader2, AlertCircle } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase/client';
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,10 +19,17 @@ export default function AdminLogin() {
     setError('');
 
     try {
+      // 1. Firebase Client SDK로 로그인
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // 2. Firebase ID Token 획득
+      const idToken = await userCredential.user.getIdToken();
+
+      // 3. 백엔드 API에 ID Token 전송하여 세션 쿠키 생성 요청
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ idToken }),
       });
 
       const data = await res.json();
@@ -49,12 +59,28 @@ export default function AdminLogin() {
             관리자 로그인
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            벨포레 AI 챗봇 시스템 CMS 접근을 위해<br />마스터 비밀번호를 입력해 주세요.
+            Firebase 관리자 이메일과 비밀번호를 입력해 주세요.
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                이메일 주소
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-neutral-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm bg-white dark:bg-neutral-900"
+                placeholder="관리자 이메일 주소"
+              />
+            </div>
             <div>
               <label htmlFor="password" className="sr-only">
                 비밀번호
@@ -63,11 +89,12 @@ export default function AdminLogin() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-neutral-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm bg-white dark:bg-neutral-900"
-                placeholder="관리자 마스터 비밀번호 입력"
+                placeholder="비밀번호"
               />
             </div>
           </div>
@@ -82,7 +109,7 @@ export default function AdminLogin() {
           <div>
             <button
               type="submit"
-              disabled={loading || !password}
+              disabled={loading || !email || !password}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

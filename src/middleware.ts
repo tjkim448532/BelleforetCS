@@ -11,8 +11,8 @@ export function middleware(request: NextRequest) {
 
   // 보호할 경로 (/admin 하위 모든 페이지 및 /api/admin 하위 모든 API)
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-    // 쿠키에서 인증 토큰 확인
-    const adminSession = request.cookies.get('admin_session')?.value;
+    // 쿠키에서 Firebase 세션 토큰 확인 (Firebase Hosting 필수 쿠키명 __session)
+    const adminSession = request.cookies.get('__session')?.value;
 
     // 인증 토큰이 없거나 유효하지 않으면 거부
     if (!adminSession) {

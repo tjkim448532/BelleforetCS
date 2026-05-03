@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Database, Bell } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase/client';
 
 export default function AdminLayout({
   children,
@@ -19,7 +21,12 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     try {
+      // 1. Firebase Client SDK 로그아웃
+      await signOut(auth);
+      
+      // 2. 서버 사이드 세션 쿠키 삭제
       await fetch('/api/admin/logout', { method: 'POST' });
+      
       router.push('/admin/login');
       router.refresh();
     } catch (error) {
