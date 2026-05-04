@@ -128,9 +128,9 @@ export async function generateBibleCSV(facilitiesData: any[], currentDate: strin
     csvText = csvText.replace(/^```(csv)?/i, '').replace(/```$/i, '').trim();
     
     return csvText;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in generateBibleCSV:', error);
-    throw new Error('Failed to generate bible CSV');
+    throw new Error(`AI 백서 생성 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
   }
 }
 

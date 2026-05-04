@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { generateBibleCSV } from '@/lib/gemini';
 
+export const maxDuration = 60; // Allow up to 60 seconds for AI processing
+
 export async function GET(req: Request) {
   try {
     // 1. 인증 체크
