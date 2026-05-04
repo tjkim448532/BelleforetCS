@@ -64,7 +64,7 @@ ${context}`
 export async function smartEditFacilityDescription(original: string, instruction: string): Promise<{summary: string, updatedText: string}> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction: `당신은 텍스트 편집 보조 AI입니다. 사용자가 제공한 [원본 텍스트]를 [수정 지시]에 맞게 수정하세요.
 응답은 반드시 아래 JSON 형식으로만 반환해야 합니다. 마크다운(\`\`\`json) 기호 없이 순수한 JSON 텍스트만 출력하세요.
 {
@@ -97,7 +97,7 @@ export async function smartEditFacilityDescription(original: string, instruction
 export async function generateBibleCSV(facilitiesData: any[], currentDate: string): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction: `당신은 데이터베이스 설계 및 정규화 전문가입니다.
 주어진 JSON 배열 형태의 [시설 데이터]를 분석하여 완벽한 정형 데이터베이스(CSV 형식)로 변환하세요.
 
@@ -140,7 +140,7 @@ export async function generateBibleCSV(facilitiesData: any[], currentDate: strin
 export async function analyzeFailedLogs(logs: any[]): Promise<any[]> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction: `당신은 고객 서비스 및 데이터베이스 관리 전문가입니다.
 주어진 [실패한 대화 로그]는 챗봇이 제대로 답변하지 못했거나 고객이 불만족한 사례들입니다.
 이 로그들을 분석하여, 공통적인 고객의 불만이나 부족한 정보(Pain point)를 찾아내고,
