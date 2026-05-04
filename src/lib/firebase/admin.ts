@@ -27,3 +27,11 @@ export const getFirebaseAdminApp = () => {
 
 export const adminDb = getFirebaseAdminApp().firestore();
 export const adminAuth = getFirebaseAdminApp().auth();
+
+export const verifyAdminSession = async (req: Request) => {
+  const sessionCookie = req.headers.get('cookie')?.split('__session=')[1]?.split(';')[0];
+  if (!sessionCookie) {
+    throw new Error('Unauthorized');
+  }
+  return await adminAuth.verifySessionCookie(sessionCookie, true);
+};

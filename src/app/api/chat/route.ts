@@ -3,41 +3,44 @@ import { querySimilarDocuments } from '@/lib/pinecone';
 import { generateAnswer } from '@/lib/gemini';
 import { adminDb } from '@/lib/firebase/admin';
 
-// --- In-Memory Rate Limiter (도배 방지) ---
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
-// 메모리 누수 방지를 위해 5분마다 만료된 데이터 청소
-setInterval(() => {
-  const nowMs = Date.now();
-  for (const [key, value] of rateLimitMap.entries()) {
-    if (nowMs >= value.resetTime) {
-      rateLimitMap.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
-
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    
-    // Rate Limiting 검사: 동일 IP에서 1분에 15회 초과 시 차단
+    const rawIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+    const ip = rawIp.trim();
     const nowMs = Date.now();
-    const limitData = rateLimitMap.get(ip);
     
-    if (limitData) {
-      if (nowMs < limitData.resetTime) {
-        limitData.count++;
-        if (limitData.count > 15) {
+    // --- Firestore 기반 Rate Limiting (도배 방지) ---
+    // 동일 IP에서 1분에 15회 초과 시 차단
+    if (ip !== 'unknown') {
+      const sanitizedIp = ip.replace(/[^a-zA-Z0-9]/g, '_');
+      const rateLimitRef = adminDb.collection('rate_limits').doc(sanitizedIp);
+      
+      try {
+        await adminDb.runTransaction(async (transaction) => {
+          const doc = await transaction.get(rateLimitRef);
+          if (!doc.exists) {
+            transaction.set(rateLimitRef, { count: 1, resetTime: nowMs + 60000 });
+          } else {
+            const data = doc.data()!;
+            if (nowMs < data.resetTime) {
+              if (data.count >= 15) {
+                throw new Error('RATE_LIMIT_EXCEEDED');
+              }
+              transaction.update(rateLimitRef, { count: data.count + 1 });
+            } else {
+              // Reset count if time expired
+              transaction.update(rateLimitRef, { count: 1, resetTime: nowMs + 60000 });
+            }
+          }
+        });
+      } catch (error: any) {
+        if (error.message === 'RATE_LIMIT_EXCEEDED') {
           console.warn(`Rate limit exceeded for IP: ${ip}`);
           return NextResponse.json({ 
-            answer: '너무 많은 질문을 연속으로 하셨습니다. 잠시 후 다시 시도해주세요.' 
+            answer: '너무 많은 질문을 연속으로 하셨습니다. 1분 후 다시 시도해주세요.' 
           }, { status: 429 });
         }
-      } else {
-        rateLimitMap.set(ip, { count: 1, resetTime: nowMs + 60000 });
       }
-    } else {
-      rateLimitMap.set(ip, { count: 1, resetTime: nowMs + 60000 });
     }
 
     const data = await req.json();

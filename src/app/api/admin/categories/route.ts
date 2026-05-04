@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 
 const SETTINGS_DOC = 'settings/facility_categories';
 const DEFAULT_CATEGORIES = ['레저', '숙박', '식음', '기타'];
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await verifyAdminSession(req);
     const docRef = adminDb.doc(SETTINGS_DOC);
     const docSnap = await docRef.get();
     
@@ -26,6 +27,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await verifyAdminSession(req);
     const { action, category, oldCategory, newCategory } = await req.json();
     
     const docRef = adminDb.doc(SETTINGS_DOC);

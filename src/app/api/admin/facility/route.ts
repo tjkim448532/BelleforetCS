@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { upsertDocument, deleteDocument } from '@/lib/pinecone';
 
 export async function POST(req: Request) {
   try {
+    await verifyAdminSession(req);
     const data = await req.json();
     const { name, category, description, location, tags, status, type } = data;
 
@@ -62,8 +63,9 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await verifyAdminSession(req);
     const snapshot = await adminDb.collection('facilities').orderBy('createdAt', 'desc').get();
     const facilities = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -78,6 +80,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
+    await verifyAdminSession(req);
     const data = await req.json();
     const { id, name, category, description, location, tags, status, type } = data;
 
@@ -124,6 +127,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    await verifyAdminSession(req);
     const { searchParams } = new URL(req.url);
     const idParam = searchParams.get('id');
     const idsParam = searchParams.get('ids');

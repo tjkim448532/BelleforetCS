@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await verifyAdminSession(req);
     const docRef = adminDb.collection('settings').doc('system');
     const doc = await docRef.get();
     
@@ -19,6 +20,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await verifyAdminSession(req);
     const data = await req.json();
     const { persona } = data;
 

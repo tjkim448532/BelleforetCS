@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await verifyAdminSession(req);
     // Limit to 200 most recent logs to avoid overloading the UI
     const snapshot = await adminDb.collection('chat_logs')
       .orderBy('timestamp', 'desc')
@@ -23,6 +24,7 @@ export async function GET() {
 
 export async function DELETE(req: Request) {
   try {
+    await verifyAdminSession(req);
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     const idsParam = searchParams.get('ids');

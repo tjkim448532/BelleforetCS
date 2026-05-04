@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 
 export async function POST(req: Request) {
   try {
+    await verifyAdminSession(req);
     const data = await req.json();
     const { title, content, isActive, startDate, endDate } = data;
 
@@ -31,8 +32,9 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await verifyAdminSession(req);
     const snapshot = await adminDb.collection('operational_notices').orderBy('createdAt', 'desc').get();
     const notices = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -47,6 +49,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
+    await verifyAdminSession(req);
     const data = await req.json();
     const { id, title, content, isActive, startDate, endDate } = data;
 
@@ -75,6 +78,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    await verifyAdminSession(req);
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
