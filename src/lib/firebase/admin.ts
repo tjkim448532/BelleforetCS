@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { cookies } from 'next/headers';
 
 export const getFirebaseAdminApp = () => {
   if (admin.apps.length > 0) {
@@ -28,8 +29,10 @@ export const getFirebaseAdminApp = () => {
 export const adminDb = getFirebaseAdminApp().firestore();
 export const adminAuth = getFirebaseAdminApp().auth();
 
-export const verifyAdminSession = async (req: Request) => {
-  const sessionCookie = req.headers.get('cookie')?.split('__session=')[1]?.split(';')[0];
+export const verifyAdminSession = async (req?: Request) => {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('__session')?.value;
+  
   if (!sessionCookie) {
     throw new Error('Unauthorized');
   }

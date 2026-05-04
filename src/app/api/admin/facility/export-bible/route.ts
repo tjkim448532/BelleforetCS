@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { generateBibleCSV } from '@/lib/gemini';
 
 export async function GET(req: Request) {
   try {
     // 1. 인증 체크
-    const sessionCookie = req.headers.get('cookie')?.split('__session=')[1]?.split(';')[0];
-    if (!sessionCookie) {
-      return NextResponse.json({ error: '인증되지 않은 사용자입니다.' }, { status: 401 });
-    }
-    await adminAuth.verifySessionCookie(sessionCookie, true);
+    await verifyAdminSession(req);
 
     // 2. 전체 시설 데이터 가져오기
     const snapshot = await adminDb.collection('facilities').get();
@@ -45,7 +41,14 @@ export async function GET(req: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Export Bible Error:', error);
+    console.error('Export Bible Error stack:', error?.stack);
+    console.error('Export Bible Error message:', error?.message);
+    
+    // Auth 에러 처리
+    if (error?.message === 'Unauthorized' || error?.code?.startsWith('auth/')) {
+      return NextResponse.json({ error: '인증되지 않은 사용자입니다. 다시 로그인해주세요.' }, { status: 401 });
+    }
+    
     return NextResponse.json({ error: error.message || '백서 추출 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }

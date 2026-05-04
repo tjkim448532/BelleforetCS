@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { smartEditFacilityDescription } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
     // 1. 인증 체크
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('__session')?.value;
-    if (!sessionCookie) {
-      return NextResponse.json({ error: '인증되지 않은 사용자입니다.' }, { status: 401 });
-    }
-    await adminAuth.verifySessionCookie(sessionCookie, true);
+    await verifyAdminSession(req);
 
     // 2. 바디 파싱
     const { originalText, instruction } = await req.json();
@@ -25,6 +19,9 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Smart Edit Error:', error);
+    if (error?.message === 'Unauthorized' || error?.code?.startsWith('auth/')) {
+      return NextResponse.json({ error: '인증되지 않은 사용자입니다. 다시 로그인해주세요.' }, { status: 401 });
+    }
     return NextResponse.json({ error: error.message || 'AI 수정 처리 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
