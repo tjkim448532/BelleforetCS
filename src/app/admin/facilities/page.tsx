@@ -31,6 +31,7 @@ export default function FacilitiesAdmin() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Categories State
   const [categories, setCategories] = useState<string[]>(['레저', '숙박', '식음', '기타']);
@@ -391,6 +392,17 @@ export default function FacilitiesAdmin() {
     });
   };
 
+  const filteredFacilities = facilities.filter(fac => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (fac.name || '').toLowerCase().includes(q) ||
+      (fac.category || '').toLowerCase().includes(q) ||
+      (fac.location || '').toLowerCase().includes(q) ||
+      (fac.description || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8 border-b pb-4">
@@ -664,12 +676,31 @@ export default function FacilitiesAdmin() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:justify-between lg:items-center">
               <div className="flex items-center space-x-4">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">등록된 시설 목록</h3>
-                <span className="text-sm text-gray-500 dark:text-gray-400">총 {facilities.length}개</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {searchQuery ? `검색결과 ${filteredFacilities.length}개 (총 ${facilities.length}개)` : `총 ${facilities.length}개`}
+                </span>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="시설명, 내용 검색..."
+                    className="block w-full sm:w-64 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm focus:border-green-500 focus:outline-none"
+                  />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 <button 
                   onClick={handleExportBible} 
                   disabled={isExporting || facilities.length === 0}
@@ -698,6 +729,8 @@ export default function FacilitiesAdmin() {
               </div>
             ) : facilities.length === 0 ? (
               <div className="text-center py-10 text-gray-500">등록된 데이터가 없습니다.</div>
+            ) : filteredFacilities.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">'{searchQuery}'에 대한 검색 결과가 없습니다.</div>
             ) : (
               <div className="overflow-x-auto border rounded-lg dark:border-neutral-700">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
@@ -707,10 +740,10 @@ export default function FacilitiesAdmin() {
                         <input
                           type="checkbox"
                           className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          checked={facilities.length > 0 && selectedIds.length === facilities.length}
+                          checked={filteredFacilities.length > 0 && selectedIds.length === filteredFacilities.length}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedIds(facilities.map(f => f.id as string).filter(Boolean));
+                              setSelectedIds(filteredFacilities.map(f => f.id as string).filter(Boolean));
                             } else {
                               setSelectedIds([]);
                             }
@@ -724,7 +757,7 @@ export default function FacilitiesAdmin() {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-700">
-                    {facilities.map((fac) => (
+                    {filteredFacilities.map((fac) => (
                       <tr key={fac.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800/50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
