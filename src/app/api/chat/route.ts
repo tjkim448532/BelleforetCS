@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
-    const { question } = data;
+    const { question, language = 'ko' } = data;
 
     if (!question) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
@@ -101,8 +101,8 @@ export async function POST(req: Request) {
       console.error('Failed to fetch persona settings', e);
     }
 
-    // 3. AI 모델에 컨텍스트, 질문, 페르소나 전달하여 응답 생성
-    const answer = await generateAnswer(question, context, currentPersona);
+    // 3. AI 모델에 컨텍스트, 질문, 페르소나, 언어 전달하여 응답 생성
+    const answer = await generateAnswer(question, context, currentPersona, language);
 
     // 4. 질문 로그 저장 (데이터 분석용) - 사용자 응답 지연을 막기 위해 비동기로 처리
     const logRef = adminDb.collection('chat_logs').doc();

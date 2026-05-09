@@ -13,12 +13,38 @@ interface Message {
   feedback?: 'up' | 'down' | null;
 }
 
+const translations = {
+  ko: {
+    greeting: '안녕하세요! 벨포레 프론트 데스크 AI입니다. 시설 운영 시간, 요금, 위치 등 무엇이든 물어보세요.',
+    placeholder: '무엇이든 물어보세요...',
+    error: '앗, 시스템에 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+    quick1: '목장 운영시간',
+    quick1Q: '목장 운영시간은 어떻게 되나요?',
+    quick2: '미디어아트 요금',
+    quick2Q: '미디어아트 센터 요금이 얼마인가요?',
+    quick3: '콘도 위치',
+    quick3Q: '콘도 위치가 어디쯤인가요?',
+  },
+  en: {
+    greeting: 'Hello! I am the Belle Foret Front Desk AI. Ask me anything about facility hours, prices, locations, etc.',
+    placeholder: 'Ask me anything...',
+    error: 'Oops, a temporary system error occurred. Please try again later.',
+    quick1: 'Farm Hours',
+    quick1Q: 'What are the operating hours of the farm?',
+    quick2: 'Media Art Price',
+    quick2Q: 'How much is the Media Art Center?',
+    quick3: 'Condo Location',
+    quick3Q: 'Where is the condo located?',
+  }
+};
+
 export default function ChatPage() {
+  const [lang, setLang] = useState<'ko' | 'en'>('ko');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: '안녕하세요! 벨포레 프론트 데스크 AI입니다. 시설 운영 시간, 요금, 위치 등 무엇이든 물어보세요.',
+      content: translations['ko'].greeting,
     }
   ]);
   const [input, setInput] = useState('');
@@ -33,6 +59,16 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: translations[lang].greeting,
+      }
+    ]);
+  }, [lang]);
+
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
 
@@ -45,7 +81,7 @@ export default function ChatPage() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text }),
+        body: JSON.stringify({ question: text, language: lang }),
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -66,7 +102,7 @@ export default function ChatPage() {
       const errorMessage: Message = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant', 
-        content: '앗, 시스템에 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' 
+        content: translations[lang].error 
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -100,15 +136,31 @@ export default function ChatPage() {
       <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-6 py-4 flex items-center justify-between shadow-sm z-10">
         <h1 className="text-xl font-bold text-green-700 dark:text-green-500 tracking-tight flex items-center">
           <Bot className="mr-2" size={24} />
-          벨포레 AI 컨시어지
+          {lang === 'ko' ? '벨포레 AI 컨시어지' : 'Belle Foret AI'}
         </h1>
-        <Link 
-          href="/admin/login" 
-          className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-        >
-          <Settings size={16} className="mr-1" />
-          관리자 로그인
-        </Link>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center bg-gray-100 dark:bg-neutral-800 rounded-full p-1">
+            <button
+              onClick={() => setLang('ko')}
+              className={clsx("px-3 py-1 rounded-full text-xs font-medium transition-colors", lang === 'ko' ? "bg-white dark:bg-neutral-700 shadow text-green-700 dark:text-green-400" : "text-gray-500")}
+            >
+              한국어
+            </button>
+            <button
+              onClick={() => setLang('en')}
+              className={clsx("px-3 py-1 rounded-full text-xs font-medium transition-colors", lang === 'en' ? "bg-white dark:bg-neutral-700 shadow text-green-700 dark:text-green-400" : "text-gray-500")}
+            >
+              English
+            </button>
+          </div>
+          <Link 
+            href="/admin/login" 
+            className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          >
+            <Settings size={16} className="mr-1" />
+            {lang === 'ko' ? '관리자 로그인' : 'Admin'}
+          </Link>
+        </div>
       </header>
 
       {/* Chat Area */}
@@ -189,22 +241,22 @@ export default function ChatPage() {
           {/* Quick actions */}
           <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
             <button 
-              onClick={() => handleQuickQuestion('목장 운영시간은 어떻게 되나요?')}
+              onClick={() => handleQuickQuestion(translations[lang].quick1Q)}
               className="flex items-center flex-shrink-0 px-3 py-1.5 rounded-full border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 transition"
             >
-              <Clock size={14} className="mr-1.5" /> 목장 운영시간
+              <Clock size={14} className="mr-1.5" /> {translations[lang].quick1}
             </button>
             <button 
-              onClick={() => handleQuickQuestion('미디어아트 센터 요금이 얼마인가요?')}
+              onClick={() => handleQuickQuestion(translations[lang].quick2Q)}
               className="flex items-center flex-shrink-0 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-100 transition"
             >
-              <DollarSign size={14} className="mr-1.5" /> 미디어아트 요금
+              <DollarSign size={14} className="mr-1.5" /> {translations[lang].quick2}
             </button>
             <button 
-              onClick={() => handleQuickQuestion('콘도 위치가 어디쯤인가요?')}
+              onClick={() => handleQuickQuestion(translations[lang].quick3Q)}
               className="flex items-center flex-shrink-0 px-3 py-1.5 rounded-full border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-sm hover:bg-purple-100 transition"
             >
-              <MapPin size={14} className="mr-1.5" /> 콘도 위치
+              <MapPin size={14} className="mr-1.5" /> {translations[lang].quick3}
             </button>
           </div>
 
@@ -216,7 +268,7 @@ export default function ChatPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="무엇이든 물어보세요..."
+              placeholder={translations[lang].placeholder}
               className="flex-1 bg-transparent px-6 py-4 outline-none text-neutral-800 dark:text-neutral-200 placeholder-neutral-400"
               disabled={isLoading}
             />

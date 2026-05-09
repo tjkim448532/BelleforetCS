@@ -20,7 +20,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
 /**
  * 컨텍스트를 기반으로 답변을 생성합니다. (Gemini Chat Completion)
  */
-export async function generateAnswer(query: string, context: string, persona: string = 'friendly'): Promise<string> {
+export async function generateAnswer(query: string, context: string, persona: string = 'friendly', language: string = 'ko'): Promise<string> {
   try {
     let personaInstruction = "항상 공손하고 친절한 호텔리어처럼 전문적인 한국어 존댓말을 사용하세요.";
     if (persona === 'professional') {
@@ -31,18 +31,37 @@ export async function generateAnswer(query: string, context: string, persona: st
       personaInstruction = "All your responses MUST be in fluent English, acting as a welcoming concierge for foreign tourists.";
     }
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
-      systemInstruction: `당신은 '벨포레(Belle Foret)' 리조트의 공식 AI 지식 응답 시스템입니다. 
+    if (language === 'en') {
+      personaInstruction = "All your responses MUST be in fluent English. Act as a welcoming and polite concierge for foreign tourists at Belle Foret resort. Answer questions accurately based only on the provided context.";
+    }
+
+    const systemInstruction = language === 'en' 
+      ? `You are the official AI knowledge response system for 'Belle Foret' resort.
+Answer the user's [Question] using ONLY the provided [Context].
+[Important Rules]
+1. Never hallucinate or invent information not found in the context. Do not use external general knowledge.
+2. If the context does not contain the answer, you must reply: "I'm sorry, but I don't have enough information to answer that question based on the provided data. Please contact the front desk." Do not make any guesses.
+3. When giving directions or locations, do not output full street addresses (like Chungbuk Jeungpyeong-gun...). Only provide natural, relative directions based on landmarks inside the resort.
+4. DO NOT use any Markdown formatting like **bold** or *italics*. Use plain text only. For lists, use hyphens (-) instead of asterisks (*).
+${personaInstruction}
+
+[Context]
+${context}`
+      : `당신은 '벨포레(Belle Foret)' 리조트의 공식 AI 지식 응답 시스템입니다. 
  제공된 [컨텍스트] 정보만을 사용하여 사용자의 [질문]에 답변하세요.
  [중요 규칙]
  1. 절대 컨텍스트에 없는 내용을 지어내거나(Hallucination) 외부의 일반적인 지식으로 답변하지 마세요.
  2. 컨텍스트만으로 답변할 수 없는 내용이라면, 어떠한 유추도 하지 말고 반드시 "죄송합니다. 제공된 정보만으로는 해당 질문에 답변할 수 없습니다. 프론트 데스크에 문의해주세요."(영문 모드일 경우 영어로)라고 응답하세요.
  3. 위치나 길안내를 할 때 "충북 증평군 도안면..."과 같은 불필요한 전체 도로명/지번 주소는 절대 출력하지 말고, 리조트 내부 랜드마크 기준의 상대적 위치만 자연스럽게 안내하세요.
+ 4. 마크다운 포맷(특히 ** 기호나 * 기호)을 절대 사용하지 마세요. 모든 답변은 순수한 평문(Plain Text)으로 작성하며, 목록이 필요할 때는 별표(*) 대신 하이픈(-)을 사용하세요.
  ${personaInstruction}
 
 [컨텍스트]
-${context}`
+${context}`;
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-flash-latest',
+      systemInstruction
     });
 
     const result = await model.generateContent({
@@ -52,7 +71,13 @@ ${context}`
       }
     });
 
-    return result.response.text() || '답변을 생성할 수 없습니다.';
+    let answerText = result.response.text() || '답변을 생성할 수 없습니다.';
+    
+    // AI가 마크다운을 썼을 경우를 대비한 후처리 로직 (강제 제거)
+    answerText = answerText.replace(/\*\*/g, ''); // 굵게 표시 제거
+    answerText = answerText.replace(/^\s*\*\s/gm, '- '); // 불릿 포인트(*)를 하이픈(-)으로 교체
+
+    return answerText;
   } catch (error) {
     console.error('Error generating answer:', error);
     throw new Error('Failed to generate answer');
