@@ -16,6 +16,8 @@ export default function FacilitiesAdmin() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [duplicateAction, setDuplicateAction] = useState<'merge' | 'overwrite'>('merge');
+  const [showAdvancedSingle, setShowAdvancedSingle] = useState(false);
+  const [showAdvancedBulk, setShowAdvancedBulk] = useState(false);
   
   // Bulk Upload State
   const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage' | 'categories'>('single');
@@ -531,38 +533,51 @@ export default function FacilitiesAdmin() {
             />
           </div>
 
-          {/* 중복 데이터 처리 방식 */}
+          {/* 중복 데이터 처리 방식 (고급 옵션으로 숨김) */}
           <div className="border-t border-gray-200 dark:border-neutral-800 pt-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              중복 데이터 처리 방식 (동일한 시설명이 이미 존재할 경우)
-            </label>
-            <div className="flex space-x-6">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="singleDuplicateAction"
-                  value="merge"
-                  checked={duplicateAction === 'merge'}
-                  onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
-                  className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                />
-                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">내용 병합하기 (추천)</span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="singleDuplicateAction"
-                  value="overwrite"
-                  checked={duplicateAction === 'overwrite'}
-                  onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
-                  className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                />
-                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">덮어쓰기 (기존 내용 삭제)</span>
-              </label>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              * 동일한 이름의 시설을 추가할 때, 기존 설명 텍스트를 유지할지 덮어쓸지 선택합니다. (카테고리, 위치 등은 최신값으로 업데이트됨)
-            </p>
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSingle(!showAdvancedSingle)}
+              className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 flex items-center transition-colors"
+            >
+              {showAdvancedSingle ? '[-] 고급 옵션 닫기' : '[+] 고급 옵션 보기 (중복 데이터 처리 방식)'}
+            </button>
+            
+            {showAdvancedSingle && (
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-neutral-800/50 rounded-lg border border-gray-200 dark:border-neutral-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  중복 데이터 처리 방식 (동일한 시설명이 이미 존재할 경우)
+                </label>
+                <div className="flex space-x-6">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="singleDuplicateAction"
+                      value="merge"
+                      checked={duplicateAction === 'merge'}
+                      onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                      className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">내용 병합하기 (추천)</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="singleDuplicateAction"
+                      value="overwrite"
+                      checked={duplicateAction === 'overwrite'}
+                      onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                      className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                    />
+                    <span className="ml-2 text-sm text-red-600 dark:text-red-400 font-medium">덮어쓰기 (기존 내용 완전 삭제)</span>
+                  </label>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  * <strong>내용 병합하기(추천)</strong>: AI가 기존 내용과 새 내용을 똑똑하게 합칩니다. <br/>
+                  * <strong>덮어쓰기</strong>: 시설 리뉴얼 등 <strong>기존 데이터를 완전히 초기화</strong>해야 할 때만 제한적으로 사용하세요.
+                </p>
+              </div>
+            )}
           </div>
 
           {message && (
@@ -611,33 +626,49 @@ export default function FacilitiesAdmin() {
             </div>
 
             <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg border border-gray-200 dark:border-neutral-700">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                중복 데이터 처리 방식 (동일한 시설명이 이미 존재할 경우)
-              </label>
-              <div className="flex space-x-6">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="bulkDuplicateAction"
-                    value="merge"
-                    checked={duplicateAction === 'merge'}
-                    onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
-                    className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">내용 병합하기 (추천)</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="bulkDuplicateAction"
-                    value="overwrite"
-                    checked={duplicateAction === 'overwrite'}
-                    onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
-                    className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">덮어쓰기 (기존 내용 삭제)</span>
-                </label>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedBulk(!showAdvancedBulk)}
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 flex items-center transition-colors mb-2"
+              >
+                {showAdvancedBulk ? '[-] 고급 옵션 닫기' : '[+] 고급 옵션 보기 (중복 데이터 처리 방식)'}
+              </button>
+              
+              {showAdvancedBulk && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-neutral-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    중복 데이터 처리 방식 (동일한 시설명이 이미 존재할 경우)
+                  </label>
+                  <div className="flex space-x-6">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="bulkDuplicateAction"
+                        value="merge"
+                        checked={duplicateAction === 'merge'}
+                        onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                        className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">내용 병합하기 (추천)</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="bulkDuplicateAction"
+                        value="overwrite"
+                        checked={duplicateAction === 'overwrite'}
+                        onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                        className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                      />
+                      <span className="ml-2 text-sm text-red-600 dark:text-red-400 font-medium">덮어쓰기 (기존 내용 완전 삭제)</span>
+                    </label>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    * <strong>내용 병합하기(추천)</strong>: AI가 기존 내용과 새 내용을 똑똑하게 합칩니다. <br/>
+                    * <strong>덮어쓰기</strong>: 기존 데이터를 완전히 무시하고 CSV 내용으로 초기화할 때만 사용하세요.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-lg p-8 text-center relative hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
