@@ -15,6 +15,7 @@ export default function FacilitiesAdmin() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [duplicateAction, setDuplicateAction] = useState<'merge' | 'overwrite'>('merge');
   
   // Bulk Upload State
   const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage' | 'categories'>('single');
@@ -168,7 +169,8 @@ export default function FacilitiesAdmin() {
       const payload = {
         ...formData,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-        status: 'approved' // 테스트 시나리오를 위해 바로 승인 및 벡터화 트리거
+        status: 'approved', // 테스트 시나리오를 위해 바로 승인 및 벡터화 트리거
+        duplicateAction
       };
 
       const response = await fetch('/api/admin/facility', {
@@ -315,7 +317,8 @@ export default function FacilitiesAdmin() {
         location: row['위치'] || '',
         description: row['설명'] || '',
         tags: (row['태그'] || '').split(',').map(t => t.trim()).filter(Boolean),
-        status: 'approved'
+        status: 'approved',
+        duplicateAction
       };
 
       if (!payload.name || !payload.description) {
@@ -528,6 +531,40 @@ export default function FacilitiesAdmin() {
             />
           </div>
 
+          {/* 중복 데이터 처리 방식 */}
+          <div className="border-t border-gray-200 dark:border-neutral-800 pt-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              중복 데이터 처리 방식 (동일한 시설명이 이미 존재할 경우)
+            </label>
+            <div className="flex space-x-6">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="singleDuplicateAction"
+                  value="merge"
+                  checked={duplicateAction === 'merge'}
+                  onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                  className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                />
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">내용 병합하기 (추천)</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="singleDuplicateAction"
+                  value="overwrite"
+                  checked={duplicateAction === 'overwrite'}
+                  onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                  className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                />
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">덮어쓰기 (기존 내용 삭제)</span>
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              * 동일한 이름의 시설을 추가할 때, 기존 설명 텍스트를 유지할지 덮어쓸지 선택합니다. (카테고리, 위치 등은 최신값으로 업데이트됨)
+            </p>
+          </div>
+
           {message && (
             <div className={`p-4 rounded-md text-sm ${message.includes('성공') ? 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
               {message}
@@ -571,6 +608,36 @@ export default function FacilitiesAdmin() {
               <p className="mt-2 text-xs text-blue-600 dark:text-blue-500">
                 * AI 무료 요금제 제한(분당 15회) 방지를 위해 <strong>데이터 1건당 약 4.5초의 학습 시간</strong>이 소요됩니다. (창을 닫지 마세요)
               </p>
+            </div>
+
+            <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg border border-gray-200 dark:border-neutral-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                중복 데이터 처리 방식 (동일한 시설명이 이미 존재할 경우)
+              </label>
+              <div className="flex space-x-6">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="bulkDuplicateAction"
+                    value="merge"
+                    checked={duplicateAction === 'merge'}
+                    onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                    className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">내용 병합하기 (추천)</span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="bulkDuplicateAction"
+                    value="overwrite"
+                    checked={duplicateAction === 'overwrite'}
+                    onChange={(e) => setDuplicateAction(e.target.value as 'merge' | 'overwrite')}
+                    className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">덮어쓰기 (기존 내용 삭제)</span>
+                </label>
+              </div>
             </div>
 
             <div className="border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-lg p-8 text-center relative hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">

@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { upsertDocument, deleteDocument } from '@/lib/pinecone';
+import { mergeFacilityDescription } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
     await verifyAdminSession(req);
     const data = await req.json();
-    const { name, category, description, location, tags, status, type } = data;
+    const { name, category, description, location, tags, status, type, duplicateAction } = data;
 
     if (!name || !description) {
       return NextResponse.json({ error: 'Name and description are required' }, { status: 400 });
@@ -16,18 +17,31 @@ export async function POST(req: Request) {
     const snapshot = await adminDb.collection('facilities').where('name', '==', name).limit(1).get();
     let docRef;
     let isUpdate = false;
+    let existingData: any = null;
 
     if (!snapshot.empty) {
       docRef = snapshot.docs[0].ref;
+      existingData = snapshot.docs[0].data();
       isUpdate = true;
     } else {
       docRef = adminDb.collection('facilities').doc();
     }
 
+    // 설명(Description) 병합 로직 (CQRS Read Model 업데이트)
+    let finalDescription = description;
+    if (isUpdate && existingData && existingData.description) {
+      if (duplicateAction === 'overwrite') {
+        finalDescription = description;
+      } else {
+        // AI 기반 지능형 병합 로직 호출
+        finalDescription = await mergeFacilityDescription(existingData.description, description);
+      }
+    }
+
     const facilityData: Record<string, unknown> = {
       name,
       category: category || '기타',
-      description,
+      description: finalDescription,
       location: location || '',
       tags: tags || [],
       status: status || 'pending',
@@ -39,11 +53,24 @@ export async function POST(req: Request) {
       facilityData.createdAt = new Date().toISOString();
     }
 
+    // 1. Write DB에 로그 남기기 (Append-Only Event Store)
+    const editLog = {
+      facilityId: docRef.id,
+      facilityName: name,
+      action: isUpdate ? 'update' : 'create',
+      method: 'POST',
+      submittedData: { name, category, description, location, tags, status, type },
+      mergedDescription: finalDescription,
+      timestamp: new Date().toISOString(),
+    };
+    await adminDb.collection('facility_edits').add(editLog);
+
+    // 2. Read DB (Golden Record) 갱신
     await docRef.set(facilityData, { merge: true });
 
     // 바로 활성화(승인) 상태로 요청이 왔다면 벡터화 진행
     if (facilityData.status === 'approved') {
-      const textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${description}\n태그: ${(facilityData.tags as string[]).join(', ')}`;
+      const textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${finalDescription}\n태그: ${(facilityData.tags as string[]).join(', ')}`;
       
       await upsertDocument({
         id: docRef.id,
@@ -89,10 +116,24 @@ export async function PUT(req: Request) {
     }
 
     const docRef = adminDb.collection('facilities').doc(id);
+    const docSnap = await docRef.get();
+    
+    let finalDescription = description;
+
+    if (docSnap.exists) {
+      const existingData = docSnap.data();
+      // 기존 텍스트와 다르고, 빈 값이 아닐 때만 AI 병합 수행 (수동 편집 고려)
+      // 편집 창에서 관리자가 완전히 다른 내용을 작성했을 수 있으므로 AI 병합을 거쳐 
+      // 기존 유실 방지(주의사항 등)를 보장합니다.
+      if (existingData && existingData.description && existingData.description !== description) {
+        finalDescription = await mergeFacilityDescription(existingData.description, description);
+      }
+    }
+
     const updatedFacility = {
       name,
       category: category || '기타',
-      description,
+      description: finalDescription,
       location: location || '',
       tags: tags || [],
       status: status || 'approved',
@@ -100,7 +141,19 @@ export async function PUT(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    // Firebase 업데이트
+    // 1. Write DB에 로그 남기기 (이벤트 소싱)
+    const editLog = {
+      facilityId: id,
+      facilityName: name,
+      action: 'update',
+      method: 'PUT',
+      submittedData: { name, category, description, location, tags, status, type },
+      mergedDescription: finalDescription,
+      timestamp: new Date().toISOString(),
+    };
+    await adminDb.collection('facility_edits').add(editLog);
+
+    // 2. Read DB (Golden Record) 갱신
     await docRef.update(updatedFacility);
 
     // Pinecone 벡터 덮어쓰기 (upsert)

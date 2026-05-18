@@ -118,6 +118,42 @@ export async function smartEditFacilityDescription(original: string, instruction
 }
 
 /**
+ * 기존 시설 설명과 직원이 새로 입력한 설명을 자연스럽게 병합합니다. (Golden Record 생성)
+ */
+export async function mergeFacilityDescription(existingDesc: string, newDesc: string): Promise<string> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-flash-latest',
+      systemInstruction: `당신은 문서 병합(Merge) 전문가입니다.
+[기존 설명]과 직원이 방금 추가/수정한 [새로운 설명]이 주어집니다.
+이 두 텍스트를 모순 없이 하나의 자연스럽고 구조화된 텍스트로 병합하여 반환하세요.
+
+[병합 규칙]
+1. 최신 정보인 [새로운 설명]을 우선합니다. 운영시간이나 요금 등이 충돌하면 새로운 설명을 따르세요.
+2. [기존 설명]에만 있는 유용한 상세 정보(주의사항 등)는 버리지 말고 유지하세요.
+3. 두 정보가 충돌하지 않는 추가 내용이라면, 자연스럽게 기존 항목에 이어 붙이세요(Append).
+4. 중복되는 내용은 하나로 합치고 문맥을 자연스럽게 다듬으세요.
+5. 어떤 부연 설명이나 마크다운 코드 블록(\`\`\` 등)도 출력하지 말고, 오직 '병합된 최종 텍스트' 결과물만 순수 평문(Plain Text)으로 출력하세요.`
+    });
+
+    const prompt = `[기존 설명]\n${existingDesc}\n\n[새로운 설명]\n${newDesc}`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2, // 사실 기반의 보수적인 병합
+      }
+    });
+
+    return result.response.text().trim();
+  } catch (error) {
+    console.error('Error in mergeFacilityDescription:', error);
+    // AI 에러 시 안전 장치로 최신 입력을 반환하거나 기존 병합 로직(단순 이어붙이기) 적용
+    return `${existingDesc}\n\n--- (자동 병합 실패, 수동 확인 요망) ---\n\n${newDesc}`;
+  }
+}
+
+/**
  * 모든 시설 데이터를 AI를 통해 완벽한 데이터베이스 형태(CSV)로 추출합니다.
  */
 export async function generateBibleCSV(facilitiesData: any[], currentDate: string): Promise<string> {

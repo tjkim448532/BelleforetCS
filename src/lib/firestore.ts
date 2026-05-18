@@ -9,8 +9,20 @@ export interface Facility {
   location: string;
   tags: string[];
   status: 'pending' | 'approved';
+  type?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
+}
+
+export interface FacilityEditLog {
+  id?: string;
+  facilityId: string;
+  facilityName: string;
+  action: 'create' | 'update';
+  method: 'POST' | 'PUT';
+  submittedData: Partial<Facility>;
+  mergedDescription: string;
+  timestamp: string; // ISO string
 }
 
 export interface Schedule {
