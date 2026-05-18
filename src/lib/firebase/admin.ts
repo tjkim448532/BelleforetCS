@@ -27,6 +27,7 @@ export const getFirebaseAdminApp = () => {
 };
 
 export const adminDb = getFirebaseAdminApp().firestore();
+adminDb.settings({ ignoreUndefinedProperties: true });
 export const adminAuth = getFirebaseAdminApp().auth();
 
 export const verifyAdminSession = async (req?: Request) => {
