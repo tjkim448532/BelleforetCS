@@ -86,17 +86,37 @@ export default function ChatPage() {
 
       if (!response.ok) throw new Error('Network response was not ok');
 
-      const data = await response.json();
+      const logId = response.headers.get('X-Log-Id') || undefined;
       
+      const aiMessageId = (Date.now() + 1).toString();
       const aiMessage: Message = { 
-        id: (Date.now() + 1).toString(), 
+        id: aiMessageId, 
         role: 'assistant', 
-        content: data.answer || '답변을 가져오지 못했습니다.',
-        logId: data.logId,
+        content: '', // 실시간으로 채워질 예정
+        logId: logId,
         feedback: null
       };
       
       setMessages(prev => [...prev, aiMessage]);
+      setIsLoading(false); // 응답이 시작되면 로딩 스피너 제거
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No stream available');
+      
+      const decoder = new TextDecoder('utf-8');
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        
+        setMessages(prev => prev.map(msg => 
+          msg.id === aiMessageId 
+            ? { ...msg, content: msg.content + chunk } 
+            : msg
+        ));
+      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = { 
@@ -105,7 +125,6 @@ export default function ChatPage() {
         content: translations[lang].error 
       };
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
       setIsLoading(false);
     }
   };
