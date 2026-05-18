@@ -412,9 +412,16 @@ export default function FacilitiesAdmin() {
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8 border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">시설 정보 관리 (CMS)</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          벨포레의 시설 정보를 입력하세요. 입력된 정보는 AI가 학습하여 고객 질문 응답에 사용됩니다.
-        </p>
+        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+          <h3 className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center mb-1">
+            <span className="mr-2">📚</span> 이 메뉴는 언제 쓰나요? (평상시 기본 안내서)
+          </h3>
+          <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside">
+            <li>운영 시간, 기본 요금, 키 제한, 위치 등 <strong>변하지 않는 고정 정보</strong>를 등록합니다.</li>
+            <li>새로운 놀이기구가 생겼거나 기본 요금표 자체가 바뀌었을 때만 수정하세요.</li>
+            <li><span className="font-semibold text-red-600 dark:text-red-400">주의:</span> 오늘 비가 와서 갑자기 문을 닫는 등의 임시 정보는 반드시 <strong>[운영 현황 / 공지]</strong> 메뉴에 적어주세요!</li>
+          </ul>
+        </div>
       </div>
 
       {/* Tabs */}

@@ -156,9 +156,16 @@ export default function OperationsAdmin() {
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       <div className="border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">운영 현황 및 공지 관리</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          우천 통제, 시설 대관 등 유동적인 현황을 관리합니다. 여기에 등록된 활성화된 공지는 AI가 고객 질문 시 최우선 규칙으로 인지하여 답변합니다.
-        </p>
+        <div className="mt-3 bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100 dark:border-red-800">
+          <h3 className="text-sm font-bold text-red-800 dark:text-red-300 flex items-center mb-1">
+            <span className="mr-2">🚨</span> 이 메뉴는 언제 쓰나요? (오늘의 긴급 속보)
+          </h3>
+          <ul className="text-sm text-red-700 dark:text-red-400 space-y-1 list-disc list-inside">
+            <li>비가 와서 갑자기 휴장하거나, 주말 한정 연장 영업 등 <strong>일시적인 현장 변동 사항</strong>을 등록합니다.</li>
+            <li>여기에 글을 올리면 챗봇이 평소 시간표를 무시하고 <strong>무조건 이 공지를 최우선으로 고객에게 대답</strong>합니다.</li>
+            <li><strong>종료일을 설정</strong>해 두면 시간이 지났을 때 AI가 알아서 공지를 지우고 평소 시간표로 대답하므로 매우 편리합니다!</li>
+          </ul>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
