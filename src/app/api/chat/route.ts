@@ -50,9 +50,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
     }
 
+    // --- 동의어 처리 (Synonym Dictionary) ---
+    // 사용자가 자주 사용하는 줄임말을 공식 명칭으로 변환하여 검색 정확도를 높입니다.
+    const synonymMap: Record<string, string> = {
+      "목장": "벨포레 목장",
+      "미디어": "미디어아트센터",
+      "아트센터": "미디어아트센터",
+      "루지": "익스트림 루지",
+      "콘도": "벨포레 리조트",
+      "수영장": "원더풀",
+      "사계절썰매": "사계절 썰매장",
+      "썰매장": "사계절 썰매장",
+      "놀이공원": "놀이동산"
+    };
+
+    let processedQuestion = question;
+    Object.entries(synonymMap).forEach(([shortName, fullName]) => {
+      // 입력된 질문에 줄임말이 포함되어 있으면 치환
+      const regex = new RegExp(shortName, 'g'); 
+      processedQuestion = processedQuestion.replace(regex, fullName);
+    });
+
     // 1. 병렬로 검색 및 설정 정보 가져오기 (속도 최적화)
+    // AI 답변 생성을 위한 질문은 원본(question)을 유지하되, DB 검색용 질문은 치환된 질문(processedQuestion)을 사용
     const [similarDocsResult, noticesSnapshot, settingsDoc] = await Promise.allSettled([
-      querySimilarDocuments(question, 3),
+      querySimilarDocuments(processedQuestion, 3),
       adminDb.collection('operational_notices').where('isActive', '==', true).get(),
       adminDb.collection('settings').doc('system').get()
     ]);
