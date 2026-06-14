@@ -35,6 +35,8 @@ export default function FacilitiesAdmin() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingFailed, setIsExportingFailed] = useState(false);
 
   // Categories State
   const [categories, setCategories] = useState<string[]>(['레저', '숙박', '식음', '기타']);
@@ -47,7 +49,7 @@ export default function FacilitiesAdmin() {
   const [isSmartEditing, setIsSmartEditing] = useState(false);
 
   // Export Bible State
-  const [isExporting, setIsExporting] = useState(false);
+
 
   useEffect(() => {
     fetchCategories();
@@ -298,6 +300,33 @@ export default function FacilitiesAdmin() {
       alert(`백서 추출 중 오류가 발생했습니다: ${(error as Error).message}`);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportFailedLogs = async () => {
+    try {
+      setIsExportingFailed(true);
+      const response = await fetch('/api/admin/logs/export-failed');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '미답변 질문 추출 실패');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `unanswered_questions_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error: unknown) {
+      alert(`추출 중 오류가 발생했습니다: ${(error as Error).message}`);
+    } finally {
+      setIsExportingFailed(false);
     }
   };
 
@@ -813,6 +842,14 @@ export default function FacilitiesAdmin() {
                 >
                   {isExporting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <span className="mr-1.5">✨</span>}
                   {isExporting ? 'AI 백서 추출 중...' : 'AI 데이터 백서 추출 (Excel)'}
+                </button>
+                <button 
+                  onClick={handleExportFailedLogs} 
+                  disabled={isExportingFailed}
+                  className="inline-flex items-center text-sm px-3 py-1.5 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 border border-purple-200 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {isExportingFailed ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <span className="mr-1.5">🚨</span>}
+                  {isExportingFailed ? '추출 중...' : '미답변 질문 리스트 추출 (Excel)'}
                 </button>
                 {selectedIds.length > 0 && (
                   <button
