@@ -289,7 +289,7 @@ export default function FacilitiesAdmin() {
       a.href = url;
       // Content-Disposition 헤더에서 파일명을 가져올 수도 있지만, 클라이언트에서도 바로 지정 가능합니다.
       const dateStr = new Date().toISOString().slice(0, 10);
-      a.download = `belleforet_bible_${dateStr}.csv`;
+      a.download = `belleforet_golden_record_${dateStr}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
