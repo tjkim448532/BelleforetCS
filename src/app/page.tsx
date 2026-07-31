@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings, ThumbsUp, ThumbsDown, Info, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Message {
@@ -49,7 +49,26 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch('/api/notices')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setNotices(data);
+      })
+      .catch(err => console.error('Failed to fetch notices:', err));
+  }, []);
+
+  useEffect(() => {
+    if (notices.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentNoticeIndex(prev => (prev + 1) % notices.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [notices.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -184,6 +203,44 @@ export default function ChatPage() {
 
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {/* Seasonal Notices Banner */}
+        {notices.length > 0 && (
+          <div className="flex justify-center mb-6">
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800 rounded-2xl p-4 max-w-2xl w-full shadow-sm relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+              <div className="flex-shrink-0 bg-orange-100 dark:bg-orange-800/50 p-2 rounded-full text-orange-600 dark:text-orange-400">
+                <Info size={20} />
+              </div>
+              <div className="flex-1 min-w-0 transition-opacity duration-500">
+                <h4 className="text-sm font-bold text-orange-800 dark:text-orange-300 flex items-center">
+                  🔔 {lang === 'ko' ? '시즌/특별 안내' : 'Seasonal Notice'}
+                  <span className="ml-2 text-xs font-normal bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-200 px-2 py-0.5 rounded-full">
+                    {notices[currentNoticeIndex]?.name}
+                  </span>
+                </h4>
+                <p className="text-sm text-orange-700 dark:text-orange-400 mt-1 line-clamp-2">
+                  {notices[currentNoticeIndex]?.seasonalDescription}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <button
+                  onClick={() => handleSend(lang === 'ko' ? `${notices[currentNoticeIndex]?.name} 시즌 정보 알려줘` : `Tell me about ${notices[currentNoticeIndex]?.name} seasonal info`)}
+                  className="flex items-center text-xs bg-white dark:bg-neutral-800 hover:bg-orange-50 dark:hover:bg-neutral-700 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-neutral-700 px-3 py-1.5 rounded-full shadow-sm transition-colors font-medium whitespace-nowrap"
+                >
+                  {lang === 'ko' ? '자세히 묻기' : 'Ask Details'} <ChevronRight size={14} className="ml-1" />
+                </button>
+              </div>
+              {/* Pagination Dots */}
+              {notices.length > 1 && (
+                <div className="absolute bottom-1.5 left-0 right-0 flex justify-center space-x-1.5">
+                  {notices.map((_, idx) => (
+                    <div key={idx} className={`w-1.5 h-1.5 rounded-full ${idx === currentNoticeIndex ? 'bg-orange-500' : 'bg-orange-300 dark:bg-orange-800'}`} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {messages.map((msg) => (
           <div
             key={msg.id}

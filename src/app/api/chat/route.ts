@@ -103,7 +103,13 @@ export async function POST(req: Request) {
           if (notice.startDate && new Date(notice.startDate) > now) return false;
           if (notice.endDate && new Date(notice.endDate) < now) return false;
           return true;
-        });
+        })
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, 5);
 
       if (activeNotices.length > 0) {
         const noticesText = activeNotices.map((n, i) => `- ${n.title}: ${n.content}`).join('\n');

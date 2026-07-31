@@ -11,6 +11,7 @@ export default function FacilitiesAdmin() {
     category: '레저',
     location: '',
     description: '',
+    seasonalDescription: '',
     tags: '',
   });
   const [loading, setLoading] = useState(false);
@@ -164,6 +165,35 @@ export default function FacilitiesAdmin() {
     }
   };
 
+  const handleSmartSplit = async () => {
+    if (!formData.description) {
+      alert('분류할 설명글을 먼저 입력해주세요.');
+      return;
+    }
+    
+    setIsSmartEditing(true);
+    try {
+      const res = await fetch('/api/admin/facility/smart-split', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: formData.description + (formData.seasonalDescription ? '\\n' + formData.seasonalDescription : '') })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setFormData(prev => ({
+        ...prev,
+        description: data.description,
+        seasonalDescription: data.seasonalDescription
+      }));
+      alert('성공적으로 분리되었습니다.');
+    } catch (e: any) {
+      alert(e.message || 'AI 자동 분류 중 오류가 발생했습니다.');
+    } finally {
+      setIsSmartEditing(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -190,7 +220,7 @@ export default function FacilitiesAdmin() {
       }
 
       setMessage('성공적으로 등록되고 시스템에 학습되었습니다!');
-      setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
+      setFormData({ name: '', category: '레저', location: '', description: '', seasonalDescription: '', tags: '' });
     } catch (error: unknown) {
       setMessage((error as Error).message || '오류가 발생했습니다.');
     } finally {
@@ -222,7 +252,7 @@ export default function FacilitiesAdmin() {
       setIsEditModalOpen(false);
       setSmartEditResult(null);
       setSmartEditInstruction('');
-      setFormData({ name: '', category: '레저', location: '', description: '', tags: '' });
+      setFormData({ name: '', category: '레저', location: '', description: '', seasonalDescription: '', tags: '' });
       fetchFacilities();
     } catch (error: unknown) {
       alert((error as Error).message);
@@ -347,6 +377,7 @@ export default function FacilitiesAdmin() {
         category: row['카테고리'] || '기타',
         location: row['위치'] || '',
         description: row['설명'] || '',
+        seasonalDescription: row['시즌설명'] || '',
         tags: (row['태그'] || '').split(',').map(t => t.trim()).filter(Boolean),
         status: 'approved',
         duplicateAction
@@ -433,7 +464,8 @@ export default function FacilitiesAdmin() {
       (fac.name || '').toLowerCase().includes(q) ||
       (fac.category || '').toLowerCase().includes(q) ||
       (fac.location || '').toLowerCase().includes(q) ||
-      (fac.description || '').toLowerCase().includes(q)
+      (fac.description || '').toLowerCase().includes(q) ||
+      (fac.seasonalDescription || '').toLowerCase().includes(q)
     );
   });
 
@@ -545,7 +577,17 @@ export default function FacilitiesAdmin() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">자연어 설명 (AI가 이해할 내용)</label>
+            <div className="flex justify-between items-end mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">자연어 설명 (AI가 이해할 내용 - 고정 정보)</label>
+              <button
+                type="button"
+                onClick={handleSmartSplit}
+                disabled={isSmartEditing || !formData.description}
+                className="inline-flex items-center text-xs px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 rounded transition-colors disabled:opacity-50"
+              >
+                {isSmartEditing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : '✨ AI 자동 분류 (고정/시즌)'}
+              </button>
+            </div>
             <textarea
               name="description"
               required
@@ -554,6 +596,18 @@ export default function FacilitiesAdmin() {
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               placeholder="운영 시간, 특징, 주의사항 등을 상세한 문장으로 적어주세요. (예: 목장은 오전 10시부터 오후 5시까지 운영되며, 양떼 몰이 공연은 주말 오후 2시에 열립니다.)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">시즌/시기별 안내 (선택)</label>
+            <textarea
+              name="seasonalDescription"
+              rows={3}
+              value={formData.seasonalDescription}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="여름 시즌, 특정 요일, 공사 기간 등 일시적으로 적용되는 정보만 따로 적어주세요. (예: 7~8월 폭염 기간에는 양몰이 공연 대신 동물 설명회를 진행합니다.)"
             />
           </div>
 
@@ -653,7 +707,7 @@ export default function FacilitiesAdmin() {
                 구글 시트나 엑셀에서 데이터를 작성한 후 <strong>.csv</strong> 파일로 다운로드하여 업로드하세요.<br/>
                 첫 번째 줄(헤더)은 반드시 아래 이름을 사용해야 합니다:<br/>
                 <code className="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded text-xs font-bold mt-2 inline-block">
-                  시설명, 카테고리, 위치, 설명, 태그
+                  시설명, 카테고리, 위치, 설명, 시즌설명, 태그
                 </code>
               </p>
               <p className="mt-2 text-xs text-blue-600 dark:text-blue-500">
@@ -739,7 +793,7 @@ export default function FacilitiesAdmin() {
               <textarea
                 value={csvText}
                 onChange={(e) => setCsvText(e.target.value)}
-                placeholder="여기에 CSV 텍스트를 그대로 붙여넣으세요...&#10;예:&#10;시설명,카테고리,위치,설명,태그&#10;&quot;놀이기구&quot;,&quot;레저&quot;,,..."
+                placeholder="여기에 CSV 텍스트를 그대로 붙여넣으세요...&#10;예:&#10;시설명,카테고리,위치,설명,시즌설명,태그&#10;&quot;놀이기구&quot;,&quot;레저&quot;,,..."
                 rows={6}
                 disabled={isUploading}
                 className="block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 font-mono"
@@ -926,6 +980,7 @@ export default function FacilitiesAdmin() {
                                 category: fac.category,
                                 location: fac.location || '',
                                 description: fac.description,
+                                seasonalDescription: fac.seasonalDescription || '',
                                 tags: Array.isArray(fac.tags) ? fac.tags.join(', ') : (fac.tags || '')
                               });
                               setEditingId(fac.id || null);
@@ -1111,7 +1166,17 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">자연어 설명</label>
+                  <div className="flex justify-between items-end mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">자연어 설명 (고정 정보)</label>
+                    <button
+                      type="button"
+                      onClick={handleSmartSplit}
+                      disabled={isSmartEditing || !formData.description}
+                      className="inline-flex items-center text-xs px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 rounded transition-colors disabled:opacity-50"
+                    >
+                      {isSmartEditing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : '✨ AI 자동 분류'}
+                    </button>
+                  </div>
                   <textarea
                     name="description"
                     required
@@ -1120,6 +1185,18 @@ export default function FacilitiesAdmin() {
                     onChange={handleChange}
                     className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">시즌/시기별 안내</label>
+                  <textarea
+                    name="seasonalDescription"
+                    rows={3}
+                    value={formData.seasonalDescription}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
 
                   {/* AI 스마트 편집 영역 */}
                   <div className="mt-3 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800">
@@ -1171,7 +1248,6 @@ export default function FacilitiesAdmin() {
                       </div>
                     )}
                   </div>
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">태그 (쉼표 구분)</label>

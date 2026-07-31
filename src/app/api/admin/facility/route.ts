@@ -7,10 +7,10 @@ export async function POST(req: Request) {
   try {
     await verifyAdminSession(req);
     const data = await req.json();
-    const { name, category, description, location, tags, status, type, duplicateAction } = data;
+    const { name, category, description, seasonalDescription, location, tags, status, type, duplicateAction } = data;
 
-    if (!name || !description) {
-      return NextResponse.json({ error: 'Name and description are required' }, { status: 400 });
+    if (!name || (!description && !seasonalDescription)) {
+      return NextResponse.json({ error: 'Name and at least one description are required' }, { status: 400 });
     }
 
     // 이름으로 중복 검사
@@ -28,13 +28,20 @@ export async function POST(req: Request) {
     }
 
     // 설명(Description) 병합 로직 (CQRS Read Model 업데이트)
-    let finalDescription = description;
-    if (isUpdate && existingData && existingData.description) {
+    let finalDescription = description || '';
+    let finalSeasonalDescription = seasonalDescription || '';
+    
+    if (isUpdate && existingData) {
       if (duplicateAction === 'overwrite') {
-        finalDescription = description;
+        finalDescription = description || '';
+        finalSeasonalDescription = seasonalDescription || '';
       } else {
-        // AI 기반 지능형 병합 로직 호출
-        finalDescription = await mergeFacilityDescription(existingData.description, description);
+        if (existingData.description) {
+          finalDescription = await mergeFacilityDescription(existingData.description, finalDescription);
+        }
+        if (existingData.seasonalDescription) {
+          finalSeasonalDescription = await mergeFacilityDescription(existingData.seasonalDescription, finalSeasonalDescription);
+        }
       }
     }
 
@@ -42,6 +49,7 @@ export async function POST(req: Request) {
       name,
       category: category || '기타',
       description: finalDescription,
+      seasonalDescription: finalSeasonalDescription,
       location: location || '',
       tags: tags || [],
       status: status || 'pending',
@@ -59,8 +67,9 @@ export async function POST(req: Request) {
       facilityName: name,
       action: isUpdate ? 'update' : 'create',
       method: 'POST',
-      submittedData: { name, category, description, location, tags, status, type },
+      submittedData: { name, category, description, seasonalDescription, location, tags, status, type },
       mergedDescription: finalDescription,
+      mergedSeasonalDescription: finalSeasonalDescription,
       timestamp: new Date().toISOString(),
     };
     await adminDb.collection('facility_edits').add(editLog);
@@ -70,7 +79,11 @@ export async function POST(req: Request) {
 
     // 바로 활성화(승인) 상태로 요청이 왔다면 벡터화 진행
     if (facilityData.status === 'approved') {
-      const textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${finalDescription}\n태그: ${(facilityData.tags as string[]).join(', ')}`;
+      let textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${finalDescription}\n`;
+      if (finalSeasonalDescription) {
+        textToVectorize += `시즌/임시안내: ${finalSeasonalDescription}\n`;
+      }
+      textToVectorize += `태그: ${(facilityData.tags as string[]).join(', ')}`;
       
       await upsertDocument({
         id: docRef.id,
@@ -109,24 +122,26 @@ export async function PUT(req: Request) {
   try {
     await verifyAdminSession(req);
     const data = await req.json();
-    const { id, name, category, description, location, tags, status, type } = data;
+    const { id, name, category, description, seasonalDescription, location, tags, status, type } = data;
 
-    if (!id || !name || !description) {
-      return NextResponse.json({ error: 'ID, Name, and description are required' }, { status: 400 });
+    if (!id || !name || (!description && !seasonalDescription)) {
+      return NextResponse.json({ error: 'ID, Name, and at least one description are required' }, { status: 400 });
     }
 
     const docRef = adminDb.collection('facilities').doc(id);
     const docSnap = await docRef.get();
     
-    let finalDescription = description;
+    let finalDescription = description || '';
+    let finalSeasonalDescription = seasonalDescription || '';
 
     if (docSnap.exists) {
       const existingData = docSnap.data();
       // 기존 텍스트와 다르고, 빈 값이 아닐 때만 AI 병합 수행 (수동 편집 고려)
-      // 편집 창에서 관리자가 완전히 다른 내용을 작성했을 수 있으므로 AI 병합을 거쳐 
-      // 기존 유실 방지(주의사항 등)를 보장합니다.
       if (existingData && existingData.description && existingData.description !== description) {
-        finalDescription = await mergeFacilityDescription(existingData.description, description);
+        finalDescription = await mergeFacilityDescription(existingData.description, finalDescription);
+      }
+      if (existingData && existingData.seasonalDescription !== undefined && existingData.seasonalDescription !== seasonalDescription) {
+        finalSeasonalDescription = await mergeFacilityDescription(existingData.seasonalDescription, finalSeasonalDescription);
       }
     }
 
@@ -134,6 +149,7 @@ export async function PUT(req: Request) {
       name,
       category: category || '기타',
       description: finalDescription,
+      seasonalDescription: finalSeasonalDescription,
       location: location || '',
       tags: tags || [],
       status: status || 'approved',
@@ -147,8 +163,9 @@ export async function PUT(req: Request) {
       facilityName: name,
       action: 'update',
       method: 'PUT',
-      submittedData: { name, category, description, location, tags, status, type },
+      submittedData: { name, category, description, seasonalDescription, location, tags, status, type },
       mergedDescription: finalDescription,
+      mergedSeasonalDescription: finalSeasonalDescription,
       timestamp: new Date().toISOString(),
     };
     await adminDb.collection('facility_edits').add(editLog);
@@ -158,7 +175,11 @@ export async function PUT(req: Request) {
 
     // Pinecone 벡터 덮어쓰기 (upsert)
     if (updatedFacility.status === 'approved') {
-      const textToVectorize = `시설명: ${name}\n카테고리: ${updatedFacility.category}\n위치: ${updatedFacility.location}\n설명: ${description}\n태그: ${updatedFacility.tags.join(', ')}`;
+      let textToVectorize = `시설명: ${name}\n카테고리: ${updatedFacility.category}\n위치: ${updatedFacility.location}\n설명: ${finalDescription}\n`;
+      if (finalSeasonalDescription) {
+        textToVectorize += `시즌/임시안내: ${finalSeasonalDescription}\n`;
+      }
+      textToVectorize += `태그: ${updatedFacility.tags.join(', ')}`;
       
       await upsertDocument({
         id: docRef.id,

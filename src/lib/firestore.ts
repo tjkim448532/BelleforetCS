@@ -6,6 +6,7 @@ export interface Facility {
   name: string;
   category: string;
   description: string;
+  seasonalDescription?: string; // 시즌/시기별 정보
   location: string;
   tags: string[];
   status: 'pending' | 'approved';
@@ -22,6 +23,7 @@ export interface FacilityEditLog {
   method: 'POST' | 'PUT';
   submittedData: Partial<Facility>;
   mergedDescription: string;
+  mergedSeasonalDescription?: string;
   timestamp: string; // ISO string
 }
 
