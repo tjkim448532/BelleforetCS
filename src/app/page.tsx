@@ -202,9 +202,10 @@ export default function ChatPage() {
       </header>
 
       {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-        {/* Seasonal Notices Banner */}
-        {notices.length > 0 && (
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 flex flex-col items-center">
+        <div className="w-full max-w-7xl flex flex-col space-y-6">
+          {/* Seasonal Notices Banner */}
+          {notices.length > 0 && (
           <div className="flex justify-center mb-6">
             <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800 rounded-2xl p-4 max-w-2xl w-full shadow-sm relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <div className="flex-shrink-0 bg-orange-100 dark:bg-orange-800/50 p-2 rounded-full text-orange-600 dark:text-orange-400">
@@ -305,15 +306,16 @@ export default function ChatPage() {
               <div className="px-4 py-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-bl-sm">
                 <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
               </div>
+              </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </main>
 
       {/* Input Area */}
       <footer className="bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 p-4">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-7xl mx-auto space-y-4">
           {/* Quick actions */}
           <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
             <button 
