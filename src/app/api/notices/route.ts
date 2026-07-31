@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 
-// 캐싱 비활성화 (항상 최신 데이터를 가져옴)
-export const dynamic = 'force-dynamic';
+// 캐싱 활성화 (60초 단위 정적 재생성 ISR)
+export const revalidate = 60;
 
 export async function GET() {
   try {

@@ -9,13 +9,11 @@ export async function POST(req: Request) {
     const ip = rawIp.trim();
     const nowMs = Date.now();
     
-    // --- Firestore 기반 Rate Limiting (도배 방지) ---
-    // 동일 IP에서 1분에 15회 초과 시 차단
-    if (ip !== 'unknown') {
-      const sanitizedIp = ip.replace(/[^a-zA-Z0-9]/g, '_');
-      const rateLimitRef = adminDb.collection('rate_limits').doc(sanitizedIp);
-      
-      try {
+    // --- Firestore 기반 Rate Limiting (도배 방지) 병렬 처리용 프로미스 ---
+    const rateLimitPromise = (async () => {
+      if (ip !== 'unknown') {
+        const sanitizedIp = ip.replace(/[^a-zA-Z0-9]/g, '_');
+        const rateLimitRef = adminDb.collection('rate_limits').doc(sanitizedIp);
         await adminDb.runTransaction(async (transaction) => {
           const doc = await transaction.get(rateLimitRef);
           if (!doc.exists) {
@@ -23,25 +21,15 @@ export async function POST(req: Request) {
           } else {
             const data = doc.data()!;
             if (nowMs < data.resetTime) {
-              if (data.count >= 15) {
-                throw new Error('RATE_LIMIT_EXCEEDED');
-              }
+              if (data.count >= 15) throw new Error('RATE_LIMIT_EXCEEDED');
               transaction.update(rateLimitRef, { count: data.count + 1 });
             } else {
-              // Reset count if time expired
               transaction.update(rateLimitRef, { count: 1, resetTime: nowMs + 60000 });
             }
           }
         });
-      } catch (error: any) {
-        if (error.message === 'RATE_LIMIT_EXCEEDED') {
-          console.warn(`Rate limit exceeded for IP: ${ip}`);
-          return NextResponse.json({ 
-            answer: '너무 많은 질문을 연속으로 하셨습니다. 1분 후 다시 시도해주세요.' 
-          }, { status: 429 });
-        }
       }
-    }
+    })();
 
     const data = await req.json();
     const { question, language = 'ko' } = data;
@@ -71,13 +59,21 @@ export async function POST(req: Request) {
       processedQuestion = processedQuestion.replace(regex, fullName);
     });
 
-    // 1. 병렬로 검색 및 설정 정보 가져오기 (속도 최적화)
+    // 1. 병렬로 검색 및 설정 정보, 도배 방지 검사 가져오기 (속도 최적화)
     // AI 답변 생성을 위한 질문은 원본(question)을 유지하되, DB 검색용 질문은 치환된 질문(processedQuestion)을 사용
-    const [similarDocsResult, noticesSnapshot, settingsDoc] = await Promise.allSettled([
+    const [similarDocsResult, noticesSnapshot, settingsDoc, rateLimitResult] = await Promise.allSettled([
       querySimilarDocuments(processedQuestion, 3),
       adminDb.collection('operational_notices').where('isActive', '==', true).get(),
-      adminDb.collection('settings').doc('system').get()
+      adminDb.collection('settings').doc('system').get(),
+      rateLimitPromise
     ]);
+
+    if (rateLimitResult.status === 'rejected' && rateLimitResult.reason.message === 'RATE_LIMIT_EXCEEDED') {
+      console.warn(`Rate limit exceeded for IP: ${ip}`);
+      return NextResponse.json({ 
+        answer: '너무 많은 질문을 연속으로 하셨습니다. 1분 후 다시 시도해주세요.' 
+      }, { status: 429 });
+    }
 
     const similarDocs = similarDocsResult.status === 'fulfilled' ? similarDocsResult.value : [];
     
