@@ -64,10 +64,18 @@ ${context}`;
       systemInstruction
     });
 
-    const formattedHistory = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    const startIndex = history.findIndex(msg => msg.role === 'user');
+    const validHistory = startIndex !== -1 ? history.slice(startIndex) : [];
+
+    const formattedHistory = validHistory.reduce((acc: any[], msg) => {
+      const role = msg.role === 'user' ? 'user' : 'model';
+      if (acc.length > 0 && acc[acc.length - 1].role === role) {
+        acc[acc.length - 1].parts[0].text += `\n${msg.content}`;
+      } else {
+        acc.push({ role, parts: [{ text: msg.content }] });
+      }
+      return acc;
+    }, []);
 
     const contents: any[] = [
       ...formattedHistory,
@@ -142,10 +150,18 @@ ${context}`;
       systemInstruction
     });
 
-    const formattedHistory = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    const startIndex = history.findIndex(msg => msg.role === 'user');
+    const validHistory = startIndex !== -1 ? history.slice(startIndex) : [];
+
+    const formattedHistory = validHistory.reduce((acc: any[], msg) => {
+      const role = msg.role === 'user' ? 'user' : 'model';
+      if (acc.length > 0 && acc[acc.length - 1].role === role) {
+        acc[acc.length - 1].parts[0].text += `\n${msg.content}`;
+      } else {
+        acc.push({ role, parts: [{ text: msg.content }] });
+      }
+      return acc;
+    }, []);
 
     const contents: any[] = [
       ...formattedHistory,
