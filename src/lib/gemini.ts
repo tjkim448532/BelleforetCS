@@ -60,7 +60,7 @@ ${context}`
 ${context}`;
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.5-flash',
       systemInstruction
     });
 
@@ -128,7 +128,7 @@ ${context}`
 ${context}`;
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.5-flash',
       systemInstruction
     });
 
@@ -153,7 +153,7 @@ ${context}`;
 export async function smartEditFacilityDescription(original: string, instruction: string): Promise<{summary: string, updatedText: string}> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.5-flash',
       systemInstruction: `당신은 텍스트 편집 보조 AI입니다. 사용자가 제공한 [원본 텍스트]를 [수정 지시]에 맞게 수정하세요.
 응답은 반드시 아래 JSON 형식으로만 반환해야 합니다. 마크다운(\`\`\`json) 기호 없이 순수한 JSON 텍스트만 출력하세요.
 {
@@ -184,7 +184,7 @@ export async function smartEditFacilityDescription(original: string, instruction
 export async function smartSplitFacilityDescription(text: string): Promise<{description: string, seasonalDescription: string}> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.5-flash',
       systemInstruction: `당신은 텍스트 분류 AI입니다. 주어진 [시설 설명] 텍스트를 두 가지 범주로 완벽하게 분리하세요.
 1. description (고정 정보): 운영시간, 위치, 기본 특징, 영구적인 주의사항 등.
 2. seasonalDescription (시즌/임시 정보): 여름/겨울 시즌 특정 이벤트, 특정 날짜에만 진행되는 행사, 공사 등 일시적인 상태 정보.
@@ -225,7 +225,7 @@ export async function smartSplitFacilityDescription(text: string): Promise<{desc
 export async function mergeFacilityDescription(existingDesc: string, newDesc: string): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.5-flash',
       systemInstruction: `당신은 문서 병합(Merge) 전문가입니다.
 [기존 설명]과 직원이 방금 추가/수정한 [새로운 설명]이 주어집니다.
 이 두 텍스트를 모순 없이 하나의 자연스럽고 구조화된 텍스트로 병합하여 반환하세요.
@@ -305,7 +305,7 @@ export async function generateBibleCSV(facilitiesData: any[], currentDate: strin
 export async function analyzeFailedLogs(logs: any[]): Promise<any[]> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-8b',
+      model: 'gemini-2.5-flash',
       systemInstruction: `당신은 고객 서비스 및 데이터베이스 관리 전문가입니다.
 주어진 [실패한 대화 로그]는 챗봇이 제대로 답변하지 못했거나 고객이 불만족한 사례들입니다.
 이 로그들을 분석하여, 공통적인 고객의 불만이나 부족한 정보(Pain point)를 찾아내고,
