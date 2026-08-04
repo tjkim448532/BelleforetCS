@@ -85,15 +85,20 @@ export async function POST(req: Request) {
       }
       textToVectorize += `태그: ${(facilityData.tags as string[]).join(', ')}`;
       
-      await upsertDocument({
-        id: docRef.id,
-        text: textToVectorize,
-        metadata: {
-          type: (facilityData.type as string) || 'facility',
-          name,
-          category: facilityData.category,
-        }
-      });
+      try {
+        await upsertDocument({
+          id: docRef.id,
+          text: textToVectorize,
+          metadata: {
+            type: (facilityData.type as string) || 'facility',
+            name,
+            category: facilityData.category,
+          }
+        });
+      } catch (pineconeError) {
+        console.warn('Pinecone sync failed during create:', pineconeError);
+        return NextResponse.json({ success: true, id: docRef.id, facility: facilityData, isUpdate, warning: 'AI search indexing failed' });
+      }
     }
 
     return NextResponse.json({ success: true, id: docRef.id, facility: facilityData, isUpdate });
@@ -181,15 +186,20 @@ export async function PUT(req: Request) {
       }
       textToVectorize += `태그: ${updatedFacility.tags.join(', ')}`;
       
-      await upsertDocument({
-        id: docRef.id,
-        text: textToVectorize,
-        metadata: {
-          type: 'facility',
-          name,
-          category: updatedFacility.category,
-        }
-      });
+      try {
+        await upsertDocument({
+          id: docRef.id,
+          text: textToVectorize,
+          metadata: {
+            type: 'facility',
+            name,
+            category: updatedFacility.category,
+          }
+        });
+      } catch (pineconeError) {
+        console.warn('Pinecone sync failed during update:', pineconeError);
+        return NextResponse.json({ success: true, id: docRef.id, facility: updatedFacility, warning: 'AI search indexing failed' });
+      }
     }
 
     return NextResponse.json({ success: true, id: docRef.id, facility: updatedFacility });
@@ -220,10 +230,15 @@ export async function DELETE(req: Request) {
 
     // 여러 개 순차 삭제
     for (const id of idsToDelete) {
-      // Firebase 삭제
-      await adminDb.collection('facilities').doc(id).delete();
-      // Pinecone 삭제
-      await deleteDocument(id);
+      try {
+        // Firebase 삭제
+        await adminDb.collection('facilities').doc(id).delete();
+        // Pinecone 삭제
+        await deleteDocument(id);
+      } catch (err) {
+        console.warn(`Failed to delete or sync facility ${id}:`, err);
+        // Continue deletion for other ids
+      }
     }
 
     return NextResponse.json({ success: true, deletedCount: idsToDelete.length, ids: idsToDelete });

@@ -27,17 +27,26 @@ export async function POST(req: Request) {
     });
 
     // Vectorize and save to Pinecone
-    const textToVectorize = `시설명: ${facilityData?.name}\n카테고리: ${facilityData?.category}\n위치: ${facilityData?.location}\n설명: ${facilityData?.description}\n태그: ${(facilityData?.tags || []).join(', ')}`;
+    let textToVectorize = `시설명: ${facilityData?.name}\n카테고리: ${facilityData?.category}\n위치: ${facilityData?.location}\n설명: ${facilityData?.description}\n`;
+    if (facilityData?.seasonalDescription) {
+      textToVectorize += `시즌/임시안내: ${facilityData.seasonalDescription}\n`;
+    }
+    textToVectorize += `태그: ${(facilityData?.tags || []).join(', ')}`;
     
-    await upsertDocument({
-      id: docRef.id,
-      text: textToVectorize,
-      metadata: {
-        type: 'facility',
-        name: facilityData?.name,
-        category: facilityData?.category,
-      }
-    });
+    try {
+      await upsertDocument({
+        id: docRef.id,
+        text: textToVectorize,
+        metadata: {
+          type: 'facility',
+          name: facilityData?.name,
+          category: facilityData?.category,
+        }
+      });
+    } catch (pineconeError) {
+      console.warn('Pinecone sync failed during approval:', pineconeError);
+      return NextResponse.json({ success: true, message: 'Approved successfully, but AI search indexing failed. Please retry indexing later.', warning: true });
+    }
 
     return NextResponse.json({ success: true, message: 'Approved and vectorized successfully' });
   } catch (error: unknown) {

@@ -3,6 +3,11 @@ import { querySimilarDocuments } from '@/lib/pinecone';
 import { generateAnswer } from '@/lib/gemini';
 import { adminDb } from '@/lib/firebase/admin';
 
+let cachedNotices: any = null;
+let cachedSettings: any = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60000; // 60 seconds
+
 export async function POST(req: Request) {
   try {
     const rawIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
@@ -61,10 +66,28 @@ export async function POST(req: Request) {
 
     // 1. 병렬로 검색 및 설정 정보, 도배 방지 검사 가져오기 (속도 최적화)
     // AI 답변 생성을 위한 질문은 원본(question)을 유지하되, DB 검색용 질문은 치환된 질문(processedQuestion)을 사용
+    let noticesPromise: any;
+    let settingsPromise: any;
+
+    if (nowMs - cacheTimestamp < CACHE_TTL && cachedNotices && cachedSettings) {
+      noticesPromise = Promise.resolve(cachedNotices);
+      settingsPromise = Promise.resolve(cachedSettings);
+    } else {
+      noticesPromise = adminDb.collection('operational_notices').where('isActive', '==', true).get().then(res => {
+        cachedNotices = res;
+        cacheTimestamp = Date.now();
+        return res;
+      });
+      settingsPromise = adminDb.collection('settings').doc('system').get().then(res => {
+        cachedSettings = res;
+        return res;
+      });
+    }
+
     const [similarDocsResult, noticesSnapshot, settingsDoc, rateLimitResult] = await Promise.allSettled([
       querySimilarDocuments(processedQuestion, 3),
-      adminDb.collection('operational_notices').where('isActive', '==', true).get(),
-      adminDb.collection('settings').doc('system').get(),
+      noticesPromise,
+      settingsPromise,
       rateLimitPromise
     ]);
 
@@ -94,13 +117,13 @@ export async function POST(req: Request) {
     if (noticesSnapshot.status === 'fulfilled' && noticesSnapshot.value) {
       const now = new Date();
       const activeNotices = noticesSnapshot.value.docs
-        .map(doc => doc.data())
-        .filter(notice => {
+        .map((doc: any) => doc.data())
+        .filter((notice: any) => {
           if (notice.startDate && new Date(notice.startDate) > now) return false;
           if (notice.endDate && new Date(notice.endDate) < now) return false;
           return true;
         })
-        .sort((a, b) => {
+        .sort((a: any, b: any) => {
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
@@ -108,7 +131,7 @@ export async function POST(req: Request) {
         .slice(0, 5);
 
       if (activeNotices.length > 0) {
-        const noticesText = activeNotices.map((n, i) => `- ${n.title}: ${n.content}`).join('\n');
+        const noticesText = activeNotices.map((n: any, i: any) => `- ${n.title}: ${n.content}`).join('\n');
         context = `[🚨 현재 리조트 긴급/운영 상황 (최우선 적용 사항)]\n${noticesText}\n\n[기본 시설/운영 정보]\n${context}`;
       }
     }
