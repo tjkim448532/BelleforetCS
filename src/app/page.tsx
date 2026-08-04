@@ -103,7 +103,11 @@ export default function ChatPage() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text, language: lang }),
+        body: JSON.stringify({ 
+          question: text, 
+          language: lang,
+          history: messages.slice(-5).map(m => ({ role: m.role, content: m.content }))
+        }),
         signal: abortControllerRef.current.signal,
       });
 

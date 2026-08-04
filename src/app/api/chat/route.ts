@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     })();
 
     const data = await req.json();
-    const { question, language = 'ko' } = data;
+    const { question, language = 'ko', history = [] } = data;
 
     if (!question) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
@@ -64,6 +64,20 @@ export async function POST(req: Request) {
       processedQuestion = processedQuestion.replace(regex, fullName);
     });
 
+    // Pinecone 검색 정확도를 높이기 위해 이전 사용자의 질문을 덧붙임
+    let pineconeQuery = processedQuestion;
+    if (history && history.length > 0) {
+      const lastUserMessage = [...history].reverse().find((m: any) => m.role === 'user');
+      if (lastUserMessage) {
+        let lastQ = lastUserMessage.content;
+        Object.entries(synonymMap).forEach(([shortName, fullName]) => {
+          const regex = new RegExp(shortName, 'g');
+          lastQ = lastQ.replace(regex, fullName);
+        });
+        pineconeQuery = `${lastQ} ${processedQuestion}`;
+      }
+    }
+
     // 1. 병렬로 검색 및 설정 정보, 도배 방지 검사 가져오기 (속도 최적화)
     // AI 답변 생성을 위한 질문은 원본(question)을 유지하되, DB 검색용 질문은 치환된 질문(processedQuestion)을 사용
     let noticesPromise: any;
@@ -85,7 +99,7 @@ export async function POST(req: Request) {
     }
 
     const [similarDocsResult, noticesSnapshot, settingsDoc, rateLimitResult] = await Promise.allSettled([
-      querySimilarDocuments(processedQuestion, 3),
+      querySimilarDocuments(pineconeQuery, 3),
       noticesPromise,
       settingsPromise,
       rateLimitPromise
@@ -151,7 +165,7 @@ export async function POST(req: Request) {
 
     // 3. AI 모델에 스트리밍 요청
     const { generateAnswerStream } = await import('@/lib/gemini');
-    const resultStream = await generateAnswerStream(question, context, currentPersona, language);
+    const resultStream = await generateAnswerStream(question, context, currentPersona, language, history);
 
     // 4. 스트리밍 응답 설정 및 백그라운드 로깅
     const logRef = adminDb.collection('chat_logs').doc();

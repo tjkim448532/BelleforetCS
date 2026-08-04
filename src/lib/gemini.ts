@@ -20,7 +20,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
 /**
  * 컨텍스트를 기반으로 답변을 생성합니다. (Gemini Chat Completion)
  */
-export async function generateAnswer(query: string, context: string, persona: string = 'friendly', language: string = 'ko'): Promise<string> {
+export async function generateAnswer(query: string, context: string, persona: string = 'friendly', language: string = 'ko', history: any[] = []): Promise<string> {
   try {
     let personaInstruction = "항상 공손하고 친절한 호텔리어처럼 전문적인 한국어 존댓말을 사용하세요.";
     if (persona === 'professional') {
@@ -64,8 +64,18 @@ ${context}`;
       systemInstruction
     });
 
+    const formattedHistory = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    const contents: any[] = [
+      ...formattedHistory,
+      { role: 'user', parts: [{ text: `[질문] ${query}` }] }
+    ];
+
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `[질문] ${query}` }] }],
+      contents,
       generationConfig: {
         temperature: 0.3, // 낮을수록 정확하고 보수적인 답변
         maxOutputTokens: 400,
@@ -88,7 +98,7 @@ ${context}`;
 /**
  * 컨텍스트를 기반으로 답변을 생성하며, 실시간 스트림 객체를 반환합니다. (Gemini Chat Completion Streaming)
  */
-export async function generateAnswerStream(query: string, context: string, persona: string = 'friendly', language: string = 'ko') {
+export async function generateAnswerStream(query: string, context: string, persona: string = 'friendly', language: string = 'ko', history: any[] = []) {
   try {
     let personaInstruction = "항상 공손하고 친절한 호텔리어처럼 전문적인 한국어 존댓말을 사용하세요.";
     if (persona === 'professional') {
@@ -132,8 +142,18 @@ ${context}`;
       systemInstruction
     });
 
+    const formattedHistory = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    const contents: any[] = [
+      ...formattedHistory,
+      { role: 'user', parts: [{ text: `[질문] ${query}` }] }
+    ];
+
     const result = await model.generateContentStream({
-      contents: [{ role: 'user', parts: [{ text: `[질문] ${query}` }] }],
+      contents,
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 400,
