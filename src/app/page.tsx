@@ -103,7 +103,11 @@ export default function ChatPage() {
         body: JSON.stringify({ question: text, language: lang }),
       });
 
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('Server error details:', errorData);
+        throw new Error(errorData?.details || errorData?.error || 'Network response was not ok');
+      }
 
       const logId = response.headers.get('X-Log-Id') || undefined;
       
