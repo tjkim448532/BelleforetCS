@@ -7,4 +7,11 @@ runConfig:
   # cpu: 1
   # memoryMiB: 512
 
-# Environment variables and secrets.
+  # Environment variables and secrets.
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: belleforetcs
+  - variable: PINECONE_INDEX_NAME
+    value: belleforet-cs
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
