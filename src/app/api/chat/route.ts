@@ -149,11 +149,10 @@ export async function POST(req: Request) {
             timestamp: new Date().toISOString(),
           }).catch(err => console.error('Failed to save chat log:', err));
 
+          controller.close();
         } catch (error) {
           console.error('Stream error:', error);
           controller.error(error);
-        } finally {
-          controller.close();
         }
       }
     });

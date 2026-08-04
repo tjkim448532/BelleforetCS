@@ -143,7 +143,7 @@ ${context}`;
     return result; // Returns GenerateContentStreamResult
   } catch (error) {
     console.error('Error generating answer stream:', error);
-    throw new Error('Failed to generate answer stream');
+    throw new Error(`Failed to generate answer stream: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
