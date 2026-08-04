@@ -15,3 +15,5 @@ env:
     value: belleforet-cs
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
+  - variable: PINECONE_API_KEY
+    secret: PINECONE_API_KEY
