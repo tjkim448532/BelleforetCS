@@ -52,6 +52,11 @@ export default function ChatPage() {
   const [notices, setNotices] = useState<any[]>([]);
   const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // 스트리밍 렌더링 최적화 및 레이스 컨디션 제어용
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [streamingContent, setStreamingContent] = useState('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch('/api/notices')
@@ -78,18 +83,16 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    setMessages([
-      {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: translations[lang].greeting,
-      }
-    ]);
-  }, [lang]);
-
+  // [BUG FIX] 언어 변경 시 messages 초기화 useEffect 제거 (이전 대화 내역 보존)
+  
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
+
+    // 이전 스트리밍 강제 종료 (Race Condition 제어)
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: text };
     setMessages(prev => [...prev, userMessage]);
@@ -101,6 +104,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: text, language: lang }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -121,26 +125,39 @@ export default function ChatPage() {
       };
       
       setMessages(prev => [...prev, aiMessage]);
+      setStreamingMessageId(aiMessageId);
+      setStreamingContent('');
       setIsLoading(false); // 응답이 시작되면 로딩 스피너 제거
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No stream available');
       
       const decoder = new TextDecoder('utf-8');
+      let currentStreamingText = '';
       
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         
         const chunk = decoder.decode(value, { stream: true });
-        
-        setMessages(prev => prev.map(msg => 
-          msg.id === aiMessageId 
-            ? { ...msg, content: msg.content + chunk } 
-            : msg
-        ));
+        currentStreamingText += chunk;
+        setStreamingContent(currentStreamingText);
       }
-    } catch (error) {
+
+      // 스트리밍 종료 시점에만 O(1)으로 원본 messages 업데이트 (렌더링 최적화)
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiMessageId 
+          ? { ...msg, content: currentStreamingText } 
+          : msg
+      ));
+      setStreamingMessageId(null);
+      setStreamingContent('');
+      
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Stream aborted by new request');
+        return; // 사용자가 중도 취소한 경우 에러 표시 생략
+      }
       console.error('Chat error:', error);
       const errorMessage: Message = { 
         id: (Date.now() + 1).toString(), 
@@ -271,7 +288,9 @@ export default function ChatPage() {
                   ? "bg-green-600 text-white rounded-br-sm" 
                   : "bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm"
               )}>
-                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
+                  {msg.id === streamingMessageId ? streamingContent : msg.content}
+                </p>
               </div>
             </div>
             {/* Feedback Buttons for AI Messages */}

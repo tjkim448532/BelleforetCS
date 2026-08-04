@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { querySimilarDocuments } from '@/lib/pinecone';
 import { generateAnswer } from '@/lib/gemini';
 import { adminDb } from '@/lib/firebase/admin';
+import * as admin from 'firebase-admin';
 
 let cachedNotices: any = null;
 let cachedSettings: any = null;
@@ -19,20 +20,19 @@ export async function POST(req: Request) {
       if (ip !== 'unknown') {
         const sanitizedIp = ip.replace(/[^a-zA-Z0-9]/g, '_');
         const rateLimitRef = adminDb.collection('rate_limits').doc(sanitizedIp);
-        await adminDb.runTransaction(async (transaction) => {
-          const doc = await transaction.get(rateLimitRef);
-          if (!doc.exists) {
-            transaction.set(rateLimitRef, { count: 1, resetTime: nowMs + 60000 });
+        const doc = await rateLimitRef.get();
+        if (!doc.exists) {
+          await rateLimitRef.set({ count: 1, resetTime: nowMs + 60000 });
+        } else {
+          const data = doc.data()!;
+          if (nowMs < data.resetTime) {
+            if (data.count >= 15) throw new Error('RATE_LIMIT_EXCEEDED');
+            // 비동기로 카운트 증가 (Transaction Lock 제거로 병목 현상 해소)
+            rateLimitRef.set({ count: admin.firestore.FieldValue.increment(1) }, { merge: true }).catch(console.error);
           } else {
-            const data = doc.data()!;
-            if (nowMs < data.resetTime) {
-              if (data.count >= 15) throw new Error('RATE_LIMIT_EXCEEDED');
-              transaction.update(rateLimitRef, { count: data.count + 1 });
-            } else {
-              transaction.update(rateLimitRef, { count: 1, resetTime: nowMs + 60000 });
-            }
+            await rateLimitRef.set({ count: 1, resetTime: nowMs + 60000 });
           }
-        });
+        }
       }
     })();
 
