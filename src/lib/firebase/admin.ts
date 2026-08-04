@@ -6,29 +6,47 @@ export const getFirebaseAdminApp = () => {
     return admin.apps[0] as admin.app.App;
   }
 
-  // To initialize the admin SDK, you should provide the service account key.
-  // In development, you can use GOOGLE_APPLICATION_CREDENTIALS or provide the private key details.
-  // Since we are mocking or getting this later:
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
   if (!clientEmail || !privateKey || !projectId) {
-    console.warn('Firebase Admin is not fully configured. Please set the required environment variables.');
+    throw new Error('Firebase Admin is not fully configured. Please set the required environment variables.');
   }
 
   return admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: projectId || 'mock-project-id',
-      clientEmail: clientEmail || 'mock-client-email',
-      privateKey: privateKey || 'mock-private-key',
+      projectId,
+      clientEmail,
+      privateKey,
     }),
   });
 };
 
-export const adminDb = getFirebaseAdminApp().firestore();
-adminDb.settings({ ignoreUndefinedProperties: true });
-export const adminAuth = getFirebaseAdminApp().auth();
+let db: admin.firestore.Firestore;
+let auth: admin.auth.Auth;
+
+try {
+  db = getFirebaseAdminApp().firestore();
+  db.settings({ ignoreUndefinedProperties: true });
+  auth = getFirebaseAdminApp().auth();
+} catch (error) {
+  console.warn('Firebase Admin init failed:', error instanceof Error ? error.message : error);
+  db = new Proxy({} as admin.firestore.Firestore, {
+    get: (target, prop) => {
+      if (prop === 'settings') return () => {};
+      return () => { throw new Error('Firebase Admin not configured. Missing credentials.'); };
+    }
+  });
+  auth = new Proxy({} as admin.auth.Auth, {
+    get: (target, prop) => {
+      return () => { throw new Error('Firebase Admin not configured. Missing credentials.'); };
+    }
+  });
+}
+
+export const adminDb = db;
+export const adminAuth = auth;
 
 export const verifyAdminSession = async (req?: Request) => {
   const cookieStore = await cookies();
