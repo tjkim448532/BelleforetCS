@@ -98,7 +98,14 @@ export async function POST(req: Request) {
       }, { status: 429 });
     }
 
-    const similarDocs = similarDocsResult.status === 'fulfilled' ? similarDocsResult.value : [];
+    if (similarDocsResult.status === 'rejected') {
+      console.error('Pinecone search failed:', similarDocsResult.reason);
+      return new Response('시스템 내부 일시적 오류로 인해 정보를 찾을 수 없습니다. 프론트 데스크에 문의해주세요.', {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+
+    const similarDocs = similarDocsResult.value;
     
     // 검색된 문서가 없으면 스트리밍 형태로 기본 응답
     if (similarDocs.length === 0) {

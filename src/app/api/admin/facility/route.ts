@@ -228,20 +228,29 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'ID or IDs are required' }, { status: 400 });
     }
 
+    let deletedIds: string[] = [];
+    let failedIds: string[] = [];
+
     // 여러 개 순차 삭제
     for (const id of idsToDelete) {
       try {
-        // Firebase 삭제
+        // Firebase 삭제 (성공 시 일단 삭제된 것으로 간주)
         await adminDb.collection('facilities').doc(id).delete();
-        // Pinecone 삭제
-        await deleteDocument(id);
+        deletedIds.push(id);
+        
+        try {
+          // Pinecone 삭제 (실패해도 Firebase에선 지워졌으므로 진행)
+          await deleteDocument(id);
+        } catch (pineconeErr) {
+          console.warn(`Pinecone delete failed for ${id}:`, pineconeErr);
+        }
       } catch (err) {
-        console.warn(`Failed to delete or sync facility ${id}:`, err);
-        // Continue deletion for other ids
+        console.warn(`Firebase delete failed for facility ${id}:`, err);
+        failedIds.push(id);
       }
     }
 
-    return NextResponse.json({ success: true, deletedCount: idsToDelete.length, ids: idsToDelete });
+    return NextResponse.json({ success: true, deletedCount: deletedIds.length, ids: deletedIds, failedIds });
   } catch (error: unknown) {
     console.error('Error deleting facility:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
