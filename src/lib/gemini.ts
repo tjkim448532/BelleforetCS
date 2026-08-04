@@ -3,13 +3,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock-gemini-key');
 
 /**
- * 텍스트를 벡터로 변환합니다. (Gemini Embedding)
+ * ?�스?��? 벡터�?변?�합?�다. (Gemini Embedding)
  */
 export async function getEmbedding(text: string): Promise<number[]> {
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
     const result = await model.embedContent(text);
-    // Pinecone 인덱스가 768차원이므로, MRL(Matryoshka Representation Learning) 속성을 이용해 768차원으로 잘라서 반환합니다.
+    // Pinecone ?�덱?��? 768차원?��?�? MRL(Matryoshka Representation Learning) ?�성???�용??768차원?�로 ?�라??반환?�니??
     return result.embedding.values.slice(0, 768);
   } catch (error) {
     console.error('Error generating embedding:', error);
@@ -18,15 +18,15 @@ export async function getEmbedding(text: string): Promise<number[]> {
 }
 
 /**
- * 컨텍스트를 기반으로 답변을 생성합니다. (Gemini Chat Completion)
+ * 컨텍?�트�?기반?�로 ?��????�성?�니?? (Gemini Chat Completion)
  */
 export async function generateAnswer(query: string, context: string, persona: string = 'friendly', language: string = 'ko'): Promise<string> {
   try {
-    let personaInstruction = "항상 공손하고 친절한 호텔리어처럼 전문적인 한국어 존댓말을 사용하세요.";
+    let personaInstruction = "??�� 공손?�고 친절???�텔리어처럼 ?�문?�인 ?�국??존댓말을 ?�용?�세??";
     if (persona === 'professional') {
-      personaInstruction = "감정을 배제하고 명확하고 간결하게 핵심만 답변하는 비서처럼 행동하세요.";
+      personaInstruction = "감정??배제?�고 명확?�고 간결?�게 ?�심�??��??�는 비서처럼 ?�동?�세??";
     } else if (persona === 'guide') {
-      personaInstruction = "유쾌하고 활기찬 놀이공원 가이드처럼 에너지 넘치게 대답하세요. 이모지도 적절히 사용하세요.";
+      personaInstruction = "?�쾌?�고 ?�기�??�?�공??가?�드처럼 ?�너지 ?�치�??�?�하?�요. ?�모지???�절???�용?�세??";
     } else if (persona === 'english') {
       personaInstruction = "All your responses MUST be in fluent English, acting as a welcoming concierge for foreign tourists.";
     }
@@ -47,36 +47,36 @@ ${personaInstruction}
 
 [Context]
 ${context}`
-      : `당신은 '벨포레(Belle Foret)' 리조트의 공식 AI 지식 응답 시스템입니다. 
- 제공된 [컨텍스트] 정보만을 사용하여 사용자의 [질문]에 답변하세요.
+      : `?�신?� '벨포??Belle Foret)' 리조?�의 공식 AI 지???�답 ?�스?�입?�다. 
+ ?�공??[컨텍?�트] ?�보만을 ?�용?�여 ?�용?�의 [질문]???��??�세??
  [중요 규칙]
- 1. 절대 컨텍스트에 없는 내용을 지어내거나(Hallucination) 외부의 일반적인 지식으로 답변하지 마세요.
- 2. 컨텍스트만으로 답변할 수 없는 내용이라면, 어떠한 유추도 하지 말고 반드시 "죄송합니다. 제공된 정보만으로는 해당 질문에 답변할 수 없습니다. 프론트 데스크에 문의해주세요."(영문 모드일 경우 영어로)라고 응답하세요.
- 3. 위치나 길안내를 할 때 "충북 증평군 도안면..."과 같은 불필요한 전체 도로명/지번 주소는 절대 출력하지 말고, 리조트 내부 랜드마크 기준의 상대적 위치만 자연스럽게 안내하세요.
- 4. 마크다운 포맷(특히 ** 기호나 * 기호)을 절대 사용하지 마세요. 모든 답변은 순수한 평문(Plain Text)으로 작성하며, 목록이 필요할 때는 별표(*) 대신 하이픈(-)을 사용하세요.
+ 1. ?��? 컨텍?�트???�는 ?�용??지?�내거나(Hallucination) ?��????�반?�인 지?�으�??��??��? 마세??
+ 2. 컨텍?�트만으�??��??????�는 ?�용?�라�? ?�떠???�추???��? 말고 반드??"죄송?�니?? ?�공???�보만으로는 ?�당 질문???��??????�습?�다. ?�론???�스?�에 문의?�주?�요."(?�문 모드??경우 ?�어�??�고 ?�답?�세??
+ 3. ?�치??길안?��? ????"충북 증평�??�안�?.."�?같�? 불필?�한 ?�체 ?�로�?지�?주소???��? 출력?��? 말고, 리조???��? ?�드마크 기�????��????�치�??�연?�럽�??�내?�세??
+ 4. 마크?�운 ?�맷(?�히 ** 기호??* 기호)???��? ?�용?��? 마세?? 모든 ?��??� ?�수???�문(Plain Text)?�로 ?�성?�며, 목록???�요???�는 별표(*) ?�???�이??-)???�용?�세??
  ${personaInstruction}
 
-[컨텍스트]
+[컨텍?�트]
 ${context}`;
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction
     });
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: `[질문] ${query}` }] }],
       generationConfig: {
-        temperature: 0.3, // 낮을수록 정확하고 보수적인 답변
+        temperature: 0.3, // ??��?�록 ?�확?�고 보수?�인 ?��?
         maxOutputTokens: 400,
       }
     });
 
-    let answerText = result.response.text() || '답변을 생성할 수 없습니다.';
+    let answerText = result.response.text() || '?��????�성?????�습?�다.';
     
-    // AI가 마크다운을 썼을 경우를 대비한 후처리 로직 (강제 제거)
-    answerText = answerText.replace(/\*\*/g, ''); // 굵게 표시 제거
-    answerText = answerText.replace(/^\s*\*\s/gm, '- '); // 불릿 포인트(*)를 하이픈(-)으로 교체
+    // AI가 마크?�운???�을 경우�??�비한 ?�처�?로직 (강제 ?�거)
+    answerText = answerText.replace(/\*\*/g, ''); // 굵게 ?�시 ?�거
+    answerText = answerText.replace(/^\s*\*\s/gm, '- '); // 불릿 ?�인??*)�??�이??-)?�로 교체
 
     return answerText;
   } catch (error) {
@@ -86,15 +86,15 @@ ${context}`;
 }
 
 /**
- * 컨텍스트를 기반으로 답변을 생성하며, 실시간 스트림 객체를 반환합니다. (Gemini Chat Completion Streaming)
+ * 컨텍?�트�?기반?�로 ?��????�성?�며, ?�시�??�트�?객체�?반환?�니?? (Gemini Chat Completion Streaming)
  */
 export async function generateAnswerStream(query: string, context: string, persona: string = 'friendly', language: string = 'ko') {
   try {
-    let personaInstruction = "항상 공손하고 친절한 호텔리어처럼 전문적인 한국어 존댓말을 사용하세요.";
+    let personaInstruction = "??�� 공손?�고 친절???�텔리어처럼 ?�문?�인 ?�국??존댓말을 ?�용?�세??";
     if (persona === 'professional') {
-      personaInstruction = "감정을 배제하고 명확하고 간결하게 핵심만 답변하는 비서처럼 행동하세요.";
+      personaInstruction = "감정??배제?�고 명확?�고 간결?�게 ?�심�??��??�는 비서처럼 ?�동?�세??";
     } else if (persona === 'guide') {
-      personaInstruction = "유쾌하고 활기찬 놀이공원 가이드처럼 에너지 넘치게 대답하세요. 이모지도 적절히 사용하세요.";
+      personaInstruction = "?�쾌?�고 ?�기�??�?�공??가?�드처럼 ?�너지 ?�치�??�?�하?�요. ?�모지???�절???�용?�세??";
     } else if (persona === 'english') {
       personaInstruction = "All your responses MUST be in fluent English, acting as a welcoming concierge for foreign tourists.";
     }
@@ -115,20 +115,20 @@ ${personaInstruction}
 
 [Context]
 ${context}`
-      : `당신은 '벨포레(Belle Foret)' 리조트의 공식 AI 지식 응답 시스템입니다. 
- 제공된 [컨텍스트] 정보만을 사용하여 사용자의 [질문]에 답변하세요.
+      : `?�신?� '벨포??Belle Foret)' 리조?�의 공식 AI 지???�답 ?�스?�입?�다. 
+ ?�공??[컨텍?�트] ?�보만을 ?�용?�여 ?�용?�의 [질문]???��??�세??
  [중요 규칙]
- 1. 절대 컨텍스트에 없는 내용을 지어내거나(Hallucination) 외부의 일반적인 지식으로 답변하지 마세요.
- 2. 컨텍스트만으로 답변할 수 없는 내용이라면, 어떠한 유추도 하지 말고 반드시 "죄송합니다. 제공된 정보만으로는 해당 질문에 답변할 수 없습니다. 프론트 데스크에 문의해주세요."(영문 모드일 경우 영어로)라고 응답하세요.
- 3. 위치나 길안내를 할 때 "충북 증평군 도안면..."과 같은 불필요한 전체 도로명/지번 주소는 절대 출력하지 말고, 리조트 내부 랜드마크 기준의 상대적 위치만 자연스럽게 안내하세요.
- 4. 마크다운 포맷(특히 ** 기호나 * 기호)을 절대 사용하지 마세요. 모든 답변은 순수한 평문(Plain Text)으로 작성하며, 목록이 필요할 때는 별표(*) 대신 하이픈(-)을 사용하세요.
+ 1. ?��? 컨텍?�트???�는 ?�용??지?�내거나(Hallucination) ?��????�반?�인 지?�으�??��??��? 마세??
+ 2. 컨텍?�트만으�??��??????�는 ?�용?�라�? ?�떠???�추???��? 말고 반드??"죄송?�니?? ?�공???�보만으로는 ?�당 질문???��??????�습?�다. ?�론???�스?�에 문의?�주?�요."(?�문 모드??경우 ?�어�??�고 ?�답?�세??
+ 3. ?�치??길안?��? ????"충북 증평�??�안�?.."�?같�? 불필?�한 ?�체 ?�로�?지�?주소???��? 출력?��? 말고, 리조???��? ?�드마크 기�????��????�치�??�연?�럽�??�내?�세??
+ 4. 마크?�운 ?�맷(?�히 ** 기호??* 기호)???��? ?�용?��? 마세?? 모든 ?��??� ?�수???�문(Plain Text)?�로 ?�성?�며, 목록???�요???�는 별표(*) ?�???�이??-)???�용?�세??
  ${personaInstruction}
 
-[컨텍스트]
+[컨텍?�트]
 ${context}`;
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction
     });
 
@@ -148,21 +148,21 @@ ${context}`;
 }
 
 /**
- * 관리자의 지시어에 따라 원본 텍스트를 수정하고 요약을 반환합니다.
+ * 관리자??지?�어???�라 ?�본 ?�스?��? ?�정?�고 ?�약??반환?�니??
  */
 export async function smartEditFacilityDescription(original: string, instruction: string): Promise<{summary: string, updatedText: string}> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: `당신은 텍스트 편집 보조 AI입니다. 사용자가 제공한 [원본 텍스트]를 [수정 지시]에 맞게 수정하세요.
-응답은 반드시 아래 JSON 형식으로만 반환해야 합니다. 마크다운(\`\`\`json) 기호 없이 순수한 JSON 텍스트만 출력하세요.
+      model: 'gemini-flash-latest',
+      systemInstruction: `?�신?� ?�스???�집 보조 AI?�니?? ?�용?��? ?�공??[?�본 ?�스??�?[?�정 지????맞게 ?�정?�세??
+?�답?� 반드???�래 JSON ?�식?�로�?반환?�야 ?�니?? 마크?�운(\`\`\`json) 기호 ?�이 ?�수??JSON ?�스?�만 출력?�세??
 {
-  "summary": "어떤 부분을 어떻게 수정했는지 간결한 한 줄 요약",
-  "updatedText": "수정이 모두 반영된 전체 텍스트본 (기존 텍스트의 맥락 유지)"
+  "summary": "?�떤 부분을 ?�떻�??�정?�는지 간결????�??�약",
+  "updatedText": "?�정??모두 반영???�체 ?�스?�본 (기존 ?�스?�의 맥락 ?��?)"
 }`
     });
 
-    const prompt = `[원본 텍스트]\n${original}\n\n[수정 지시]\n${instruction}`;
+    const prompt = `[?�본 ?�스??\n${original}\n\n[?�정 지??\n${instruction}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -184,19 +184,19 @@ export async function smartEditFacilityDescription(original: string, instruction
 export async function smartSplitFacilityDescription(text: string): Promise<{description: string, seasonalDescription: string}> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: `당신은 텍스트 분류 AI입니다. 주어진 [시설 설명] 텍스트를 두 가지 범주로 완벽하게 분리하세요.
-1. description (고정 정보): 운영시간, 위치, 기본 특징, 영구적인 주의사항 등.
-2. seasonalDescription (시즌/임시 정보): 여름/겨울 시즌 특정 이벤트, 특정 날짜에만 진행되는 행사, 공사 등 일시적인 상태 정보.
+      model: 'gemini-flash-latest',
+      systemInstruction: `?�신?� ?�스??분류 AI?�니?? 주어�?[?�설 ?�명] ?�스?��? ??가지 범주�??�벽?�게 분리?�세??
+1. description (고정 ?�보): ?�영?�간, ?�치, 기본 ?�징, ?�구?�인 주의?�항 ??
+2. seasonalDescription (?�즌/?�시 ?�보): ?�름/겨울 ?�즌 ?�정 ?�벤?? ?�정 ?�짜?�만 진행?�는 ?�사, 공사 ???�시?�인 ?�태 ?�보.
 
-응답은 반드시 아래 JSON 형식으로만 반환해야 합니다. 마크다운(\`\`\`json) 기호 없이 순수한 JSON 텍스트만 출력하세요.
+?�답?� 반드???�래 JSON ?�식?�로�?반환?�야 ?�니?? 마크?�운(\`\`\`json) 기호 ?�이 ?�수??JSON ?�스?�만 출력?�세??
 {
-  "description": "분리된 고정 정보 텍스트 (줄바꿈 유지)",
-  "seasonalDescription": "분리된 시즌/임시 정보 텍스트 (해당 없으면 빈 문자열)"
+  "description": "분리??고정 ?�보 ?�스??(줄바�??��?)",
+  "seasonalDescription": "분리???�즌/?�시 ?�보 ?�스??(?�당 ?�으�?�?문자??"
 }`
     });
 
-    const prompt = `[시설 설명]\n${text}`;
+    const prompt = `[?�설 ?�명]\n${text}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -220,30 +220,30 @@ export async function smartSplitFacilityDescription(text: string): Promise<{desc
 }
 
 /**
- * 기존 시설 설명과 직원이 새로 입력한 설명을 자연스럽게 병합합니다. (Golden Record 생성)
+ * 기존 ?�설 ?�명�?직원???�로 ?�력???�명???�연?�럽�?병합?�니?? (Golden Record ?�성)
  */
 export async function mergeFacilityDescription(existingDesc: string, newDesc: string): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: `당신은 문서 병합(Merge) 전문가입니다.
-[기존 설명]과 직원이 방금 추가/수정한 [새로운 설명]이 주어집니다.
-이 두 텍스트를 모순 없이 하나의 자연스럽고 구조화된 텍스트로 병합하여 반환하세요.
+      model: 'gemini-flash-latest',
+      systemInstruction: `?�신?� 문서 병합(Merge) ?�문가?�니??
+[기존 ?�명]�?직원??방금 추�?/?�정??[?�로???�명]??주어집니??
+?????�스?��? 모순 ?�이 ?�나???�연?�럽�?구조?�된 ?�스?�로 병합?�여 반환?�세??
 
 [병합 규칙]
-1. 최신 정보인 [새로운 설명]을 우선합니다. 운영시간이나 요금 등이 충돌하면 새로운 설명을 따르세요.
-2. [기존 설명]에만 있는 유용한 상세 정보(주의사항 등)는 버리지 말고 유지하세요.
-3. 두 정보가 충돌하지 않는 추가 내용이라면, 자연스럽게 기존 항목에 이어 붙이세요(Append).
-4. 중복되는 내용은 하나로 합치고 문맥을 자연스럽게 다듬으세요.
-5. 어떤 부연 설명이나 마크다운 코드 블록(\`\`\` 등)도 출력하지 말고, 오직 '병합된 최종 텍스트' 결과물만 순수 평문(Plain Text)으로 출력하세요.`
+1. 최신 ?�보??[?�로???�명]???�선?�니?? ?�영?�간?�나 ?�금 ?�이 충돌?�면 ?�로???�명???�르?�요.
+2. [기존 ?�명]?�만 ?�는 ?�용???�세 ?�보(주의?�항 ????버리지 말고 ?��??�세??
+3. ???�보가 충돌?��? ?�는 추�? ?�용?�라�? ?�연?�럽�?기존 ??��???�어 붙이?�요(Append).
+4. 중복?�는 ?�용?� ?�나�??�치�?문맥???�연?�럽�??�듬?�세??
+5. ?�떤 부???�명?�나 마크?�운 코드 블록(\`\`\` ????출력?��? 말고, ?�직 '병합??최종 ?�스?? 결과물만 ?�수 ?�문(Plain Text)?�로 출력?�세??`
     });
 
-    const prompt = `[기존 설명]\n${existingDesc}\n\n[새로운 설명]\n${newDesc}`;
+    const prompt = `[기존 ?�명]\n${existingDesc}\n\n[?�로???�명]\n${newDesc}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.2, // 사실 기반의 보수적인 병합
+        temperature: 0.2, // ?�실 기반??보수?�인 병합
         maxOutputTokens: 800,
       }
     });
@@ -251,84 +251,84 @@ export async function mergeFacilityDescription(existingDesc: string, newDesc: st
     return result.response.text().trim();
   } catch (error) {
     console.error('Error in mergeFacilityDescription:', error);
-    // AI 에러 시 안전 장치로 최신 입력을 반환하거나 기존 병합 로직(단순 이어붙이기) 적용
-    return `${existingDesc}\n\n--- (자동 병합 실패, 수동 확인 요망) ---\n\n${newDesc}`;
+    // AI ?�러 ???�전 ?�치�?최신 ?�력??반환?�거??기존 병합 로직(?�순 ?�어붙이�? ?�용
+    return `${existingDesc}\n\n--- (?�동 병합 ?�패, ?�동 ?�인 ?�망) ---\n\n${newDesc}`;
   }
 }
 
 /**
- * 모든 시설 데이터를 AI를 통해 완벽한 데이터베이스 형태(CSV)로 추출합니다.
+ * 모든 ?�설 ?�이?��? AI�??�해 ?�벽???�이?�베?�스 ?�태(CSV)�?추출?�니??
  */
 export async function generateBibleCSV(facilitiesData: any[], currentDate: string): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({
       model: 'gemini-flash-latest',
-      systemInstruction: `당신은 데이터베이스 설계 및 정규화 전문가입니다.
-주어진 JSON 배열 형태의 [시설 데이터]를 분석하여 완벽한 정형 데이터베이스(CSV 형식)로 변환하세요.
+      systemInstruction: `?�신?� ?�이?�베?�스 ?�계 �??�규???�문가?�니??
+주어�?JSON 배열 ?�태??[?�설 ?�이??�?분석?�여 ?�벽???�형 ?�이?�베?�스(CSV ?�식)�?변?�하?�요.
 
-[Zero Data Loss 원칙 - 반드시 지킬 것]
-1. 환영 인사말이나 단순 중복 문구만 제거하세요.
-2. 운영시간, 가격, 신장 제한, 우대 조건, 할인, 환불 규정 등 구체적인 조건(Fact)은 절대 하나도 빠짐없이 '상세_특징_및_규정' 컬럼에 개조식(Bullet point)으로 기록하세요.
-3. [과거 이벤트 필터링]: 오늘 날짜는 "${currentDate}" 입니다. 설명글에 행사 기간이 명시되어 있고, 그 기한이 오늘 날짜보다 확실히 과거라면 해당 시설(이벤트)은 CSV 결과에서 아예 제외하세요.
+[Zero Data Loss ?�칙 - 반드??지??�?
+1. ?�영 ?�사말이???�순 중복 문구�??�거?�세??
+2. ?�영?�간, 가�? ?�장 ?�한, ?��? 조건, ?�인, ?�불 규정 ??구체?�인 조건(Fact)?� ?��? ?�나??빠짐?�이 '?�세_?�징_�?규정' 컬럼??개조??Bullet point)?�로 기록?�세??
+3. [과거 ?�벤???�터�?: ?�늘 ?�짜??"${currentDate}" ?�니?? ?�명글???�사 기간??명시?�어 ?�고, �?기한???�늘 ?�짜보다 ?�실??과거?�면 ?�당 ?�설(?�벤???� CSV 결과?�서 ?�예 ?�외?�세??
 
-[CSV 컬럼 구조 (정확히 이 순서를 따를 것)]
-카테고리,시설명,위치,운영시간,이용요금,상세_특징_및_규정,검색태그
+[CSV 컬럼 구조 (?�확?????�서�??��? �?]
+카테고리,?�설�??�치,?�영?�간,?�용?�금,?�세_?�징_�?규정,검?�태�?
 
-- CSV 헤더를 첫 줄에 반드시 포함하세요.
-- 데이터 내의 쉼표(,)나 줄바꿈은 큰따옴표(" ")로 묶어서 CSV 포맷이 깨지지 않게 하세요.
-- 마크다운 기호(\`\`\`csv) 없이 순수한 CSV 텍스트만 출력하세요.`
+- CSV ?�더�?�?줄에 반드???�함?�세??
+- ?�이???�의 ?�표(,)??줄바꿈�? ?�따?�표(" ")�?묶어??CSV ?�맷??깨�?지 ?�게 ?�세??
+- 마크?�운 기호(\`\`\`csv) ?�이 ?�수??CSV ?�스?�만 출력?�세??`
     });
 
-    const prompt = `[시설 데이터]\n${JSON.stringify(facilitiesData, null, 2)}`;
+    const prompt = `[?�설 ?�이??\n${JSON.stringify(facilitiesData, null, 2)}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.1, // 매우 보수적이고 정확하게
+        temperature: 0.1, // 매우 보수?�이�??�확?�게
       }
     });
 
     let csvText = result.response.text();
-    // 마크다운 제거 (만약 출력되었다면)
+    // 마크?�운 ?�거 (만약 출력?�었?�면)
     csvText = csvText.replace(/^```(csv)?/i, '').replace(/```$/i, '').trim();
     
     return csvText;
   } catch (error: any) {
     console.error('Error in generateBibleCSV:', error);
-    throw new Error(`AI 백서 생성 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+    throw new Error(`AI 백서 ?�성 �??�류가 발생?�습?�다: ${error.message || '?????�는 ?�류'}`);
   }
 }
 
 /**
- * 실패한 대화 로그들을 분석하여 새로운 지식을 제안합니다.
+ * ?�패???�??로그?�을 분석?�여 ?�로??지?�을 ?�안?�니??
  */
 export async function analyzeFailedLogs(logs: any[]): Promise<any[]> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: `당신은 고객 서비스 및 데이터베이스 관리 전문가입니다.
-주어진 [실패한 대화 로그]는 챗봇이 제대로 답변하지 못했거나 고객이 불만족한 사례들입니다.
-이 로그들을 분석하여, 공통적인 고객의 불만이나 부족한 정보(Pain point)를 찾아내고,
-이를 해결하기 위해 시스템에 추가해야 할 '새로운 지식(Facility/FAQ 데이터)' 초안을 작성해주세요.
+      model: 'gemini-flash-latest',
+      systemInstruction: `?�신?� 고객 ?�비??�??�이?�베?�스 관�??�문가?�니??
+주어�?[?�패???�??로그]??챗봇???��?�??��??��? 못했거나 고객??불만족한 ?��??�입?�다.
+??로그?�을 분석?�여, 공통?�인 고객??불만?�나 부족한 ?�보(Pain point)�?찾아?�고,
+?��? ?�결?�기 ?�해 ?�스?�에 추�??�야 ??'?�로??지??Facility/FAQ ?�이??' 초안???�성?�주?�요.
 
-응답은 반드시 아래 형식의 JSON 배열(Array)로만 반환해야 합니다. 마크다운 기호 없이 순수 JSON만 출력하세요.
+?�답?� 반드???�래 ?�식??JSON 배열(Array)로만 반환?�야 ?�니?? 마크?�운 기호 ?�이 ?�수 JSON�?출력?�세??
 [
   {
-    "problem": "고객들이 유모차 대여에 대해 자주 묻지만 정보가 없음",
-    "suggestedName": "유모차 및 휠체어 대여 안내",
-    "suggestedCategory": "기타",
-    "suggestedDescription": "벨포레 웰컴센터에서 유모차 및 휠체어를 무료로 대여하실 수 있습니다. (신분증 보관 필요)",
-    "suggestedTags": "유모차, 휠체어, 대여, 아이동반"
+    "problem": "고객?�이 ?�모�??�?�에 ?�???�주 묻�?�??�보가 ?�음",
+    "suggestedName": "?�모�?�??�체???�???�내",
+    "suggestedCategory": "기�?",
+    "suggestedDescription": "벨포???�컴?�터?�서 ?�모�?�??�체?��? 무료�??�?�하?????�습?�다. (?�분�?보�? ?�요)",
+    "suggestedTags": "?�모�? ?�체?? ?�?? ?�이?�반"
   }
 ]`
     });
 
-    const prompt = `[실패한 대화 로그]\n${JSON.stringify(logs, null, 2)}\n\n이 로그들을 바탕으로 1~3개의 핵심적인 신규 지식을 제안해주세요.`;
+    const prompt = `[?�패???�??로그]\n${JSON.stringify(logs, null, 2)}\n\n??로그?�을 바탕?�로 1~3개의 ?�심?�인 ?�규 지?�을 ?�안?�주?�요.`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.2, // 창의적이되 너무 벗어나지 않게
+        temperature: 0.2, // 창의?�이???�무 벗어?��? ?�게
         maxOutputTokens: 600,
         responseMimeType: "application/json",
       }
