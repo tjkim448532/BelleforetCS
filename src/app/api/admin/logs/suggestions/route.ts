@@ -1,22 +1,18 @@
 import { NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { analyzeFailedLogs } from '@/lib/gemini';
 
 export async function GET(req: Request) {
   try {
-    // 1. 관리자 인증 체크
-    const sessionCookie = req.headers.get('cookie')?.split('__session=')[1]?.split(';')[0];
-    if (!sessionCookie) {
-      return NextResponse.json({ error: '인증되지 않은 사용자입니다.' }, { status: 401 });
-    }
-    await adminAuth.verifySessionCookie(sessionCookie, true);
+    // 1. 관리자 인증 체크 (보안 취약점 패치)
+    await verifyAdminSession(req);
 
-    // 2. 실패한 로그 수집
-    // 복합 쿼리 대신 전체 최근 로그(예: 300개)를 가져와서 메모리에서 필터링합니다. 
-    // (Firestore 복합 인덱스 생성 대기 시간을 피하기 위함)
+    // 2. 실패한 로그 수집 (메모리 최적화 OOM 방지)
+    // 필요한 필드만 select 하여 페이로드 크기를 대폭 절감
     const snapshot = await adminDb.collection('chat_logs')
+      .select('question', 'answer', 'feedback')
       .orderBy('timestamp', 'desc')
-      .limit(300)
+      .limit(150)
       .get();
 
     const failedLogs = snapshot.docs.map(doc => doc.data()).filter(log => {
@@ -43,6 +39,9 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ suggestions });
   } catch (error: any) {
+    if (error.message === 'Unauthorized' || error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+      return NextResponse.json({ error: '인증되지 않은 사용자입니다.' }, { status: 401 });
+    }
     console.error('Error generating log suggestions:', error);
     return NextResponse.json({ error: error.message || '오답 분석 중 오류가 발생했습니다.' }, { status: 500 });
   }

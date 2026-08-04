@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { upsertDocument } from '@/lib/pinecone';
 
 export async function POST(req: Request) {
   try {
+    await verifyAdminSession(req);
     const data = await req.json();
     const { id } = data;
 
@@ -49,8 +50,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'Approved and vectorized successfully' });
-  } catch (error: unknown) {
+  } catch (error: any) {
+    if (error.message === 'Unauthorized' || error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+      return NextResponse.json({ error: '인증되지 않은 사용자입니다.' }, { status: 401 });
+    }
     console.error('Error approving facility:', error);
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
