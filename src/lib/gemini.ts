@@ -86,7 +86,6 @@ ${context}`;
       contents,
       generationConfig: {
         temperature: 0.3, // 낮을수록 정확하고 보수적인 답변
-        maxOutputTokens: 400,
       }
     });
 
@@ -172,7 +171,6 @@ ${context}`;
       contents,
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 400,
       }
     });
 
