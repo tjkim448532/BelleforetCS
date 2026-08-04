@@ -10,17 +10,18 @@ export const getFirebaseAdminApp = () => {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  if (!clientEmail || !privateKey || !projectId) {
-    throw new Error('Firebase Admin is not fully configured. Please set the required environment variables.');
+  if (clientEmail && privateKey && projectId) {
+    return admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+    });
   }
 
-  return admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId,
-      clientEmail,
-      privateKey,
-    }),
-  });
+  // Fallback to Application Default Credentials for Firebase App Hosting / Cloud Run
+  return admin.initializeApp();
 };
 
 let db: admin.firestore.Firestore;
