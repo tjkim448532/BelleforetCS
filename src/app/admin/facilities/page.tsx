@@ -63,6 +63,34 @@ export default function FacilitiesAdmin() {
   const [smartEditResult, setSmartEditResult] = useState<{ summary: string; updatedText: string } | null>(null);
   const [isSmartEditing, setIsSmartEditing] = useState(false);
 
+  // Quick-Slot Builder & AI Fact-Check State (직원용 초간단 정형 입력 & 정답 검증)
+  const [showQuickSlotBuilder, setShowQuickSlotBuilder] = useState(true);
+  const [quickSlots, setQuickSlots] = useState({
+    hours: '',
+    closedDays: '',
+    price: '',
+    requirements: '',
+    rainPolicy: '',
+    petPolicy: '',
+    phone: '',
+  });
+  const [isFactChecking, setIsFactChecking] = useState(false);
+  const [factCheckResult, setFactCheckResult] = useState<{
+    verdict: 'MATCH' | 'NEW_KNOWLEDGE' | 'CONFLICT';
+    hasConflict: boolean;
+    conflictSummary: string;
+    matchedFacilities: Array<{ id: string; name: string; category: string; description: string }>;
+    extractedSpecs: {
+      operatingHours: string;
+      closedDays: string;
+      priceInfo: string;
+      location: string;
+      ageHeightLimit: string;
+      rainPolicy: string;
+      petAllowed: string;
+    };
+  } | null>(null);
+
   // RAG Audit & Homepage Sync State
   const [auditData, setAuditData] = useState<any | null>(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -455,8 +483,73 @@ export default function FacilitiesAdmin() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 빈칸만 채우면 AI 표준 양식(■ 운영시간 / ■ 휴무일 / ■ 이용요금 등)으로 자동 조립
+  const applyQuickSlotsToDescription = () => {
+    const lines: string[] = [];
+    if (quickSlots.hours.trim()) lines.push(`■ 운영시간: ${quickSlots.hours.trim()}`);
+    if (quickSlots.closedDays.trim()) lines.push(`■ 휴무일: ${quickSlots.closedDays.trim()}`);
+    if (quickSlots.price.trim()) lines.push(`■ 이용요금: ${quickSlots.price.trim()}`);
+    if (quickSlots.requirements.trim()) lines.push(`■ 이용조건/키제한: ${quickSlots.requirements.trim()}`);
+    if (quickSlots.rainPolicy.trim()) lines.push(`■ 우천/날씨 기준: ${quickSlots.rainPolicy.trim()}`);
+    if (quickSlots.petPolicy.trim()) lines.push(`■ 반려견 동반: ${quickSlots.petPolicy.trim()}`);
+    if (quickSlots.phone.trim()) lines.push(`■ 문의 전화: ${quickSlots.phone.trim()}`);
+
+    if (lines.length === 0) {
+      alert('먼저 위 빈칸 중 알고 계신 항목을 하나 이상 적어주세요!');
+      return;
+    }
+
+    const structuredBlock = lines.join('\n');
+    setFormData((prev) => ({
+      ...prev,
+      description: prev.description.trim()
+        ? `${structuredBlock}\n\n${prev.description.trim()}`
+        : structuredBlock,
+    }));
+    setFactCheckResult(null);
+  };
+
+  // 등록/수정 전 기존 DB 충돌 및 정형 슬롯 추출 AI 팩트체크
+  const handleRunFactCheck = async () => {
+    if (!formData.name.trim() || !formData.description.trim()) {
+      alert('먼저 [1. 시설 이름]과 [4. 상세 설명]을 적어주세요!');
+      return;
+    }
+
+    setIsFactChecking(true);
+    setFactCheckResult(null);
+    try {
+      const res = await fetch('/api/admin/robot-dataset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_staff_answer',
+          name: formData.name.trim(),
+          category: formData.category,
+          location: formData.location.trim(),
+          description:
+            formData.description.trim() +
+            (formData.seasonalDescription.trim()
+              ? `\n[시즌/기간 안내] ${formData.seasonalDescription.trim()}`
+              : ''),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '팩트체크 중 오류가 발생했습니다.');
+      setFactCheckResult(data);
+    } catch (e: any) {
+      alert(e.message || 'AI 팩트체크 중 오류가 발생했습니다.');
+    } finally {
+      setIsFactChecking(false);
+    }
+  };
+
+  const handleSaveWithStatus = async (targetStatus: 'approved' | 'pending') => {
+    if (!formData.name.trim() || !formData.description.trim()) {
+      alert('시설 이름과 상세 설명은 필수입니다.');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
@@ -467,7 +560,7 @@ export default function FacilitiesAdmin() {
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
-        status: 'approved',
+        status: targetStatus,
         duplicateAction,
       };
 
@@ -483,7 +576,11 @@ export default function FacilitiesAdmin() {
         throw new Error(responseData.error || '등록에 실패했습니다.');
       }
 
-      setMessage('✅ 성공적으로 저장되었으며, 지금부터 AI 챗봇이 이 내용을 바탕으로 대답합니다!');
+      setMessage(
+        targetStatus === 'approved'
+          ? '✅ 성공적으로 저장되었으며, 지금부터 AI 챗봇이 이 내용을 바탕으로 대답합니다!'
+          : '⏳ [검수 대기열]에 안전하게 등록되었습니다! 매니저가 승인 버튼을 누르면 AI가 학습을 시작합니다.'
+      );
       setFormData({
         name: '',
         category: categories[0] || '레저',
@@ -492,11 +589,52 @@ export default function FacilitiesAdmin() {
         seasonalDescription: '',
         tags: '',
       });
+      setQuickSlots({
+        hours: '',
+        closedDays: '',
+        price: '',
+        requirements: '',
+        rainPolicy: '',
+        petPolicy: '',
+        phone: '',
+      });
+      setFactCheckResult(null);
       fetchFacilities();
     } catch (error: unknown) {
       setMessage((error as Error).message || '오류가 발생했습니다.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSaveWithStatus('approved');
+  };
+
+  const handleApprovePending = async (fac: any) => {
+    setLoadingManage(true);
+    try {
+      const response = await fetch('/api/admin/facility', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: fac.id,
+          name: fac.name,
+          category: fac.category || '기타',
+          location: fac.location || '',
+          description: fac.description || '',
+          seasonalDescription: fac.seasonalDescription || '',
+          tags: Array.isArray(fac.tags) ? fac.tags : [],
+          status: 'approved',
+        }),
+      });
+      if (!response.ok) throw new Error('승인 처리에 실패했습니다.');
+      alert(`✅ '${fac.name}' 지식이 승인되어 지금부터 AI가 즉시 안내합니다!`);
+      fetchFacilities();
+    } catch (e: any) {
+      alert(e.message || '승인 처리 중 오류가 발생했습니다.');
+      setLoadingManage(false);
     }
   };
 
@@ -530,6 +668,7 @@ export default function FacilitiesAdmin() {
       setIsEditModalOpen(false);
       setSmartEditResult(null);
       setSmartEditInstruction('');
+      setFactCheckResult(null);
       setFormData({
         name: '',
         category: categories[0] || '레저',
@@ -727,6 +866,8 @@ export default function FacilitiesAdmin() {
   const filteredFacilities = facilities.filter((fac) => {
     if (categoryFilter === 'EXPIRED') {
       if (fac.status !== 'expired') return false;
+    } else if (categoryFilter === 'PENDING') {
+      if (fac.status !== 'pending') return false;
     } else if (categoryFilter !== 'ALL') {
       if (fac.category !== categoryFilter) return false;
     }
@@ -770,7 +911,8 @@ export default function FacilitiesAdmin() {
     );
   })();
 
-  const activeCount = facilities.filter((f) => f.status !== 'expired').length;
+  const activeCount = facilities.filter((f) => f.status === 'approved').length;
+  const pendingCount = facilities.filter((f) => f.status === 'pending').length;
   const expiredCount = facilities.filter((f) => f.status === 'expired').length;
 
   return (
@@ -786,7 +928,7 @@ export default function FacilitiesAdmin() {
               📚 AI 지식창고 관리
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              AI 상담원이 손님에게 대답할 때 참고하는 <strong>백과사전(총 {activeCount}개 학습 중)</strong>입니다. 아래 4개 버튼 중 원하시는 작업을 눌러보세요!
+              AI 상담원이 손님에게 대답할 때 참고하는 <strong>백과사전(총 {activeCount}개 학습 중{pendingCount > 0 ? ` · 검수 대기 ${pendingCount}개` : ''})</strong>입니다. 아래 4개 버튼 중 원하시는 작업을 눌러보세요!
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -821,7 +963,14 @@ export default function FacilitiesAdmin() {
                 : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
             }`}
           >
-            <div className="text-sm font-extrabold">📋 1. 등록된 지식 찾아보기/고치기</div>
+            <div className="text-sm font-extrabold flex items-center justify-between">
+              <span>📋 1. 등록된 지식 찾아보기/고치기</span>
+              {pendingCount > 0 && (
+                <span className="px-2 py-0.5 text-[11px] rounded-full bg-amber-400 text-gray-900 font-extrabold">
+                  대기 {pendingCount}
+                </span>
+              )}
+            </div>
             <div className={`text-xs mt-1 ${activeTab === 'manage' ? 'text-green-100' : 'text-gray-500'}`}>
               현재 AI가 아는 {activeCount}개 지식을 검색하고 수정합니다
             </div>
@@ -829,7 +978,10 @@ export default function FacilitiesAdmin() {
 
           <button
             type="button"
-            onClick={() => setActiveTab('single')}
+            onClick={() => {
+              setActiveTab('single');
+              setFactCheckResult(null);
+            }}
             className={`p-3.5 rounded-xl border text-left transition-all ${
               activeTab === 'single'
                 ? 'bg-green-600 text-white border-green-700 shadow-sm'
@@ -838,7 +990,7 @@ export default function FacilitiesAdmin() {
           >
             <div className="text-sm font-extrabold">✏️ 2. 새 지식 하나씩 등록하기</div>
             <div className={`text-xs mt-1 ${activeTab === 'single' ? 'text-green-100' : 'text-gray-500'}`}>
-              새로운 시설, 요금, 자주 묻는 규정을 추가합니다
+              빈칸만 채우면 AI 표준 양식으로 자동 조립 &amp; 팩트체크
             </div>
           </button>
 
@@ -884,6 +1036,22 @@ export default function FacilitiesAdmin() {
         {/* ===================================================================== */}
         {activeTab === 'manage' && (
           <div className="space-y-5">
+            {/* 검수 대기 알림 배너 */}
+            {pendingCount > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-300 dark:border-amber-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="text-xs sm:text-sm text-amber-900 dark:text-amber-200">
+                  ⏳ <strong>승인 대기 중인 지식이 {pendingCount}건 있습니다!</strong> 직원이 등록한 내용을 확인하시고 오른쪽 <strong>[✅ 즉시 승인]</strong> 버튼을 누르면 그 즉시 AI가 손님에게 안내를 시작합니다.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter(categoryFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold rounded-lg shrink-0"
+                >
+                  {categoryFilter === 'PENDING' ? '전체 목록 보기' : `⏳ 검수 대기 ${pendingCount}건만 모아보기`}
+                </button>
+              </div>
+            )}
+
             {/* 초보자 도움말 박스 */}
             <div className="bg-gray-50 dark:bg-neutral-800/60 p-4 rounded-xl border border-gray-200 dark:border-neutral-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
@@ -891,7 +1059,10 @@ export default function FacilitiesAdmin() {
               </div>
               <button
                 type="button"
-                onClick={() => setActiveTab('single')}
+                onClick={() => {
+                  setActiveTab('single');
+                  setFactCheckResult(null);
+                }}
                 className="inline-flex items-center px-3.5 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-extrabold rounded-lg shrink-0"
               >
                 <Plus className="w-4 h-4 mr-1" /> 새 지식 추가하러 가기
@@ -912,6 +1083,19 @@ export default function FacilitiesAdmin() {
                 >
                   전체 ({facilities.length})
                 </button>
+                {pendingCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter('PENDING')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors ${
+                      categoryFilter === 'PENDING'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
+                    }`}
+                  >
+                    ⏳ 검수 대기 ({pendingCount})
+                  </button>
+                )}
                 {categories.map((cat) => {
                   const count = facilities.filter((f) => f.category === cat).length;
                   return (
@@ -1018,9 +1202,9 @@ export default function FacilitiesAdmin() {
                         분류
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">
-                        AI가 알고 있는 상세 내용 (마우스를 올리면 전체 보기)
+                        AI가 알고 있는 상세 내용 &amp; 핵심 요약
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 w-48">
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 w-56">
                         관리 버튼
                       </th>
                     </tr>
@@ -1029,7 +1213,9 @@ export default function FacilitiesAdmin() {
                     {filteredFacilities.map((fac: any) => (
                       <tr
                         key={fac.id}
-                        className="hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
+                        className={`hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors ${
+                          fac.status === 'pending' ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
+                        }`}
                       >
                         <td className="px-4 py-3.5 whitespace-nowrap">
                           <input
@@ -1056,6 +1242,10 @@ export default function FacilitiesAdmin() {
                             {fac.status === 'expired' ? (
                               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
                                 📦 만료보관 (검색 제외)
+                              </span>
+                            ) : fac.status === 'pending' ? (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                                ⏳ 검수 대기 (승인 전)
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
@@ -1091,8 +1281,42 @@ export default function FacilitiesAdmin() {
                               ⏰ 시즌/기간: {fac.seasonalDescription}
                             </div>
                           )}
+                          {/* AI가 자동으로 인식한 정형 슬롯 미니 요약 칩 */}
+                          {fac.robotSpecs && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {fac.robotSpecs.operatingHours && fac.robotSpecs.operatingHours !== '미기재' && (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300">
+                                  ⏰ {fac.robotSpecs.operatingHours.slice(0, 28)}
+                                </span>
+                              )}
+                              {fac.robotSpecs.closedDays && fac.robotSpecs.closedDays !== '미기재' && (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-700">
+                                  🛑 {fac.robotSpecs.closedDays.slice(0, 20)}
+                                </span>
+                              )}
+                              {fac.robotSpecs.priceInfo && fac.robotSpecs.priceInfo !== '미기재' && (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700">
+                                  💰 {fac.robotSpecs.priceInfo.slice(0, 28)}
+                                </span>
+                              )}
+                              {fac.robotSpecs.petAllowed && fac.robotSpecs.petAllowed !== '미기재' && (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-emerald-50 text-emerald-700">
+                                  🐶 반려견 {fac.robotSpecs.petAllowed}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3.5 whitespace-nowrap text-right text-xs font-bold space-x-1.5">
+                          {fac.status === 'pending' && (
+                            <button
+                              onClick={() => handleApprovePending(fac)}
+                              className="inline-flex items-center px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-2xs transition-colors"
+                              title="검수를 완료하고 즉시 AI 챗봇이 안내하도록 승인합니다"
+                            >
+                              ✅ 즉시 승인
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setFormData({
@@ -1108,6 +1332,7 @@ export default function FacilitiesAdmin() {
                               setEditingId(fac.id || null);
                               setSmartEditResult(null);
                               setSmartEditInstruction('');
+                              setFactCheckResult(null);
                               setIsEditModalOpen(true);
                             }}
                             className="inline-flex items-center px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition-colors"
@@ -1199,7 +1424,10 @@ export default function FacilitiesAdmin() {
                     name="name"
                     required
                     value={formData.name}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      setFactCheckResult(null);
+                    }}
                     className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none"
                     placeholder="예: 마운틴카트, 남도예담, 반려견 동반 규정"
                   />
@@ -1292,6 +1520,115 @@ export default function FacilitiesAdmin() {
                 />
               </div>
 
+              {/* 🧩 직원용 초간단 빈칸 채우기 도우미 (7대 핵심 정보 자동 조립) */}
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/70 space-y-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 dark:text-emerald-200 flex items-center">
+                      🧩 빈칸만 채우면 끝! AI 표준 설명문 자동 조립기 (선택 사항)
+                    </h4>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                      긴 문장으로 쓰기 힘드실 때, 아래 빈칸 중 아는 것만 적고 <strong>[✨ 아래 설명 칸에 채우기]</strong>를 누르면 AI가 100% 이해하는 표준 양식으로 만들어 줍니다!
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickSlotBuilder(!showQuickSlotBuilder)}
+                    className="text-xs font-bold text-emerald-800 dark:text-emerald-300 underline shrink-0"
+                  >
+                    {showQuickSlotBuilder ? '빈칸 도우미 접기' : '빈칸 도우미 펼치기'}
+                  </button>
+                </div>
+
+                {showQuickSlotBuilder && (
+                  <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                          ⏰ 운영시간
+                        </label>
+                        <input
+                          type="text"
+                          value={quickSlots.hours}
+                          onChange={(e) => setQuickSlots({ ...quickSlots, hours: e.target.value })}
+                          placeholder="예: 10:00~17:30 (점심 12:30~13:30)"
+                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                          🛑 휴무일
+                        </label>
+                        <input
+                          type="text"
+                          value={quickSlots.closedDays}
+                          onChange={(e) => setQuickSlots({ ...quickSlots, closedDays: e.target.value })}
+                          placeholder="예: 매주 월요일 휴장 / 연중무휴"
+                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                          💰 이용요금 및 할인
+                        </label>
+                        <input
+                          type="text"
+                          value={quickSlots.price}
+                          onChange={(e) => setQuickSlots({ ...quickSlots, price: e.target.value })}
+                          placeholder="예: 성인 21,000원 (투숙객 20% 할인)"
+                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                          📏 이용조건 / 키·나이 제한
+                        </label>
+                        <input
+                          type="text"
+                          value={quickSlots.requirements}
+                          onChange={(e) => setQuickSlots({ ...quickSlots, requirements: e.target.value })}
+                          placeholder="예: 140cm 이상 단독 탑승 가능"
+                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                          ☔ 우천 / 날씨 기준
+                        </label>
+                        <input
+                          type="text"
+                          value={quickSlots.rainPolicy}
+                          onChange={(e) => setQuickSlots({ ...quickSlots, rainPolicy: e.target.value })}
+                          placeholder="예: 우천 시 안전을 위해 운휴"
+                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                          🐶 반려견 동반 여부
+                        </label>
+                        <input
+                          type="text"
+                          value={quickSlots.petPolicy}
+                          onChange={(e) => setQuickSlots({ ...quickSlots, petPolicy: e.target.value })}
+                          placeholder="예: 동반 가능(목줄 필수) / 출입 불가"
+                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={applyQuickSlotsToDescription}
+                        className="inline-flex items-center px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-lg shadow-2xs transition-colors"
+                      >
+                        ✨ 위 빈칸 내용을 아래 [4. 상세 설명]에 AI 표준 양식으로 채우기
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-1.5 gap-2">
                   <div>
@@ -1302,29 +1639,91 @@ export default function FacilitiesAdmin() {
                       운영시간, 요금, 키 제한, 특징 등을 자유롭게 적어주세요.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleSmartSplit}
-                    disabled={isSmartEditing || !formData.description}
-                    className="inline-flex items-center text-xs font-bold px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 shrink-0"
-                  >
-                    {isSmartEditing ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                    ) : (
-                      '✨ AI로 기본정보/시즌정보 자동 나누기'
-                    )}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRunFactCheck}
+                      disabled={isFactChecking || !formData.name.trim() || !formData.description.trim()}
+                      className="inline-flex items-center text-xs font-extrabold px-3 py-1.5 bg-amber-100 text-amber-900 hover:bg-amber-200 rounded-lg border border-amber-300 transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      {isFactChecking ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                      ) : (
+                        '🔍 등록 전 AI 팩트체크 (기존 DB 충돌 검사)'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSmartSplit}
+                      disabled={isSmartEditing || !formData.description}
+                      className="inline-flex items-center text-xs font-bold px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      {isSmartEditing ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                      ) : (
+                        '✨ AI로 기본정보/시즌정보 자동 나누기'
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   name="description"
                   required
                   rows={5}
                   value={formData.description}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    setFactCheckResult(null);
+                  }}
                   className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none leading-relaxed"
                   placeholder="예: 오전 10시부터 오후 5시까지 운영합니다. 성인 15,000원, 소인 12,000원이며 투숙객은 20% 할인됩니다."
                 />
               </div>
+
+              {/* 🔍 AI 팩트체크 및 정형 슬롯 추출 미리보기 결과 카드 */}
+              {factCheckResult && (
+                <div
+                  className={`p-4 rounded-xl border space-y-3 ${
+                    factCheckResult.verdict === 'CONFLICT'
+                      ? 'bg-red-50/90 border-red-300 text-red-900 dark:bg-red-950/40 dark:border-red-800 dark:text-red-200'
+                      : 'bg-emerald-50/90 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-extrabold">
+                      {factCheckResult.verdict === 'CONFLICT'
+                        ? '🔴 주의! 기존 DB 지식과 숫자/내용 차이가 발견되었습니다'
+                        : factCheckResult.verdict === 'MATCH'
+                        ? '🟢 AI 팩트체크 통과 (기존 지식과 충돌 없음)'
+                        : '🟢 AI 팩트체크 통과 (우리 DB에 처음 등록되는 신규 지식)'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFactCheckResult(null)}
+                      className="text-xs underline opacity-75 hover:opacity-100"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">
+                    {factCheckResult.conflictSummary}
+                  </p>
+                  <div className="bg-white/90 dark:bg-neutral-900/80 p-3 rounded-lg border border-black/10 text-xs">
+                    <div className="font-extrabold text-gray-800 dark:text-gray-200 mb-1.5">
+                      🤖 AI &amp; 로봇/콜봇이 이 글에서 자동으로 인식한 7대 핵심 데이터:
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-700 dark:text-gray-300">
+                      <div>• <strong>운영시간:</strong> {factCheckResult.extractedSpecs.operatingHours}</div>
+                      <div>• <strong>휴무일:</strong> {factCheckResult.extractedSpecs.closedDays}</div>
+                      <div>• <strong>요금:</strong> {factCheckResult.extractedSpecs.priceInfo}</div>
+                      <div>• <strong>위치:</strong> {factCheckResult.extractedSpecs.location}</div>
+                      <div>• <strong>이용기준:</strong> {factCheckResult.extractedSpecs.ageHeightLimit}</div>
+                      <div>• <strong>우천시:</strong> {factCheckResult.extractedSpecs.rainPolicy}</div>
+                      <div>• <strong>반려견:</strong> {factCheckResult.extractedSpecs.petAllowed}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
@@ -1410,7 +1809,7 @@ export default function FacilitiesAdmin() {
               {message && (
                 <div
                   className={`p-4 rounded-xl text-sm font-bold ${
-                    message.includes('✅') || message.includes('성공')
+                    message.includes('✅') || message.includes('성공') || message.includes('⏳')
                       ? 'bg-green-50 text-green-800 border border-green-200'
                       : 'bg-red-50 text-red-800 border border-red-200'
                   }`}
@@ -1419,24 +1818,49 @@ export default function FacilitiesAdmin() {
                 </div>
               )}
 
-              <div className="flex justify-end pt-2">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2 border-t dark:border-neutral-800">
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-extrabold text-white shadow-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  type="button"
+                  onClick={handleRunFactCheck}
+                  disabled={isFactChecking || loading || !formData.name.trim() || !formData.description.trim()}
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-4 py-3 text-xs sm:text-sm font-extrabold disabled:opacity-50 transition-colors"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      AI에게 가르치는 중...
-                    </>
+                  {isFactChecking ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                   ) : (
-                    <>
-                      <Save className="mr-2 h-5 w-5" />
-                      저장하고 AI에게 바로 가르치기
-                    </>
+                    <span className="mr-1.5">🔍</span>
                   )}
+                  1단계: 기존 DB 충돌 / AI 정답 팩트체크
                 </button>
+
+                <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleSaveWithStatus('pending')}
+                    className="inline-flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 px-4 py-3 text-xs sm:text-sm font-extrabold disabled:opacity-50 transition-colors"
+                    title="아직 확신이 없을 때 검수 대기함에 먼저 올려두고 매니저가 승인하게 합니다"
+                  >
+                    ⏳ 검수 대기열로 등록 (매니저 확인 후 반영)
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        AI에게 가르치는 중...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-5 w-5" />
+                        ✅ 검증 완료 — AI에게 바로 가르치기
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -2185,18 +2609,52 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
-                    4. 상세 설명 (AI가 손님에게 대답할 내용)
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                      4. 상세 설명 (AI가 손님에게 대답할 내용)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRunFactCheck}
+                      disabled={isFactChecking || !formData.name.trim() || !formData.description.trim()}
+                      className="inline-flex items-center text-xs font-extrabold px-2.5 py-1 bg-amber-100 text-amber-900 hover:bg-amber-200 rounded-md border border-amber-300 disabled:opacity-50"
+                    >
+                      {isFactChecking ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        '🔍 AI 인식 내용 미리보기 / 팩트체크'
+                      )}
+                    </button>
+                  </div>
                   <textarea
                     name="description"
                     required
                     rows={6}
                     value={formData.description}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      setFactCheckResult(null);
+                    }}
                     className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm leading-relaxed"
                   />
                 </div>
+
+                {factCheckResult && (
+                  <div className="p-3 rounded-xl bg-emerald-50/90 border border-emerald-300 text-xs space-y-1.5">
+                    <div className="font-extrabold text-emerald-900">
+                      🤖 수정된 본문에서 AI가 자동으로 인식한 7대 핵심 슬롯:
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-gray-800">
+                      <div>• <strong>운영시간:</strong> {factCheckResult.extractedSpecs.operatingHours}</div>
+                      <div>• <strong>휴무일:</strong> {factCheckResult.extractedSpecs.closedDays}</div>
+                      <div>• <strong>요금:</strong> {factCheckResult.extractedSpecs.priceInfo}</div>
+                      <div>• <strong>위치:</strong> {factCheckResult.extractedSpecs.location}</div>
+                      <div>• <strong>이용기준:</strong> {factCheckResult.extractedSpecs.ageHeightLimit}</div>
+                      <div>• <strong>우천시:</strong> {factCheckResult.extractedSpecs.rainPolicy}</div>
+                      <div>• <strong>반려견:</strong> {factCheckResult.extractedSpecs.petAllowed}</div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
@@ -2231,6 +2689,7 @@ export default function FacilitiesAdmin() {
                       setIsEditModalOpen(false);
                       setSmartEditResult(null);
                       setSmartEditInstruction('');
+                      setFactCheckResult(null);
                     }}
                     className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50"
                   >

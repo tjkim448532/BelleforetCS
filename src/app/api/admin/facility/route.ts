@@ -139,7 +139,7 @@ export async function PUT(req: Request) {
   try {
     await verifyAdminSession(req);
     const data = await req.json();
-    const { id, name, category, description, seasonalDescription, location, tags, status, type } = data;
+    const { id, name, category, description, seasonalDescription, location, tags, status, type, duplicateAction } = data;
 
     if (!id || !name || (!description && !seasonalDescription)) {
       return NextResponse.json({ error: 'ID, Name, and at least one description are required' }, { status: 400 });
@@ -151,9 +151,9 @@ export async function PUT(req: Request) {
     let finalDescription = description || '';
     let finalSeasonalDescription = seasonalDescription || '';
 
-    if (docSnap.exists) {
+    // 명시적으로 duplicateAction === 'merge'를 요청한 경우에만 기존 설명과 AI 병합 수행 (모달 직접 수정 시에는 직원이 수정한 텍스트를 그대로 보존)
+    if (docSnap.exists && duplicateAction === 'merge') {
       const existingData = docSnap.data();
-      // 기존 텍스트와 다르고, 빈 값이 아닐 때만 AI 병합 수행 (수동 편집 고려)
       if (existingData && existingData.description && existingData.description !== description) {
         finalDescription = await mergeFacilityDescription(existingData.description, finalDescription);
       }
@@ -199,7 +199,7 @@ export async function PUT(req: Request) {
     // 2. Read DB (Golden Record) 갱신
     await docRef.update(updatedFacility);
 
-    // Pinecone 벡터 덮어쓰기 (upsert)
+    // Pinecone 벡터 덮어쓰기 (upsert) 또는 비승인/만료 전환 시 벡터 제거
     if (updatedFacility.status === 'approved') {
       let textToVectorize = `시설명: ${name}\n카테고리: ${updatedFacility.category}\n위치: ${updatedFacility.location}\n설명: ${finalDescription}\n`;
       if (finalSeasonalDescription) {
@@ -219,10 +219,18 @@ export async function PUT(req: Request) {
         });
       } catch (pineconeError) {
         console.warn('Pinecone sync failed during update:', pineconeError);
+        invalidateFacilityCache();
         return NextResponse.json({ success: true, id: docRef.id, facility: updatedFacility, warning: 'AI search indexing failed' });
+      }
+    } else {
+      try {
+        await deleteDocument(docRef.id);
+      } catch (pineconeDeleteErr) {
+        console.warn('Pinecone delete failed during non-approved status update:', pineconeDeleteErr);
       }
     }
 
+    invalidateFacilityCache();
     return NextResponse.json({ success: true, id: docRef.id, facility: updatedFacility });
   } catch (error: unknown) {
     console.error('Error updating facility:', error);
@@ -271,6 +279,7 @@ export async function DELETE(req: Request) {
       }
     }
 
+    invalidateFacilityCache();
     return NextResponse.json({ success: true, deletedCount: deletedIds.length, ids: deletedIds, failedIds });
   } catch (error: unknown) {
     console.error('Error deleting facility:', error);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { listAllVectorIds, upsertDocument, deleteDocument } from '@/lib/pinecone';
 import { synthesizeMultipleFacilities } from '@/lib/gemini';
+import { extractRobotSpecsFromText, invalidateFacilityCache } from '@/lib/cs-intelligence';
 
 const GENERIC_TERMS = new Set(['이벤트', '패키지', 'pkg', '숙박', '레저', '식음', '기타', '할인', '요금', '안내', '운영', '콘도']);
 
@@ -242,6 +243,7 @@ export async function POST(req: Request) {
         });
       }
 
+      invalidateFacilityCache();
       return NextResponse.json({
         success: true,
         deletedGhostCount: ghostIds.length,
@@ -293,6 +295,14 @@ export async function POST(req: Request) {
             .filter(Boolean);
 
       const masterRef = adminDb.collection('facilities').doc(masterId);
+      const robotSpecs = extractRobotSpecsFromText({
+        name: name.trim(),
+        category: category || '기타',
+        location: location || '',
+        description: description.trim(),
+        seasonalDescription: (seasonalDescription || '').trim(),
+      });
+
       const updatedData = {
         name: name.trim(),
         category: category || '기타',
@@ -301,6 +311,7 @@ export async function POST(req: Request) {
         seasonalDescription: (seasonalDescription || '').trim(),
         tags: cleanTags,
         status: 'approved',
+        robotSpecs,
         updatedAt: new Date().toISOString(),
       };
 
@@ -338,6 +349,7 @@ export async function POST(req: Request) {
         timestamp: new Date().toISOString(),
       });
 
+      invalidateFacilityCache();
       return NextResponse.json({
         success: true,
         masterId,
@@ -392,6 +404,7 @@ export async function POST(req: Request) {
         deactivatedNoticeCount++;
       }
 
+      invalidateFacilityCache();
       return NextResponse.json({
         success: true,
         expiredFacCount,
