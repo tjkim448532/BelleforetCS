@@ -606,14 +606,27 @@ export async function answerGuestQuestion(params: {
   // 긴급 공지 최우선 주입
   let latestNoticeTimeMs = 0;
   if (cachedNotices && cachedNotices.docs) {
+    const { extractNoticeMaxDate } = await import('@/app/api/admin/operations/route');
     const now = new Date();
+    const kstTodayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const activeNotices = cachedNotices.docs
-      .map((d: any) => d.data())
-      .filter((n: any) => {
+      .filter((d: any) => {
+        const n = d.data();
         if (n.startDate && new Date(n.startDate) > now) return false;
-        if (n.endDate && new Date(n.endDate) < now) return false;
+        if (n.endDate && new Date(n.endDate) < now) {
+          d.ref.update({ isActive: false }).catch(() => {});
+          return false;
+        }
+        if (!n.endDate) {
+          const inferredEnd = extractNoticeMaxDate(n.title || '', n.content || '', n.createdAt);
+          if (inferredEnd && inferredEnd < kstTodayStr) {
+            d.ref.update({ isActive: false }).catch(() => {});
+            return false;
+          }
+        }
         return true;
       })
+      .map((d: any) => d.data())
       .slice(0, 5);
 
     if (activeNotices.length > 0) {

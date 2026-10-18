@@ -16,7 +16,7 @@ import {
 import { OperationalNotice } from '@/lib/firestore';
 
 export default function OperationsAdmin() {
-  const [notices, setNotices] = useState<OperationalNotice[]>([]);
+  const [notices, setNotices] = useState<Array<OperationalNotice & { audit?: any }>>([]);
   const [loading, setLoading] = useState(false);
   const [loadingManage, setLoadingManage] = useState(false);
   const [message, setMessage] = useState('');
@@ -31,6 +31,17 @@ export default function OperationsAdmin() {
     startDate: '',
     endDate: '',
   });
+
+  // AI 초안 검수 & 일괄 정리 상태
+  const [isCheckingDraft, setIsCheckingDraft] = useState(false);
+  const [draftCheckResult, setDraftCheckResult] = useState<{
+    verdict: 'KEEP_ACTIVE' | 'EXPIRED_DELETE' | 'MIGRATE_TO_KNOWLEDGE';
+    advice: string;
+    suggestedEndDate: string;
+    suggestedCategory: string;
+  } | null>(null);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [migratingId, setMigratingId] = useState<string | null>(null);
 
   const fetchNotices = async () => {
     setLoadingManage(true);
@@ -89,6 +100,7 @@ export default function OperationsAdmin() {
   // 초보자용 원클릭 공지 양식 채우기
   const applyTemplate = (type: 'rain' | 'inspect' | 'extend' | 'soldout') => {
     applyQuickPeriod('today');
+    setDraftCheckResult(null);
     if (type === 'rain') {
       setFormData((prev) => ({
         ...prev,
@@ -128,6 +140,7 @@ export default function OperationsAdmin() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
+    setDraftCheckResult(null);
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
@@ -147,6 +160,108 @@ export default function OperationsAdmin() {
     setEditingId(null);
     setIsEditing(false);
     setMessage('');
+    setDraftCheckResult(null);
+  };
+
+  // 작성 중인 공지 AI 검수 및 종료일 자동 세팅
+  const handleAiCheckDraft = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      alert('먼저 [1. 공지 제목]과 [2. 상세 내용]을 적어주세요!');
+      return;
+    }
+
+    setIsCheckingDraft(true);
+    setDraftCheckResult(null);
+    try {
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ai_check_draft',
+          title: formData.title.trim(),
+          content: formData.content.trim(),
+          endDate: formData.endDate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'AI 검수 중 오류가 발생했습니다.');
+
+      setDraftCheckResult(data);
+      if (data.suggestedEndDate && !formData.endDate) {
+        setFormData((prev) => ({
+          ...prev,
+          endDate: data.suggestedEndDate.slice(0, 16),
+        }));
+      }
+    } catch (e: any) {
+      alert(e.message || 'AI 검수 중 오류가 발생했습니다.');
+    } finally {
+      setIsCheckingDraft(false);
+    }
+  };
+
+  // 불필요/만료 공지 한 번에 삭제
+  const handleBulkDeleteExpired = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        `AI가 찾아낸 날짜가 지났거나 종료된 불필요 공지 ${ids.length}건을 한 번에 삭제하시겠습니까?`
+      )
+    )
+      return;
+
+    setIsCleaningUp(true);
+    try {
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'bulk_delete',
+          ids,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '일괄 삭제 실패');
+      alert(`✅ 불필요한 과거 공지 ${data.deletedCount}건이 깔끔하게 삭제되었습니다!`);
+      fetchNotices();
+    } catch (e: any) {
+      alert(e.message || '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
+
+  // 상시 혜택/규정 공지를 [1. AI 지식창고]로 이관 후 긴급 공지에서 삭제
+  const handleMigrateToFacility = async (notice: any) => {
+    if (
+      !confirm(
+        `'${notice.title}' 내용은 일시적인 긴급 휴장이 아니라 계속 유지되는 [상시 혜택/이용 규정]입니다.\n\n[1. AI 지식창고]에 정식 지식으로 등록하고 긴급 공지 목록에서는 지우시겠습니까?`
+      )
+    )
+      return;
+
+    setMigratingId(notice.id);
+    try {
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'migrate_to_facility',
+          noticeId: notice.id,
+          category: notice.audit?.suggestedCategory || '기타',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '이관 실패');
+      alert(
+        `✅ '${data.facilityName}' 항목이 [1. AI 지식창고]로 안전하게 이동되었으며 긴급 공지 목록에서 정리되었습니다!`
+      );
+      fetchNotices();
+    } catch (e: any) {
+      alert(e.message || '지식창고 이동 중 오류가 발생했습니다.');
+    } finally {
+      setMigratingId(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -184,7 +299,7 @@ export default function OperationsAdmin() {
       setMessage(
         isEditing
           ? '✅ 공지가 성공적으로 수정되어 AI 챗봇에 즉시 반영되었습니다!'
-          : '✅ 새 긴급 공지가 등록되어 AI 챗봇이 지금부터 이 내용으로 안내합니다!'
+          : '✅ 새 긴급 공지가 등록되어 AI 챗봇이 지금부터 이 내용으로 안내합니다! (종료일이 지나면 자동으로 꺼집니다)'
       );
       resetForm();
       fetchNotices();
@@ -234,6 +349,7 @@ export default function OperationsAdmin() {
     });
     setEditingId(notice.id || null);
     setIsEditing(true);
+    setDraftCheckResult(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -255,13 +371,19 @@ export default function OperationsAdmin() {
     }
   };
 
-  const checkIsCurrentlyActive = (notice: OperationalNotice) => {
+  const checkIsCurrentlyActive = (notice: OperationalNotice & { audit?: any }) => {
     if (!notice.isActive) return false;
     const now = new Date();
     if (notice.startDate && new Date(notice.startDate) > now) return false;
     if (notice.endDate && new Date(notice.endDate) < now) return false;
+    if (notice.audit?.verdict === 'EXPIRED_DELETE') return false;
     return true;
   };
+
+  const expiredDeleteIds = notices
+    .filter((n) => n.audit?.verdict === 'EXPIRED_DELETE' && n.id)
+    .map((n) => n.id as string);
+  const migrateCandidates = notices.filter((n) => n.audit?.verdict === 'MIGRATE_TO_KNOWLEDGE');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
@@ -270,7 +392,7 @@ export default function OperationsAdmin() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 mb-2">
-              메뉴 2 · 현장 긴급 속보 전용
+              메뉴 2 · 현장 긴급 속보 전용 (AI 날짜·내용 자동 검수 탑재)
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
               🚨 오늘의 긴급 공지 (갑작스러운 휴장 · 시간 변경)
@@ -294,10 +416,11 @@ export default function OperationsAdmin() {
           </div>
           <div className="bg-blue-50/70 dark:bg-blue-900/15 p-3.5 rounded-xl border border-blue-100 dark:border-blue-800/40">
             <p className="font-bold text-blue-800 dark:text-blue-300 mb-1">
-              💡 꿀팁: 종료 날짜를 정해두면 퇴근 후에도 안심!
+              🤖 AI 자동 종료일 추출 &amp; 청소 기능이 켜져 있습니다!
             </p>
             <ul className="text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside text-xs">
-              <li>아래 <strong>[오늘 하루만 적용]</strong> 버튼을 눌러서 올리면, 오늘 밤 12시가 지나면 AI가 알아서 공지를 끄고 내일 아침부터 평소 시간표대로 대답합니다.</li>
+              <li>직원이 종료일을 안 골라도 본문에 날짜(예: <code>8월 23일</code>)가 적혀 있으면 AI가 알아서 종료일을 세팅합니다.</li>
+              <li>기한이 지난 과거 공지나 상시 규정은 오른쪽 목록에서 <strong>원클릭으로 삭제·정리</strong>할 수 있습니다.</li>
             </ul>
           </div>
         </div>
@@ -380,12 +503,16 @@ export default function OperationsAdmin() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-800 dark:text-gray-200">
-                2. 상세 내용 (AI가 손님에게 안내할 내용) <span className="text-red-500">*</span>
-              </label>
-              <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
-                손님에게 말하듯 편하게 적어주시면 AI가 예쁜 문장으로 다듬어 대답합니다.
-              </p>
+              <div className="flex justify-between items-center mb-1.5">
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-200">
+                    2. 상세 내용 (AI가 손님에게 안내할 내용) <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    손님에게 말하듯 편하게 적어주시면 AI가 예쁜 문장으로 다듬어 대답합니다.
+                  </p>
+                </div>
+              </div>
               <textarea
                 name="content"
                 required
@@ -395,7 +522,46 @@ export default function OperationsAdmin() {
                 className="block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 leading-relaxed"
                 placeholder="예: 오늘 우천으로 인해 마운틴카트와 사계절썰매는 휴장합니다. 실내 미디어아트센터는 정상 운영합니다."
               />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleAiCheckDraft}
+                  disabled={isCheckingDraft || !formData.title.trim() || !formData.content.trim()}
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-extrabold disabled:opacity-50 transition-colors"
+                >
+                  {isCheckingDraft ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <span className="mr-1">🤖</span>
+                  )}
+                  AI로 종료일 자동 맞추기 &amp; 내용 검수
+                </button>
+              </div>
             </div>
+
+            {draftCheckResult && (
+              <div
+                className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                  draftCheckResult.verdict === 'KEEP_ACTIVE'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    : 'bg-amber-50 border-amber-300 text-amber-900'
+                }`}
+              >
+                <div className="font-extrabold">
+                  {draftCheckResult.verdict === 'KEEP_ACTIVE'
+                    ? '🟢 AI 검수 완료: 긴급 공지로 적절합니다!'
+                    : draftCheckResult.verdict === 'MIGRATE_TO_KNOWLEDGE'
+                    ? '💡 AI 안내: 이 내용은 상시 규정에 가깝습니다 ([1. AI 지식창고] 등록 권장)'
+                    : '⚠️ AI 주의: 본문 속 날짜가 이미 지난 과거 날짜인지 확인해 주세요!'}
+                </div>
+                <p className="leading-relaxed">{draftCheckResult.advice}</p>
+                {draftCheckResult.suggestedEndDate && (
+                  <p className="font-bold text-indigo-700">
+                    📅 추천 자동 종료일: {draftCheckResult.suggestedEndDate.replace('T', ' ')}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* 기간 설정 영역 */}
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-neutral-800/60 border border-gray-200 dark:border-neutral-700 space-y-3">
@@ -405,7 +571,7 @@ export default function OperationsAdmin() {
                   3. 언제까지 이 공지를 띄울까요? (자동 종료 설정)
                 </label>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  아래 버튼만 누르면 날짜가 자동으로 맞춰집니다!
+                  아래 버튼만 누르면 날짜가 자동으로 맞춰집니다! (비워두셔도 본문 날짜를 AI가 자동 인식합니다)
                 </p>
               </div>
 
@@ -512,8 +678,45 @@ export default function OperationsAdmin() {
           </form>
         </div>
 
-        {/* 우측: 현재 등록된 공지 목록 (7칸) */}
-        <div className="lg:col-span-7">
+        {/* 우측: 현재 등록된 공지 목록 & AI 자동 검수/정리 (7칸) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* 🧹 AI 공지 자동 검수 & 원클릭 정리 배너 */}
+          {(expiredDeleteIds.length > 0 || migrateCandidates.length > 0) && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 p-5 rounded-2xl border border-amber-300 dark:border-amber-800 space-y-3 shadow-2xs">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-amber-900 dark:text-amber-200 flex items-center">
+                    🧹 AI 긴급 공지 자동 검수 결과: 정리가 필요한 공지가 발견되었습니다!
+                  </h3>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                    • 날짜가 지났거나 이미 종료된 과거 공지: <strong>{expiredDeleteIds.length}건</strong>
+                    {migrateCandidates.length > 0 && (
+                      <>
+                        {' '}
+                        · [1. AI 지식창고]로 옮기면 좋은 상시 규정: <strong>{migrateCandidates.length}건</strong>
+                      </>
+                    )}
+                  </p>
+                </div>
+                {expiredDeleteIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleBulkDeleteExpired(expiredDeleteIds)}
+                    disabled={isCleaningUp}
+                    className="inline-flex items-center px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl shadow-2xs shrink-0 disabled:opacity-50 transition-colors"
+                  >
+                    {isCleaningUp ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    불필요한 과거 공지 {expiredDeleteIds.length}건 한 번에 지우기
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xs border border-neutral-200 dark:border-neutral-800 overflow-hidden">
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex justify-between items-center bg-gray-50/60 dark:bg-neutral-900/50">
               <div>
@@ -521,7 +724,7 @@ export default function OperationsAdmin() {
                   📋 등록된 긴급 공지 목록 ({notices.length}건)
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  <strong>[🟢 AI 안내 중]</strong> 표시가 켜진 공지만 현재 손님에게 안내됩니다. 상황이 끝나면 버튼을 눌러 끌 수 있습니다.
+                  AI가 각 공지의 <strong>종료일과 본문 날짜·내용</strong>을 자동으로 검수하여 삭제 또는 이동이 필요한 항목을 표시합니다.
                 </p>
               </div>
               <button
@@ -550,6 +753,7 @@ export default function OperationsAdmin() {
               <ul className="divide-y divide-gray-200 dark:divide-neutral-800">
                 {notices.map((notice) => {
                   const isActiveNow = checkIsCurrentlyActive(notice);
+                  const audit = notice.audit;
 
                   return (
                     <li
@@ -559,7 +763,7 @@ export default function OperationsAdmin() {
                           ? 'bg-blue-50/50 dark:bg-blue-900/10'
                           : isActiveNow
                           ? 'bg-white dark:bg-neutral-900'
-                          : 'bg-gray-50/70 dark:bg-neutral-900/40 opacity-75'
+                          : 'bg-gray-50/70 dark:bg-neutral-900/40 opacity-85'
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -580,9 +784,35 @@ export default function OperationsAdmin() {
                           <h4 className="text-base font-extrabold text-gray-900 dark:text-white">
                             {notice.title}
                           </h4>
+                          {audit?.verdict === 'EXPIRED_DELETE' && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-red-100 text-red-800 border border-red-300">
+                              🗑️ 불필요/기간경과 (삭제 권장)
+                            </span>
+                          )}
+                          {audit?.verdict === 'MIGRATE_TO_KNOWLEDGE' && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-300">
+                              📚 상시 규정 (지식창고 이동 권장)
+                            </span>
+                          )}
                         </div>
 
-                        <div className="flex items-center space-x-2 shrink-0">
+                        <div className="flex items-center flex-wrap gap-1.5 shrink-0">
+                          {audit?.verdict === 'MIGRATE_TO_KNOWLEDGE' && (
+                            <button
+                              type="button"
+                              onClick={() => handleMigrateToFacility(notice)}
+                              disabled={migratingId === notice.id}
+                              className="inline-flex items-center px-2.5 py-1.5 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs disabled:opacity-50 transition-colors"
+                              title="이 상시 규정을 [1. AI 지식창고]에 정식 등록하고 긴급 공지에서는 지웁니다"
+                            >
+                              {migratingId === notice.id ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                              ) : (
+                                <span className="mr-1">📚</span>
+                              )}
+                              지식창고로 옮기고 지우기
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEdit(notice)}
                             className="inline-flex items-center px-2.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
@@ -597,6 +827,18 @@ export default function OperationsAdmin() {
                           </button>
                         </div>
                       </div>
+
+                      {audit && audit.verdict !== 'KEEP_ACTIVE' && (
+                        <div
+                          className={`mt-2.5 p-2.5 rounded-lg text-xs font-medium border ${
+                            audit.verdict === 'EXPIRED_DELETE'
+                              ? 'bg-red-50/80 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-300'
+                              : 'bg-indigo-50/80 border-indigo-200 text-indigo-800 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-300'
+                          }`}
+                        >
+                          🤖 <strong>AI 검수 의견:</strong> {audit.reason}
+                        </div>
+                      )}
 
                       <div className="mt-3 text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-neutral-800 p-3.5 rounded-xl border border-gray-200/80 dark:border-neutral-700 whitespace-pre-wrap leading-relaxed">
                         {notice.content}
@@ -616,6 +858,10 @@ export default function OperationsAdmin() {
                               ? new Date(notice.endDate).toLocaleString('ko-KR')
                               : '계속'}
                           </div>
+                        ) : audit?.detectedMaxDate ? (
+                          <span className="text-amber-700 font-bold">
+                            📅 종료일 미설정 (본문 감지 종료일: {audit.detectedMaxDate})
+                          </span>
                         ) : (
                           <span>♾️ 기간 제한 없음 (직접 끌 때까지 안내)</span>
                         )}

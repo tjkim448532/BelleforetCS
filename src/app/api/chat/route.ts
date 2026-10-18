@@ -115,7 +115,9 @@ export async function POST(req: Request) {
 
     // --- 동적 운영 정보 (Operational Notices) 주입 및 만료 공지 자동 비활성화 ---
     if (noticesSnapshot.status === 'fulfilled' && noticesSnapshot.value) {
+      const { extractNoticeMaxDate } = await import('@/app/api/admin/operations/route');
       const now = new Date();
+      const kstTodayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const activeNotices = noticesSnapshot.value.docs
         .filter((doc: any) => {
           const notice = doc.data();
@@ -123,6 +125,14 @@ export async function POST(req: Request) {
             // 종료일이 지난 공지는 백그라운드에서 자동 비활성화 (Auto-Expire)
             doc.ref.update({ isActive: false }).catch(() => {});
             return false;
+          }
+          if (!notice.endDate) {
+            const inferredEnd = extractNoticeMaxDate(notice.title || '', notice.content || '', notice.createdAt);
+            if (inferredEnd && inferredEnd < kstTodayStr) {
+              // 종료일이 비어 있어도 본문 날짜가 모두 지난 공지는 자동 비활성화
+              doc.ref.update({ isActive: false }).catch(() => {});
+              return false;
+            }
           }
           if (notice.startDate && new Date(notice.startDate) > now) return false;
           return true;
