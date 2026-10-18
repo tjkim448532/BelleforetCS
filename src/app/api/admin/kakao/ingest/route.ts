@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { upsertDocument } from '@/lib/pinecone';
 import {
   classifyConversation,
+  extractRobotSpecsFromText,
+  invalidateFacilityCache,
   maskPersonalInfo,
   resolveDeduplicatedLogTarget,
 } from '@/lib/cs-intelligence';
@@ -11,7 +14,7 @@ import {
  * 카카오톡 대화 내보내기(.txt / .csv) 및 상담 대화 통째로 흡수 API
  * - 개인정보(전화번호, 실명, 이메일 등)를 100% 마스킹한 뒤,
  *   AI가 고객 질문과 상담원 답변 쌍(Q&A) 및 핵심 지식을 자동 추출하여
- *   통합 인박스(chat_logs, channel='kakao')에 적재하고 지식창고 등록 후보를 반환합니다.
+ *   통합 인박스(chat_logs, channel='kakao')와 AI 지식창고(facilities + Pinecone 벡터 DB)에 즉시 영구 학습시킵니다.
  */
 export async function POST(req: Request) {
   try {
@@ -19,6 +22,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const rawText: string = (body.rawText || '').trim();
     const saveToLogs: boolean = body.saveToLogs !== false;
+    const saveToKnowledgeBase: boolean = body.saveToKnowledgeBase !== false;
 
     if (!rawText) {
       return NextResponse.json(
@@ -39,7 +43,7 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
+      model: 'gemini-flash-lite-latest',
       generationConfig: { responseMimeType: 'application/json' },
     });
 
@@ -72,6 +76,7 @@ ${maskedText}`;
       : [];
 
     let savedLogCount = 0;
+    let learnedFacilityCount = 0;
     const enrichedPairs = [];
 
     for (const pair of pairs) {
@@ -107,6 +112,60 @@ ${maskedText}`;
         savedLogCount++;
       }
 
+      if (saveToKnowledgeBase) {
+        const facTitle = `[상담학습] ${(pair.suggestedName || q).trim().slice(0, 60)}`;
+        const facCategory = pair.suggestedCategory || cls.category || '기타';
+        const facDesc = `[고객 질문]\n${q}\n\n[상담원 공식 답변]\n${pair.suggestedDescription || a}`;
+        const facTags = String(pair.suggestedTags || '')
+          .split(',')
+          .map((t: string) => t.trim())
+          .filter(Boolean);
+
+        const existingSnap = await adminDb
+          .collection('facilities')
+          .where('name', '==', facTitle)
+          .limit(1)
+          .get();
+        const facRef = existingSnap.empty
+          ? adminDb.collection('facilities').doc()
+          : existingSnap.docs[0].ref;
+
+        const robotSpecs = extractRobotSpecsFromText({
+          name: facTitle,
+          category: facCategory,
+          description: facDesc,
+        });
+
+        await facRef.set(
+          {
+            name: facTitle,
+            category: facCategory,
+            location: '벨포레 리조트 내',
+            description: facDesc,
+            seasonalDescription: '',
+            tags: facTags,
+            status: 'approved',
+            type: 'faq',
+            robotSpecs,
+            updatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+
+        await upsertDocument({
+          id: facRef.id,
+          text: `시설명: ${facTitle}\n카테고리: ${facCategory}\n위치: 벨포레 리조트 내\n설명: ${facDesc}\n태그: ${facTags.join(', ')}`,
+          metadata: {
+            type: 'faq',
+            name: facTitle,
+            category: facCategory,
+          },
+        }).catch((err) => console.warn('Pinecone upsert warning:', err));
+
+        learnedFacilityCount++;
+      }
+
       enrichedPairs.push({
         ...pair,
         question: q,
@@ -117,11 +176,17 @@ ${maskedText}`;
       });
     }
 
+    if (learnedFacilityCount > 0) {
+      invalidateFacilityCache();
+    }
+
     return NextResponse.json({
       status: 'success',
+      extractedCount: enrichedPairs.length,
       savedLogCount,
-      message: `카카오톡 대화에서 핵심 Q&A ${savedLogCount}건을 자동 추출하여 통합 인박스(카카오톡 채널)와 로봇 학습 DB에 저장했습니다!`,
+      learnedFacilityCount,
       extractedPairs: enrichedPairs,
+      message: `카카오톡 대화에서 총 ${enrichedPairs.length}건의 Q&A를 추출하여 통합 인박스(${savedLogCount}건) 및 AI 지식창고·벡터DB(${learnedFacilityCount}건)에 즉시 영구 학습시켰습니다!`,
     });
   } catch (error: any) {
     console.error('[Kakao Ingest Error]:', error);

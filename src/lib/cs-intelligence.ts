@@ -331,6 +331,11 @@ let cachedFacilities: Array<Record<string, any> & { id: string }> | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 60000;
 
+export function invalidateFacilityCache() {
+  cachedFacilities = null;
+  cacheTimestamp = 0;
+}
+
 export const BELLEFORET_SYNONYM_MAP: Record<string, string> = {
   양몰이: '벨포레 목장 양몰이',
   양떼목장: '벨포레 목장',

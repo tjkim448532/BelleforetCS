@@ -241,6 +241,8 @@ export default function OmnichannelAndRobotCenterPage() {
           name: `[상담학습] ${teachTitle.trim()}`,
           category: teachCategory,
           type: 'faq',
+          status: 'approved',
+          duplicateAction: 'overwrite',
           description: `[고객 자주 묻는 질문]\n질문: ${teachTitle.trim()}\n\n[공식 답변 및 안내]\n${teachAnswer.trim()}`,
         }),
       });
@@ -252,6 +254,7 @@ export default function OmnichannelAndRobotCenterPage() {
           body: JSON.stringify({
             action: 'save_staff_reply',
             logId: teachingLog.id,
+            updatedAnswer: teachAnswer.trim(),
             staffNote: `[AI 지식창고 학습 완료] ${teachAnswer.trim()}`,
             isResolved: true,
           }),

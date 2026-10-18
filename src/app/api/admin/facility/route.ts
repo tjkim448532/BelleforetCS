@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { upsertDocument, deleteDocument } from '@/lib/pinecone';
 import { mergeFacilityDescription } from '@/lib/gemini';
-import { extractRobotSpecsFromText } from '@/lib/cs-intelligence';
+import { extractRobotSpecsFromText, invalidateFacilityCache } from '@/lib/cs-intelligence';
 
 export async function POST(req: Request) {
   try {
@@ -107,10 +107,12 @@ export async function POST(req: Request) {
         });
       } catch (pineconeError) {
         console.warn('Pinecone sync failed during create:', pineconeError);
+        invalidateFacilityCache();
         return NextResponse.json({ success: true, id: docRef.id, facility: facilityData, isUpdate, warning: 'AI search indexing failed' });
       }
     }
 
+    invalidateFacilityCache();
     return NextResponse.json({ success: true, id: docRef.id, facility: facilityData, isUpdate });
   } catch (error: unknown) {
     console.error('Error creating/updating facility:', error);
