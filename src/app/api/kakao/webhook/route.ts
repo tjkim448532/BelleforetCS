@@ -46,11 +46,49 @@ export async function POST(req: Request) {
       });
     }
 
+    // 고객이 직접 "상담직원 연결"을 요청한 경우 즉시 1:1 채팅 전환 안내 및 인박스 긴급 알림 등록
+    if (/^(상담직원\s*연결|상담원\s*연결|직원\s*연결|사람\s*연결)$/.test(utterance.trim())) {
+      await answerGuestQuestion({
+        question: `[상담직원 연결 요청] ${utterance.trim()}`,
+        channel: 'kakao',
+        externalUserId: kakaoUserId,
+      });
+      return NextResponse.json({
+        version: '2.0',
+        template: {
+          outputs: [
+            {
+              simpleText: {
+                text: '👩‍💼 담당 상담원 연결 안내\n\n1. 현재 카카오톡 채팅방 입력창 왼쪽의 [상담직원 전환(또는 채팅상담)] 버튼을 눌러주시면 직원이 1:1 채팅으로 직접 응대해 드립니다.\n2. 급하신 용무는 벨포레 대표번호(📞 1566-0162)로 전화 주시면 즉시 도와드리겠습니다!',
+              },
+            },
+          ],
+          quickReplies: [
+            {
+              label: '오늘 운영 안 하는 시설 있나요?',
+              action: 'message',
+              messageText: '오늘 운영 안 하는 시설 있나요?',
+            },
+            {
+              label: '마운틴카트 요금 알려줘',
+              action: 'message',
+              messageText: '마운틴카트 요금 알려줘',
+            },
+          ],
+        },
+      });
+    }
+
     const result = await answerGuestQuestion({
       question: utterance.trim(),
       channel: 'kakao',
       externalUserId: kakaoUserId,
     });
+
+    // AI가 답변하기 어려운 질문이거나 불만/환불 문의인 경우 자동으로 상담원 연결 안내 문구 추가
+    const finalAnswerText = result.classification.needsHumanHandoff
+      ? `${result.answer}\n\n💡 직원의 직접 확인이 필요하신 경우 아래 [👩‍💼 상담직원 연결] 버튼 또는 채팅창 좌측 [상담직원 전환]을 눌러주세요.`
+      : result.answer;
 
     const outputs: any[] = [];
 
@@ -58,7 +96,7 @@ export async function POST(req: Request) {
       outputs.push({
         basicCard: {
           title: '🌲 벨포레 리조트 AI 안내',
-          description: result.answer.slice(0, 230),
+          description: finalAnswerText.slice(0, 230),
           buttons: result.links.map((l) => ({
             action: 'webLink',
             label: l.label,
@@ -66,30 +104,39 @@ export async function POST(req: Request) {
           })),
         },
       });
-      if (result.answer.length > 230) {
+      if (finalAnswerText.length > 230) {
         outputs.unshift({
           simpleText: {
-            text: result.answer,
+            text: finalAnswerText,
           },
         });
       }
     } else {
       outputs.push({
         simpleText: {
-          text: result.answer,
+          text: finalAnswerText,
         },
       });
     }
+
+    const quickReplies = [
+      ...result.quickReplies.slice(0, 3).map((q) => ({
+        label: q,
+        action: 'message',
+        messageText: q,
+      })),
+      {
+        label: '👩‍💼 상담직원 연결',
+        action: 'message',
+        messageText: '상담직원 연결',
+      },
+    ];
 
     return NextResponse.json({
       version: '2.0',
       template: {
         outputs,
-        quickReplies: result.quickReplies.map((q) => ({
-          label: q,
-          action: 'message',
-          messageText: q,
-        })),
+        quickReplies,
       },
       _belleforetMeta: {
         logId: result.logId,
