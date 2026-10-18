@@ -196,7 +196,7 @@ export async function POST(req: Request) {
               sentiment: cls.sentiment,
               sentimentLabel: cls.sentimentLabel,
               needsHumanHandoff: cls.needsHumanHandoff,
-              isResolved: dedupTarget.existingData?.isResolved ?? cls.isResolved,
+              isResolved: cls.isResolved,
               timestamp: new Date().toISOString(),
             },
             { merge: true }

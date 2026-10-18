@@ -449,7 +449,10 @@ export async function searchHybridFacilityDocs(
     if (isDiningBroadQuery && catStr === '식음') score += 14;
     if (
       isPackageBroadQuery &&
-      (f.homepageSourceType === 'special_offer' || nameStr.includes('패키지') || nameStr.includes('pkg'))
+      (f.homepageSourceType === 'specialOffer' ||
+        f.homepageSourceType === 'special_offer' ||
+        nameStr.includes('패키지') ||
+        nameStr.includes('pkg'))
     ) {
       score += 18;
     }
@@ -689,7 +692,7 @@ export async function answerGuestQuestion(params: {
         sentiment: classification.sentiment,
         sentimentLabel: classification.sentimentLabel,
         needsHumanHandoff: classification.needsHumanHandoff,
-        isResolved: existingData?.isResolved ?? classification.isResolved,
+        isResolved: classification.isResolved,
         timestamp: new Date().toISOString(),
       },
       { merge: true }

@@ -90,31 +90,24 @@ export async function POST(req: Request) {
       ? `${result.answer}\n\n💡 직원의 직접 확인이 필요하신 경우 아래 [👩‍💼 상담직원 연결] 버튼 또는 채팅창 좌측 [상담직원 전환]을 눌러주세요.`
       : result.answer;
 
-    const outputs: any[] = [];
+    const outputs: any[] = [
+      {
+        simpleText: {
+          text: finalAnswerText,
+        },
+      },
+    ];
 
     if (result.links.length > 0) {
       outputs.push({
-        basicCard: {
-          title: '🌲 벨포레 리조트 AI 안내',
-          description: finalAnswerText.slice(0, 230),
+        textCard: {
+          title: '🌲 공식 홈페이지 상세 안내',
+          description: '아래 버튼을 누르시면 공식 홈페이지 상세 페이지로 이동합니다.',
           buttons: result.links.map((l) => ({
             action: 'webLink',
             label: l.label,
             webLinkUrl: l.url,
           })),
-        },
-      });
-      if (finalAnswerText.length > 230) {
-        outputs.unshift({
-          simpleText: {
-            text: finalAnswerText,
-          },
-        });
-      }
-    } else {
-      outputs.push({
-        simpleText: {
-          text: finalAnswerText,
         },
       });
     }
