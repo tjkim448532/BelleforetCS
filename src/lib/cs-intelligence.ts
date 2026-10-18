@@ -596,7 +596,7 @@ export async function answerGuestQuestion(params: {
     });
 
   // 긴급 공지 최우선 주입
-  let hasActiveNotices = false;
+  let latestNoticeTimeMs = 0;
   if (cachedNotices && cachedNotices.docs) {
     const now = new Date();
     const activeNotices = cachedNotices.docs
@@ -609,7 +609,10 @@ export async function answerGuestQuestion(params: {
       .slice(0, 5);
 
     if (activeNotices.length > 0) {
-      hasActiveNotices = true;
+      for (const n of activeNotices) {
+        const t = new Date(n.updatedAt || n.createdAt || 0).getTime();
+        if (t > latestNoticeTimeMs) latestNoticeTimeMs = t;
+      }
       const noticesText = activeNotices
         .map((n: any) => `- ${n.title}: ${n.content}`)
         .join('\n');
@@ -626,12 +629,13 @@ export async function answerGuestQuestion(params: {
       : question;
 
   const { logRef, normalizedQuestion, nextAskCount, existingData } = dedupTarget;
+  const existingAnswerTimeMs = existingData?.timestamp ? new Date(existingData.timestamp).getTime() : 0;
 
   let rawAnswer = '';
-  // 이미 검증된 동일 질문 답변이 있고 긴급 공지가 없으면 0.2초 만에 즉시 캐시 응답 반환
+  // 이미 검증된 동일 질문 답변이 있고, 그 이후 새로 등록/수정된 긴급 공지가 없으면 0.2초 만에 즉시 캐시 응답 반환
   if (
     channel !== 'voice' &&
-    !hasActiveNotices &&
+    existingAnswerTimeMs > latestNoticeTimeMs &&
     existingData?.answer &&
     existingData?.isResolved === true &&
     !existingData?.needsHumanHandoff
