@@ -41,11 +41,14 @@ export async function POST(req: Request) {
     })();
 
     const data = await req.json();
-    const { question, language = 'ko', history = [] } = data;
+    const { question: rawQuestion, language = 'ko', history = [] } = data;
 
-    if (!question) {
+    if (!rawQuestion) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
     }
+
+    const { cleanKakaoCopyPasteQuestion } = await import('@/lib/cs-intelligence');
+    const question = cleanKakaoCopyPasteQuestion(rawQuestion);
 
     // --- 동의어 처리 (Synonym Dictionary) ---
     // 사용자가 자주 사용하는 줄임말을 공식 명칭으로 변환하여 검색 정확도를 높입니다.

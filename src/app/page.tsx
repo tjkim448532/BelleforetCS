@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings, ThumbsUp, ThumbsDown, Info, ChevronRight } from 'lucide-react';
+import { Send, Bot, User, Clock, DollarSign, MapPin, Loader2, Settings, ThumbsUp, ThumbsDown, Info, ChevronRight, Copy, Check } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Message {
@@ -15,8 +15,8 @@ interface Message {
 
 const translations = {
   ko: {
-    greeting: '안녕하세요! 벨포레 프론트 데스크 AI입니다. 시설 운영 시간, 요금, 위치 등 무엇이든 물어보세요.',
-    placeholder: '무엇이든 물어보세요...',
+    greeting: '안녕하세요! 벨포레 프론트 데스크 AI입니다. 시설 운영 시간, 요금, 위치 등 무엇이든 물어보세요. (💡 카카오톡으로 온 고객 질문을 그대로 복사해 붙여넣으셔도 정확한 답장을 만들어 드립니다!)',
+    placeholder: '질문을 입력하거나 카카오톡 고객 질문을 그대로 붙여넣으세요...',
     error: '앗, 시스템에 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
     quick1: '목장 운영시간',
     quick1Q: '목장 운영시간은 어떻게 되나요?',
@@ -49,6 +49,7 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   const [notices, setNotices] = useState<any[]>([]);
   const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -297,29 +298,58 @@ export default function ChatPage() {
                 </p>
               </div>
             </div>
-            {/* Feedback Buttons for AI Messages */}
-            {msg.role === 'assistant' && msg.logId && (
+            {/* Copy & Feedback Buttons for AI Messages */}
+            {msg.role === 'assistant' && msg.id !== '1' && (
               <div className="flex items-center space-x-2 mt-2 ml-11">
-                <button 
-                  onClick={() => handleFeedback(msg.id, msg.logId!, 'up')}
+                <button
+                  onClick={() => {
+                    const textToCopy = msg.id === streamingMessageId ? streamingContent : msg.content;
+                    navigator.clipboard.writeText(textToCopy);
+                    setCopiedMsgId(msg.id);
+                    setTimeout(() => setCopiedMsgId(null), 2000);
+                  }}
                   className={clsx(
-                    "p-1.5 rounded-md transition-colors",
-                    msg.feedback === 'up' ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                    "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold transition-colors border",
+                    copiedMsgId === msg.id
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 dark:bg-neutral-800 dark:text-amber-300 dark:border-neutral-700"
                   )}
-                  title="도움이 되었어요"
+                  title="카카오톡이나 문자 답장용으로 이 답변 복사하기"
                 >
-                  <ThumbsUp size={14} />
-                </button>
-                <button 
-                  onClick={() => handleFeedback(msg.id, msg.logId!, 'down')}
-                  className={clsx(
-                    "p-1.5 rounded-md transition-colors",
-                    msg.feedback === 'down' ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                  {copiedMsgId === msg.id ? (
+                    <>
+                      <Check size={13} className="mr-1" /> 답장 복사 완료! (카톡에 붙여넣기 하세요)
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} className="mr-1" /> 카톡 답장용 복사
+                    </>
                   )}
-                  title="아쉬워요"
-                >
-                  <ThumbsDown size={14} />
                 </button>
+                {msg.logId && (
+                  <>
+                    <button 
+                      onClick={() => handleFeedback(msg.id, msg.logId!, 'up')}
+                      className={clsx(
+                        "p-1.5 rounded-md transition-colors",
+                        msg.feedback === 'up' ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-400 hover:text-green-600 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                      )}
+                      title="도움이 되었어요"
+                    >
+                      <ThumbsUp size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleFeedback(msg.id, msg.logId!, 'down')}
+                      className={clsx(
+                        "p-1.5 rounded-md transition-colors",
+                        msg.feedback === 'down' ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                      )}
+                      title="아쉬워요"
+                    >
+                      <ThumbsDown size={14} />
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

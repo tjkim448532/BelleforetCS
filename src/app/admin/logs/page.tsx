@@ -972,10 +972,10 @@ export default function OmnichannelAndRobotCenterPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-extrabold text-neutral-900 dark:text-white">
-                      벨포레 리조트 카카오톡 채널 (실시간 연동 테스트)
+                      벨포레 카카오톡 AI 도우미 (외부 카톡 질문 복붙 ➔ 1초 답장 생성)
                     </h3>
                     <p className="text-xs text-neutral-700 dark:text-gray-400">
-                      여기서 메시지를 보내면 실제 카카오톡 웹훅 서버가 작동하며 [통합 인박스]에 즉시 기록됩니다!
+                      직원이 외부 카카오톡으로 받은 고객 질문을 그대로 복사해 붙여넣으면, 정확한 답장을 만들어 드리고 [통합 인박스]에 자동 저장합니다!
                     </p>
                   </div>
                 </div>
@@ -998,8 +998,27 @@ export default function OmnichannelAndRobotCenterPage() {
                         }`}
                       >
                         {msg.text}
-                        <div className="text-[10px] opacity-60 mt-1 text-right">
-                          {msg.timestamp}
+                        <div className="flex items-center justify-between gap-3 mt-2 pt-1.5 border-t border-black/5 dark:border-white/10">
+                          <span className="text-[10px] opacity-60">
+                            {msg.timestamp}
+                          </span>
+                          {msg.sender === 'bot' && idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyUrl(msg.text, `kakao_msg_${idx}`)}
+                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-[#FEE500] hover:bg-amber-400 text-neutral-950 shadow-2xs transition-colors"
+                            >
+                              {copiedUrl === `kakao_msg_${idx}` ? (
+                                <>
+                                  <Check className="w-3 h-3 mr-1" /> 복사 완료! (카톡에 붙여넣기)
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3 mr-1" /> 이 답변 복사해서 카톡에 붙여넣기
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1042,7 +1061,7 @@ export default function OmnichannelAndRobotCenterPage() {
                   type="text"
                   value={kakaoSimInput}
                   onChange={(e) => setKakaoSimInput(e.target.value)}
-                  placeholder="카카오톡으로 물어볼 질문을 입력하세요 (예: 애견 동반 가능한가요?)"
+                  placeholder="외부 카톡으로 온 고객 질문을 그대로 복사해 붙여넣으세요 (예: [홍길동] [오후 2:10] 루지 요금 얼마예요?)"
                   className="flex-1 px-3 py-2 text-sm bg-transparent text-gray-900 dark:text-white focus:outline-none"
                 />
                 <button

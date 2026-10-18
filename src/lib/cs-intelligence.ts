@@ -44,6 +44,24 @@ export function maskPersonalInfo(text: string): string {
 }
 
 /**
+ * 직원이 외부 PC/모바일 카카오톡에서 고객 질문을 드래그해 그대로 복붙했을 때
+ * "[홍길동] [오후 2:10]" 또는 "2026년 10월 18일 오후 2:10, 홍길동 :" 같은 카톡 말풍선 헤더를 자동 제거합니다.
+ */
+export function cleanKakaoCopyPasteQuestion(rawText: string): string {
+  if (!rawText) return '';
+  const cleaned = maskPersonalInfo(rawText)
+    .replace(/\[[^\]]{1,25}\]\s*\[(?:오전|오후|AM|PM)?\s*\d{1,2}:\d{2}\]\s*/gi, '')
+    .replace(
+      /\d{4}[년.\-\s]+\d{1,2}[월.\-\s]+\d{1,2}[일.\s]+(?:오전|오후)?\s*\d{1,2}:\d{2},\s*[^:：]{1,25}[:：]\s*/g,
+      ''
+    )
+    .replace(/-{3,}\s*\d{4}년.*-{3,}/g, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+  return cleaned || rawText.trim();
+}
+
+/**
  * 고객 질문과 AI 답변을 분석하여 의도(Intent), 분류(Category), 감정/긴급도(Sentiment), 상담원 개입 필요 여부를 즉시 분류합니다.
  */
 export function classifyConversation(
@@ -272,7 +290,8 @@ export async function answerGuestQuestion(params: {
 }> {
   triggerDailyHomepageSyncIfNeeded();
 
-  const { question, channel, externalUserId, callerPhone } = params;
+  const { channel, externalUserId, callerPhone } = params;
+  const question = cleanKakaoCopyPasteQuestion(params.question);
   const nowMs = Date.now();
 
   const synonymMap: Record<string, string> = {
