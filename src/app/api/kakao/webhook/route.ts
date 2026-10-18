@@ -46,8 +46,8 @@ export async function POST(req: Request) {
       });
     }
 
-    // 고객이 직접 "상담직원 연결"을 요청한 경우 즉시 1:1 채팅 전환 안내 및 인박스 긴급 알림 등록
-    if (/^(상담직원\s*연결|상담원\s*연결|직원\s*연결|사람\s*연결)$/.test(utterance.trim())) {
+    // 고객이 직접 "상담직원 연결"을 요청한 경우 카카오 공식 operator 액션 버튼(실시간 1:1 채팅 전환) 및 전화연결 버튼 카드 즉시 반환
+    if (/^(상담직원\s*연결|상담원\s*연결|직원\s*연결|사람\s*연결|상담\s*연결|채팅\s*상담|상담원)$/.test(utterance.trim())) {
       await answerGuestQuestion({
         question: `[상담직원 연결 요청] ${utterance.trim()}`,
         channel: 'kakao',
@@ -58,8 +58,21 @@ export async function POST(req: Request) {
         template: {
           outputs: [
             {
-              simpleText: {
-                text: '👩‍💼 담당 상담원 연결 안내\n\n1. 현재 카카오톡 채팅방 입력창 왼쪽의 [상담직원 전환(또는 채팅상담)] 버튼을 눌러주시면 직원이 1:1 채팅으로 직접 응대해 드립니다.\n2. 급하신 용무는 벨포레 대표번호(📞 1566-0162)로 전화 주시면 즉시 도와드리겠습니다!',
+              textCard: {
+                title: '👩‍💼 벨포레 상담직원 연결',
+                description:
+                  '아래 [상담직원 실시간 채팅 연결] 버튼을 누르시면 담당 직원과 1:1 대화로 즉시 전환됩니다.\n(채팅 상담시간: 매일 10:00 ~ 17:00)',
+                buttons: [
+                  {
+                    action: 'operator',
+                    label: '👩‍💼 상담직원 실시간 채팅 연결',
+                  },
+                  {
+                    action: 'phone',
+                    label: '📞 고객센터 전화연결 (1566-0162)',
+                    phoneNumber: '1566-0162',
+                  },
+                ],
               },
             },
           ],
@@ -85,15 +98,10 @@ export async function POST(req: Request) {
       externalUserId: kakaoUserId,
     });
 
-    // AI가 답변하기 어려운 질문이거나 불만/환불 문의인 경우 자동으로 상담원 연결 안내 문구 추가
-    const finalAnswerText = result.classification.needsHumanHandoff
-      ? `${result.answer}\n\n💡 직원의 직접 확인이 필요하신 경우 아래 [👩‍💼 상담직원 연결] 버튼 또는 채팅창 좌측 [상담직원 전환]을 눌러주세요.`
-      : result.answer;
-
     const outputs: any[] = [
       {
         simpleText: {
-          text: finalAnswerText,
+          text: result.answer,
         },
       },
     ];
@@ -108,6 +116,27 @@ export async function POST(req: Request) {
             label: l.label,
             webLinkUrl: l.url,
           })),
+        },
+      });
+    }
+
+    // AI가 답변하기 어려운 질문이거나 불만/환불 문의인 경우 실제 작동하는 카카오 공식 operator/phone 버튼 카드 자동 부착
+    if (result.classification.needsHumanHandoff) {
+      outputs.push({
+        textCard: {
+          title: '👩‍💼 담당 상담원 직접 연결',
+          description: '직원의 직접 확인이 필요하신 경우 아래 버튼을 눌러 1:1 채팅 또는 전화로 연결하실 수 있습니다.',
+          buttons: [
+            {
+              action: 'operator',
+              label: '👩‍💼 상담직원 실시간 채팅 연결',
+            },
+            {
+              action: 'phone',
+              label: '📞 고객센터 전화연결 (1566-0162)',
+              phoneNumber: '1566-0162',
+            },
+          ],
         },
       });
     }
