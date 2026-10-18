@@ -42,6 +42,7 @@ interface ChatLog {
   needsHumanHandoff?: boolean;
   isResolved?: boolean;
   staffNote?: string;
+  askCount?: number;
 }
 
 interface RobotSummaryData {
@@ -823,6 +824,13 @@ export default function OmnichannelAndRobotCenterPage() {
                         {log.intentLabel && (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                             🏷️ [{log.category || '일반'}] {log.intentLabel}
+                          </span>
+                        )}
+
+                        {/* 2-1. 중복 질문 누적 횟수 배지 */}
+                        {log.askCount && log.askCount > 1 && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                            🔥 {log.askCount}회 질문됨 (중복 자동병합)
                           </span>
                         )}
 

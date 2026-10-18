@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   classifyConversation,
   maskPersonalInfo,
+  resolveDeduplicatedLogTarget,
 } from '@/lib/cs-intelligence';
 
 /**
@@ -81,21 +82,28 @@ ${maskedText}`;
       const cls = classifyConversation(q, a, 'kakao');
 
       if (saveToLogs) {
-        await adminDb.collection('chat_logs').add({
-          question: q,
-          answer: a,
-          contextUsed: ['kakao_import'],
-          channel: 'kakao',
-          externalUserId: 'kakao_chat_export',
-          category: cls.category,
-          intentCode: cls.intentCode,
-          intentLabel: cls.intentLabel,
-          sentiment: cls.sentiment,
-          sentimentLabel: cls.sentimentLabel,
-          needsHumanHandoff: false,
-          isResolved: true,
-          timestamp: new Date().toISOString(),
-        });
+        const { logRef, normalizedQuestion, nextAskCount } =
+          await resolveDeduplicatedLogTarget(q);
+        await logRef.set(
+          {
+            question: q,
+            normalizedQuestion,
+            askCount: nextAskCount,
+            answer: a,
+            contextUsed: ['kakao_import'],
+            channel: 'kakao',
+            externalUserId: 'kakao_chat_export',
+            category: cls.category,
+            intentCode: cls.intentCode,
+            intentLabel: cls.intentLabel,
+            sentiment: cls.sentiment,
+            sentimentLabel: cls.sentimentLabel,
+            needsHumanHandoff: false,
+            isResolved: true,
+            timestamp: new Date().toISOString(),
+          },
+          { merge: true }
+        );
         savedLogCount++;
       }
 

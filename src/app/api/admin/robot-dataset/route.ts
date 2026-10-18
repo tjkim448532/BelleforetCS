@@ -4,6 +4,7 @@ import {
   classifyConversation,
   extractRobotSpecsFromText,
   maskPersonalInfo,
+  normalizeQuestionKey,
 } from '@/lib/cs-intelligence';
 
 /**
@@ -91,7 +92,8 @@ export async function GET(req: Request) {
         lines.push(JSON.stringify(record));
       }
 
-      // (B) 실제 고객 질문·응대 분류 로그 데이터셋 (개인정보 100% 마스킹)
+      // (B) 실제 고객 질문·응대 분류 로그 데이터셋 (개인정보 100% 마스킹 & 중복 질문 100% 제거)
+      const seenNormalized = new Set<string>();
       for (const log of logs) {
         const cls = classifyConversation(
           log.question || '',
@@ -100,10 +102,15 @@ export async function GET(req: Request) {
         );
         if (!cls.isResolved) continue; // 미해결 오답은 학습 데이터셋에서 자동 제외
 
+        const normKey = log.normalizedQuestion || normalizeQuestionKey(cls.maskedQuestion);
+        if (!normKey || seenNormalized.has(normKey)) continue;
+        seenNormalized.add(normKey);
+
         const record = {
           dataset_type: 'real_guest_dialogue',
           log_id: log.id,
           channel: log.channel || 'web',
+          ask_count: log.askCount || 1,
           category: log.category || cls.category,
           intent_code: log.intentCode || cls.intentCode,
           intent_label: log.intentLabel || cls.intentLabel,
@@ -196,11 +203,11 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const action = body.action || 'upgrade_all_db';
 
-    // 1. 전체 시설 정형 슬롯(robotSpecs) 추출 및 과거 대화 로그 일괄 자동 분류·현대화
+    // 1. 전체 시설 정형 슬롯(robotSpecs) 추출 및 과거 대화 로그 일괄 자동 분류·중복 병합 현대화
     if (action === 'upgrade_all_db') {
       const [facSnap, logSnap] = await Promise.all([
-        adminDb.collection('facilities').get(),
-        adminDb.collection('chat_logs').get(),
+        adminDb.collection('facilities').orderBy('name').get().catch(() => adminDb.collection('facilities').get()),
+        adminDb.collection('chat_logs').orderBy('timestamp', 'desc').get(),
       ]);
 
       let updatedFacilitiesCount = 0;
@@ -211,8 +218,29 @@ export async function POST(req: Request) {
         updatedFacilitiesCount++;
       }
 
-      let updatedLogsCount = 0;
+      const canonicalMap = new Map<
+        string,
+        { doc: FirebaseFirestore.QueryDocumentSnapshot; totalAskCount: number }
+      >();
+      const docsToDelete: FirebaseFirestore.DocumentReference[] = [];
+
       for (const doc of logSnap.docs) {
+        const data = doc.data();
+        const normKey = normalizeQuestionKey(data.question || '');
+        const count = typeof data.askCount === 'number' ? data.askCount : 1;
+
+        if (!normKey) continue;
+
+        if (canonicalMap.has(normKey)) {
+          canonicalMap.get(normKey)!.totalAskCount += count;
+          docsToDelete.push(doc.ref);
+        } else {
+          canonicalMap.set(normKey, { doc, totalAskCount: count });
+        }
+      }
+
+      let updatedLogsCount = 0;
+      for (const [normKey, { doc, totalAskCount }] of canonicalMap.entries()) {
         const data = doc.data();
         const cls = classifyConversation(
           data.question || '',
@@ -221,6 +249,9 @@ export async function POST(req: Request) {
         );
         await doc.ref.set(
           {
+            question: cls.maskedQuestion,
+            normalizedQuestion: normKey,
+            askCount: totalAskCount,
             channel: data.channel || 'web',
             category: cls.category,
             intentCode: cls.intentCode,
@@ -235,11 +266,16 @@ export async function POST(req: Request) {
         updatedLogsCount++;
       }
 
+      for (const ref of docsToDelete) {
+        await ref.delete();
+      }
+
       return NextResponse.json({
         status: 'success',
         updatedFacilitiesCount,
         updatedLogsCount,
-        message: `전체 시설 ${updatedFacilitiesCount}건 로봇 스펙 추출 및 상담 기록 ${updatedLogsCount}건 의도 분류 현대화가 완료되었습니다!`,
+        mergedDuplicatesCount: docsToDelete.length,
+        message: `전체 시설 ${updatedFacilitiesCount}건 로봇 스펙 추출, 고유 상담 기록 ${updatedLogsCount}건 분류 및 중복 질문 ${docsToDelete.length}건 병합 완료!`,
       });
     }
 

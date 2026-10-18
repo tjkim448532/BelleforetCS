@@ -47,7 +47,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
     }
 
-    const { cleanKakaoCopyPasteQuestion } = await import('@/lib/cs-intelligence');
+    const { cleanKakaoCopyPasteQuestion, resolveDeduplicatedLogTarget, classifyConversation } =
+      await import('@/lib/cs-intelligence');
     const question = cleanKakaoCopyPasteQuestion(rawQuestion);
 
     // --- 동의어 처리 (Synonym Dictionary) ---
@@ -73,8 +74,7 @@ export async function POST(req: Request) {
 
     const pineconeQuery = processedQuestion;
 
-    // 1. 병렬로 검색 및 설정 정보, 도배 방지 검사 가져오기 (속도 최적화)
-    // AI 답변 생성을 위한 질문은 원본(question)을 유지하되, DB 검색용 질문은 치환된 질문(processedQuestion)을 사용
+    // 1. 병렬로 검색 및 설정 정보, 도배 방지, 중복 질문 문서 조회 가져오기 (속도 최적화)
     let noticesPromise: any;
     let settingsPromise: any;
 
@@ -93,11 +93,12 @@ export async function POST(req: Request) {
       });
     }
 
-    const [similarDocsResult, noticesSnapshot, settingsDoc, rateLimitResult] = await Promise.allSettled([
+    const [similarDocsResult, noticesSnapshot, settingsDoc, rateLimitResult, dedupLogResult] = await Promise.allSettled([
       querySimilarDocuments(pineconeQuery, 3),
       noticesPromise,
       settingsPromise,
-      rateLimitPromise
+      rateLimitPromise,
+      resolveDeduplicatedLogTarget(question),
     ]);
 
     if (rateLimitResult.status === 'rejected' && rateLimitResult.reason.message === 'RATE_LIMIT_EXCEEDED') {
@@ -167,8 +168,18 @@ export async function POST(req: Request) {
     const { generateAnswerStream } = await import('@/lib/gemini');
     const resultStream = await generateAnswerStream(question, context, currentPersona, language, history);
 
-    // 4. 스트리밍 응답 설정 및 백그라운드 로깅
-    const logRef = adminDb.collection('chat_logs').doc();
+    // 4. 스트리밍 응답 설정 및 중복 없는 백그라운드 병합 로깅(Upsert)
+    const dedupTarget =
+      dedupLogResult.status === 'fulfilled'
+        ? dedupLogResult.value
+        : {
+            logRef: adminDb.collection('chat_logs').doc(),
+            normalizedQuestion: question.toLowerCase().replace(/\s+/g, ''),
+            nextAskCount: 1,
+            existingData: null,
+          };
+
+    const logRef = dedupTarget.logRef;
     const logId = logRef.id;
 
     const stream = new ReadableStream({
@@ -184,25 +195,29 @@ export async function POST(req: Request) {
           // AI 마크다운 후처리 (스트리밍 완료 후 DB 저장 시에만 적용)
           let cleanAnswer = fullAnswer.replace(/\*\*/g, '').replace(/^\s*\*\s/gm, '- ');
 
-          const { classifyConversation } = await import('@/lib/cs-intelligence');
           const cls = classifyConversation(question, cleanAnswer, 'web');
 
-          // 백그라운드에서 로그 저장 (자동 분류·의도·감정·로봇 학습용 메타데이터 포함)
-          logRef.set({
-            question,
-            answer: cleanAnswer,
-            contextUsed: similarDocs.map(d => d.id),
-            ip: ip,
-            channel: 'web',
-            category: cls.category,
-            intentCode: cls.intentCode,
-            intentLabel: cls.intentLabel,
-            sentiment: cls.sentiment,
-            sentimentLabel: cls.sentimentLabel,
-            needsHumanHandoff: cls.needsHumanHandoff,
-            isResolved: cls.isResolved,
-            timestamp: new Date().toISOString(),
-          }).catch(err => console.error('Failed to save chat log:', err));
+          // 백그라운드에서 로그 병합 저장 (동일 질문은 중복 생성하지 않고 askCount 증가 및 최신 답변 갱신)
+          logRef.set(
+            {
+              question,
+              normalizedQuestion: dedupTarget.normalizedQuestion,
+              askCount: dedupTarget.nextAskCount,
+              answer: cleanAnswer,
+              contextUsed: similarDocs.map(d => d.id),
+              ip: ip,
+              channel: dedupTarget.existingData?.channel || 'web',
+              category: cls.category,
+              intentCode: cls.intentCode,
+              intentLabel: cls.intentLabel,
+              sentiment: cls.sentiment,
+              sentimentLabel: cls.sentimentLabel,
+              needsHumanHandoff: cls.needsHumanHandoff,
+              isResolved: dedupTarget.existingData?.isResolved ?? cls.isResolved,
+              timestamp: new Date().toISOString(),
+            },
+            { merge: true }
+          ).catch(err => console.error('Failed to save chat log:', err));
 
           controller.close();
         } catch (error) {

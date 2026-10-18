@@ -62,6 +62,63 @@ export function cleanKakaoCopyPasteQuestion(rawText: string): string {
 }
 
 /**
+ * 중복 질문 방지를 위한 표준 질문 정규화 키 생성기
+ * (띄어쓰기, 물음표, 느낌표, 마침표 차이를 무시하고 동일 질문 여부를 판별합니다)
+ */
+export function normalizeQuestionKey(question: string): string {
+  return cleanKakaoCopyPasteQuestion(question)
+    .toLowerCase()
+    .replace(/[?？!！.,~"'`’“”\s]/g, '')
+    .trim();
+}
+
+/**
+ * 동일한 질문(normalizedQuestion)이 이미 chat_logs에 존재하면 새 문서를 중복 생성하지 않고
+ * 기존 문서의 참조(docRef)와 누적 질문 횟수(askCount)를 반환합니다.
+ */
+export async function resolveDeduplicatedLogTarget(question: string): Promise<{
+  logRef: FirebaseFirestore.DocumentReference;
+  normalizedQuestion: string;
+  nextAskCount: number;
+  existingData: Record<string, any> | null;
+}> {
+  const normalizedQuestion = normalizeQuestionKey(question);
+  if (!normalizedQuestion) {
+    return {
+      logRef: adminDb.collection('chat_logs').doc(),
+      normalizedQuestion: '',
+      nextAskCount: 1,
+      existingData: null,
+    };
+  }
+
+  const snap = await adminDb
+    .collection('chat_logs')
+    .where('normalizedQuestion', '==', normalizedQuestion)
+    .limit(1)
+    .get();
+
+  if (!snap.empty) {
+    const existingDoc = snap.docs[0];
+    const data = existingDoc.data() || {};
+    const prevCount = typeof data.askCount === 'number' ? data.askCount : 1;
+    return {
+      logRef: existingDoc.ref,
+      normalizedQuestion,
+      nextAskCount: prevCount + 1,
+      existingData: data,
+    };
+  }
+
+  return {
+    logRef: adminDb.collection('chat_logs').doc(),
+    normalizedQuestion,
+    nextAskCount: 1,
+    existingData: null,
+  };
+}
+
+/**
  * 고객 질문과 AI 답변을 분석하여 의도(Intent), 분류(Category), 감정/긴급도(Sentiment), 상담원 개입 필요 여부를 즉시 분류합니다.
  */
 export function classifyConversation(
@@ -379,24 +436,31 @@ export async function answerGuestQuestion(params: {
 
   const classification = classifyConversation(question, cleanAnswer, channel);
 
-  // 통합 인박스(chat_logs)에 채널 및 분류 메타데이터와 함께 즉시 기록
-  const logRef = adminDb.collection('chat_logs').doc();
-  await logRef.set({
-    question,
-    answer: cleanAnswer,
-    contextUsed: similarDocs.map((d) => d.id),
-    channel,
-    externalUserId: externalUserId || null,
-    callerPhone: callerPhone || null,
-    category: classification.category,
-    intentCode: classification.intentCode,
-    intentLabel: classification.intentLabel,
-    sentiment: classification.sentiment,
-    sentimentLabel: classification.sentimentLabel,
-    needsHumanHandoff: classification.needsHumanHandoff,
-    isResolved: classification.isResolved,
-    timestamp: new Date().toISOString(),
-  });
+  // 통합 인박스(chat_logs)에 중복 없이 병합(Upsert) 기록 및 질문 횟수(askCount) 누적
+  const { logRef, normalizedQuestion, nextAskCount, existingData } =
+    await resolveDeduplicatedLogTarget(question);
+
+  await logRef.set(
+    {
+      question,
+      normalizedQuestion,
+      askCount: nextAskCount,
+      answer: cleanAnswer,
+      contextUsed: similarDocs.map((d) => d.id),
+      channel,
+      externalUserId: externalUserId || existingData?.externalUserId || null,
+      callerPhone: callerPhone || existingData?.callerPhone || null,
+      category: classification.category,
+      intentCode: classification.intentCode,
+      intentLabel: classification.intentLabel,
+      sentiment: classification.sentiment,
+      sentimentLabel: classification.sentimentLabel,
+      needsHumanHandoff: classification.needsHumanHandoff,
+      isResolved: existingData?.isResolved ?? classification.isResolved,
+      timestamp: new Date().toISOString(),
+    },
+    { merge: true }
+  );
 
   // 카카오톡 하단 빠른 질문 버튼(Quick Replies) 추천
   const quickReplies = [
