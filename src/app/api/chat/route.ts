@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     }
 
     const [hybridDocsResult, noticesSnapshot, settingsDoc, rateLimitResult, dedupLogResult] = await Promise.allSettled([
-      searchHybridFacilityDocs(pineconeQuery, question, { topK: 5, fastMode: true }),
+      searchHybridFacilityDocs(pineconeQuery, question, { topK: 3, fastMode: true }),
       noticesPromise,
       settingsPromise,
       rateLimitPromise,

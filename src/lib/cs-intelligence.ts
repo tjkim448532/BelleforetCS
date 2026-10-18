@@ -332,7 +332,7 @@ let cacheTimestamp = 0;
 const CACHE_TTL = 60000;
 
 export const BELLEFORET_SYNONYM_MAP: Record<string, string> = {
-  양몰이: '벨포레 목장 양몰이 공연',
+  양몰이: '벨포레 목장 양몰이',
   양떼목장: '벨포레 목장',
   양떼: '벨포레 목장 양몰이',
   먹이주기: '벨포레 목장 먹이주기 체험',
@@ -378,7 +378,7 @@ function formatFacilityVectorText(f: Record<string, any>): string {
 const GENERIC_QUERY_STOPWORDS = new Set([
   '문의', '질문', '안내', '알려줘', '알려주세요', '알고싶어요', '궁금해요', '궁금합니다',
   '어떻게', '되나요', '인가요', '있나요', '없나요', '얼마', '얼마인가요', '얼마야',
-  '시간', '운영시간', '요금', '가격', '어디', '어디야', '어디에', '위치', '벨포레', '리조트',
+  '시간', '운영시간', '공연시간', '요금', '가격', '어디', '어디야', '어디에', '위치', '벨포레', '리조트',
   '오늘', '지금', '주말', '평일', '주중', '이용', '시설', '방금',
 ]);
 
@@ -394,7 +394,7 @@ export async function searchHybridFacilityDocs(
   docs: Array<{ id: string; score?: number; metadata?: Record<string, any> }>;
   topLocalScore: number;
 }> {
-  const topK = options?.topK ?? 5;
+  const topK = options?.topK ?? 3;
   const fastMode = options?.fastMode ?? false;
 
   let facilities = options?.preloadedFacilities || cachedFacilities;
@@ -464,9 +464,15 @@ export async function searchHybridFacilityDocs(
   scored.sort((a, b) => b.score - a.score);
   const topLocalScore = scored[0]?.score || 0;
 
-  const effectiveLimit = isDiningBroadQuery || isPackageBroadQuery ? Math.max(topK, 8) : topK;
+  // 특정 시설이 고득점(>= 30)으로 명확히 매칭된 경우, 점수가 45% 미만인 노이즈 문서(예: '공연' 한 단어만 겹치는 타 문서)를 배제하여 LLM 혼란을 원천 차단
+  const minScoreThreshold =
+    topLocalScore >= 30 && !isDiningBroadQuery && !isPackageBroadQuery
+      ? Math.max(16, Math.floor(topLocalScore * 0.45))
+      : 12;
+
+  const effectiveLimit = isDiningBroadQuery || isPackageBroadQuery ? Math.max(topK, 6) : topK;
   const localMatches = scored
-    .filter((item) => item.score >= 12)
+    .filter((item) => item.score >= minScoreThreshold)
     .slice(0, effectiveLimit)
     .map((item) => ({
       id: item.facility.id,
@@ -568,7 +574,7 @@ export async function answerGuestQuestion(params: {
   }
 
   const { docs: similarDocs } = await searchHybridFacilityDocs(processedQuestion, question, {
-    topK: 5,
+    topK: 3,
     fastMode: true,
     preloadedFacilities: cachedFacilities || undefined,
   });
