@@ -47,34 +47,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
     }
 
-    const { cleanKakaoCopyPasteQuestion, resolveDeduplicatedLogTarget, classifyConversation } =
-      await import('@/lib/cs-intelligence');
+    const {
+      cleanKakaoCopyPasteQuestion,
+      resolveDeduplicatedLogTarget,
+      classifyConversation,
+      expandBelleforetSynonyms,
+      searchHybridFacilityDocs,
+    } = await import('@/lib/cs-intelligence');
     const question = cleanKakaoCopyPasteQuestion(rawQuestion);
+    const pineconeQuery = expandBelleforetSynonyms(question);
 
-    // --- 동의어 처리 (Synonym Dictionary) ---
-    // 사용자가 자주 사용하는 줄임말을 공식 명칭으로 변환하여 검색 정확도를 높입니다.
-    const synonymMap: Record<string, string> = {
-      "목장": "벨포레 목장",
-      "미디어": "미디어아트센터",
-      "아트센터": "미디어아트센터",
-      "루지": "마운틴카트 루지",
-      "콘도": "벨포레 리조트",
-      "수영장": "원더풀",
-      "사계절썰매": "사계절 썰매",
-      "썰매장": "사계절 썰매",
-      "놀이공원": "놀이동산"
-    };
-
-    let processedQuestion = question;
-    Object.entries(synonymMap).forEach(([shortName, fullName]) => {
-      // 입력된 질문에 줄임말이 포함되어 있으면 치환
-      const regex = new RegExp(shortName, 'g'); 
-      processedQuestion = processedQuestion.replace(regex, fullName);
-    });
-
-    const pineconeQuery = processedQuestion;
-
-    // 1. 병렬로 검색 및 설정 정보, 도배 방지, 중복 질문 문서 조회 가져오기 (속도 최적화)
+    // 1. 병렬로 하이브리드 검색 및 설정 정보, 도배 방지, 중복 질문 문서 조회 가져오기 (속도 최적화)
     let noticesPromise: any;
     let settingsPromise: any;
 
@@ -93,8 +76,8 @@ export async function POST(req: Request) {
       });
     }
 
-    const [similarDocsResult, noticesSnapshot, settingsDoc, rateLimitResult, dedupLogResult] = await Promise.allSettled([
-      querySimilarDocuments(pineconeQuery, 3),
+    const [hybridDocsResult, noticesSnapshot, settingsDoc, rateLimitResult, dedupLogResult] = await Promise.allSettled([
+      searchHybridFacilityDocs(pineconeQuery, question, { topK: 5, fastMode: true }),
       noticesPromise,
       settingsPromise,
       rateLimitPromise,
@@ -108,14 +91,14 @@ export async function POST(req: Request) {
       }, { status: 429 });
     }
 
-    if (similarDocsResult.status === 'rejected') {
-      console.error('Pinecone search failed:', similarDocsResult.reason);
+    if (hybridDocsResult.status === 'rejected') {
+      console.error('Hybrid search failed:', hybridDocsResult.reason);
       return new Response('시스템 내부 일시적 오류로 인해 정보를 찾을 수 없습니다. 프론트 데스크에 문의해주세요.', {
         headers: { 'Content-Type': 'text/plain; charset=utf-8' }
       });
     }
 
-    const similarDocs = similarDocsResult.value;
+    const similarDocs = hybridDocsResult.value.docs;
     
     // 검색된 문서가 없으면 스트리밍 형태로 기본 응답
     if (similarDocs.length === 0) {
