@@ -215,11 +215,20 @@ export default function OmnichannelAndRobotCenterPage() {
     setTimeout(() => setCopiedUrl(null), 2500);
   };
 
+  const [teachVerifying, setTeachVerifying] = useState(false);
+  const [teachVerifyResult, setTeachVerifyResult] = useState<{
+    verdict: 'PASS' | 'WARN' | 'NEW';
+    conflictSummary: string;
+    polishedAnswer: string;
+    matchedFacilities: string[];
+  } | null>(null);
+
   // [정답 가르치기] 모달 열기
   const openTeachModal = (log: ChatLog) => {
     setTeachingLog(log);
     setTeachCategory(log.category || '자주묻는질문(FAQ)');
     setTeachTitle(log.question);
+    setTeachVerifyResult(null);
     setTeachAnswer(
       isUnansweredOrSorry(log)
         ? `네, 고객님! 문의하신 "${log.question}"에 대해 안내해 드립니다.\n\n- 상세 내용: `
@@ -227,9 +236,42 @@ export default function OmnichannelAndRobotCenterPage() {
     );
   };
 
+  // [정답 가르치기] 사전 AI 팩트체크 (기존 승인 DB와 충돌 여부 검증)
+  const handleVerifyTeachAnswer = async () => {
+    if (!teachTitle.trim() || !teachAnswer.trim() || teachVerifying) return;
+    setTeachVerifying(true);
+    setTeachVerifyResult(null);
+    try {
+      const res = await fetch('/api/admin/robot-dataset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_staff_answer',
+          question: teachTitle.trim(),
+          draftAnswer: teachAnswer.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTeachVerifyResult({
+          verdict: data.verdict || 'NEW',
+          conflictSummary: data.conflictSummary || '',
+          polishedAnswer: data.polishedAnswer || teachAnswer,
+          matchedFacilities: data.matchedFacilities || [],
+        });
+      } else {
+        alert(`검증 오류: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to verify answer:', error);
+      alert('팩트체크 검증 중 오류가 발생했습니다.');
+    } finally {
+      setTeachVerifying(false);
+    }
+  };
+
   // [정답 가르치기] 저장 -> AI 지식창고(Facility + Pinecone) 등록 + 로그 해결 처리
-  const handleTeachSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitTeachKnowledge = async (approvalStatus: 'approved' | 'pending') => {
     if (!teachTitle.trim() || !teachAnswer.trim()) return;
 
     setTeachSubmitting(true);
@@ -241,7 +283,7 @@ export default function OmnichannelAndRobotCenterPage() {
           name: `[상담학습] ${teachTitle.trim()}`,
           category: teachCategory,
           type: 'faq',
-          status: 'approved',
+          status: approvalStatus,
           duplicateAction: 'overwrite',
           description: `[고객 자주 묻는 질문]\n질문: ${teachTitle.trim()}\n\n[공식 답변 및 안내]\n${teachAnswer.trim()}`,
         }),
@@ -255,12 +297,17 @@ export default function OmnichannelAndRobotCenterPage() {
             action: 'save_staff_reply',
             logId: teachingLog.id,
             updatedAnswer: teachAnswer.trim(),
-            staffNote: `[AI 지식창고 학습 완료] ${teachAnswer.trim()}`,
-            isResolved: true,
+            staffNote:
+              approvalStatus === 'approved'
+                ? `[AI 지식창고 즉시반영 완료] ${teachAnswer.trim()}`
+                : `[관리자 승인대기(pending) 등록] ${teachAnswer.trim()}`,
+            isResolved: approvalStatus === 'approved',
           }),
         });
         alert(
-          '🎉 AI 지식창고(RAG)와 로봇 학습 DB에 정답이 동시에 등록되었습니다!\n이제부터 웹·카카오톡·AI전화 어디서든 이 질문이 들어오면 방금 알려주신 정답으로 즉시 대답합니다.'
+          approvalStatus === 'approved'
+            ? '🎉 검증 완료! AI 지식창고(RAG)와 로봇 학습 DB에 즉시 반영되었습니다.\n이제부터 웹·카카오톡·AI전화 어디서든 이 질문이 들어오면 방금 등록하신 정답으로 대답합니다.'
+            : '⏳ [시설/지식 관리(/admin/facilities)]의 검수 대기열(pending)에 등록되었습니다.\n책임자가 내용을 최종 확인 후 [승인]을 누르면 AI가 답변을 시작합니다.'
         );
         setTeachingLog(null);
         fetchLogs();
@@ -275,6 +322,11 @@ export default function OmnichannelAndRobotCenterPage() {
     } finally {
       setTeachSubmitting(false);
     }
+  };
+
+  const handleTeachSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitTeachKnowledge('approved');
   };
 
   // [상담원 메모] 저장
@@ -1653,39 +1705,91 @@ export default function OmnichannelAndRobotCenterPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center justify-between">
-                        <span>앞으로 AI가 대답할 정확한 안내 내용</span>
-                        <span className="text-[11px] text-indigo-600 font-normal flex items-center">
-                          <HelpCircle className="w-3 h-3 mr-1" />
-                          웹·카톡·전화·로봇 모두에 즉시 반영됩니다
-                        </span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                          앞으로 AI가 대답할 정확한 안내 내용
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleVerifyTeachAnswer}
+                          disabled={teachVerifying || !teachAnswer.trim()}
+                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300 transition-colors disabled:opacity-50"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 mr-1" />
+                          {teachVerifying ? '기존 DB와 대조 검증 중...' : '🔍 기존 DB 충돌/정답 AI 팩트체크'}
+                        </button>
+                      </div>
                       <textarea
-                        rows={6}
+                        rows={5}
                         required
                         value={teachAnswer}
                         onChange={(e) => setTeachAnswer(e.target.value)}
                         className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white leading-relaxed"
                       />
+
+                      {teachVerifyResult && (
+                        <div
+                          className={`mt-3 p-3.5 rounded-xl border text-xs space-y-2 ${
+                            teachVerifyResult.verdict === 'WARN'
+                              ? 'bg-red-50 border-red-200 text-red-900 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200'
+                              : 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200'
+                          }`}
+                        >
+                          <div className="font-extrabold flex items-center justify-between">
+                            <span>{teachVerifyResult.conflictSummary}</span>
+                          </div>
+                          {teachVerifyResult.matchedFacilities.length > 0 && (
+                            <div className="text-[11px] opacity-80">
+                              대조한 공식 문서: {teachVerifyResult.matchedFacilities.join(', ')}
+                            </div>
+                          )}
+                          {teachVerifyResult.polishedAnswer &&
+                            teachVerifyResult.polishedAnswer !== teachAnswer && (
+                              <div className="pt-2 border-t border-black/10 dark:border-white/10">
+                                <div className="font-bold mb-1">✨ AI 교정 표준 문장 제안:</div>
+                                <div className="p-2 rounded-lg bg-white/80 dark:bg-neutral-900/80 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                                  {teachVerifyResult.polishedAnswer}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setTeachAnswer(teachVerifyResult.polishedAnswer)}
+                                  className="mt-2 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white hover:bg-indigo-700"
+                                >
+                                  이 다듬어진 문장으로 바꾸기
+                                </button>
+                              </div>
+                            )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-neutral-800/60 px-6 py-4 flex justify-end gap-2">
+                <div className="bg-gray-50 dark:bg-neutral-800/60 px-6 py-4 flex flex-wrap justify-between items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setTeachingLog(null)}
-                    className="px-4 py-2 rounded-xl border border-gray-300 dark:border-neutral-700 text-xs font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800"
+                    className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-neutral-700 text-xs font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800"
                   >
                     취소
                   </button>
-                  <button
-                    type="submit"
-                    disabled={teachSubmitting}
-                    className="px-5 py-2 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
-                  >
-                    {teachSubmitting ? 'AI 지식창고에 저장 중...' : '✅ AI 지식창고에 정답 등록하기'}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={teachSubmitting}
+                      onClick={() => submitTeachKnowledge('pending')}
+                      className="px-3.5 py-2 rounded-xl text-xs font-extrabold text-amber-900 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 disabled:opacity-50"
+                    >
+                      ⏳ 관리자 검수 대기열로 등록
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={teachSubmitting}
+                      className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+                    >
+                      {teachSubmitting ? '저장 중...' : '✅ 검증 완료 — AI 즉시 반영'}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

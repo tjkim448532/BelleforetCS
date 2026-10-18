@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   classifyConversation,
+  expandBelleforetSynonyms,
   extractRobotSpecsFromText,
   maskPersonalInfo,
   normalizeQuestionKey,
+  searchHybridFacilityDocs,
 } from '@/lib/cs-intelligence';
 
 /**
@@ -299,6 +302,61 @@ export async function POST(req: Request) {
       await adminDb.collection('chat_logs').doc(logId).set(updatePayload, { merge: true });
 
       return NextResponse.json({ status: 'success' });
+    }
+
+    // 3. 직원이 입력한 정답을 기존 승인 DB(facilities)와 대조하여 사실 여부·충돌 여부를 AI로 사전 검증
+    if (action === 'verify_staff_answer') {
+      const { question = '', draftAnswer = '' } = body;
+      if (!question.trim() || !draftAnswer.trim()) {
+        return NextResponse.json(
+          { error: '질문과 검증할 답변 내용을 모두 입력해 주세요.' },
+          { status: 400 }
+        );
+      }
+
+      const processed = expandBelleforetSynonyms(question);
+      const { docs } = await searchHybridFacilityDocs(processed, question, {
+        topK: 3,
+        fastMode: true,
+      });
+
+      const refText =
+        docs.length > 0
+          ? docs.map((d, i) => `[기존 DB 문서 ${i + 1}: ${d.metadata?.name}]\n${d.metadata?.text}`).join('\n\n')
+          : '관련된 기존 DB 문서 없음 (완전 신규 지식)';
+
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-flash-lite-latest',
+        generationConfig: { responseMimeType: 'application/json' },
+      });
+
+      const prompt = `당신은 벨포레 리조트의 CS 품질 감사관(Fact-Checker)입니다.
+직원이 고객 질문에 대해 새로 등록하려는 [직원 작성 답변]을 [기존 공식 DB 문서]와 대조하여 팩트체크하세요.
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{
+  "verdict": "PASS" | "WARN" | "NEW",
+  "conflictSummary": "검증 결과 요약 (요금, 시간, 규정 등이 기존 DB와 일치하면 '✅ 기존 공식 DB 정보와 정확히 일치합니다.' / 기존 DB 수치와 충돌하면 '⚠️ [시설명]의 기존 DB 정보(수치)와 다릅니다. 확인이 필요합니다.' / 기존 DB에 없던 새로운 세부 정보면 '💡 기존 DB에 없던 새로운 세부 안내 정보입니다.')",
+  "polishedAnswer": "직원이 작성한 답변의 핵심 사실을 유지하면서 호텔리어 표준 존댓말과 깔끔한 목록(- 기호)으로 다듬은 추천 답변"
+}
+
+[고객 질문]: ${question}
+[직원 작성 답변]: ${draftAnswer}
+
+[기존 공식 DB 문서]:
+${refText}`;
+
+      const result = await model.generateContent(prompt);
+      const parsed = JSON.parse(result.response.text());
+
+      return NextResponse.json({
+        status: 'success',
+        verdict: parsed.verdict || 'NEW',
+        conflictSummary: parsed.conflictSummary || '검증이 완료되었습니다.',
+        polishedAnswer: parsed.polishedAnswer || draftAnswer,
+        matchedFacilities: docs.map((d) => d.metadata?.name).filter(Boolean),
+      });
     }
 
     return NextResponse.json({ error: '알 수 없는 action입니다.' }, { status: 400 });
