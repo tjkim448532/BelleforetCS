@@ -1149,9 +1149,46 @@ export default function FacilitiesAdmin() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={isDeleting}
-                    className="inline-flex items-center text-xs font-bold px-3 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 border border-red-200 shrink-0"
+                    className="inline-flex items-center text-xs font-bold px-3.5 py-2 bg-rose-600 text-white rounded-xl hover:bg-rose-700 shrink-0 transition-colors"
                   >
-                    선택 삭제 ({selectedIds.length})
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />
+                    선택 완전삭제 ({selectedIds.length}건)
+                  </button>
+                )}
+                {expiredCount > 0 && (
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={async () => {
+                      const expiredIds = facilities
+                        .filter((f) => f.status === 'expired' && f.id)
+                        .map((f) => f.id as string);
+                      if (expiredIds.length === 0) return;
+                      if (
+                        !confirm(
+                          `만료 보관함에 있는 불필요/구형 데이터 ${expiredIds.length}건을 DB에서 영구 완전삭제하시겠습니까?\n(삭제 후에는 복구할 수 없습니다)`
+                        )
+                      )
+                        return;
+                      setIsDeleting(true);
+                      try {
+                        const res = await fetch(
+                          `/api/admin/facility?ids=${expiredIds.join(',')}`,
+                          { method: 'DELETE' }
+                        );
+                        if (!res.ok) throw new Error('만료 보관함 일괄 삭제 실패');
+                        setSelectedIds([]);
+                        fetchFacilities();
+                      } catch (e: any) {
+                        alert(e.message || '삭제 중 오류가 발생했습니다.');
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }}
+                    className="inline-flex items-center text-xs font-bold px-3.5 py-2 bg-white text-rose-600 rounded-xl hover:bg-rose-50 border border-rose-200 shrink-0 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />
+                    만료 보관함 비우기 ({expiredCount}건 완전삭제)
                   </button>
                 )}
                 <button
@@ -1173,7 +1210,7 @@ export default function FacilitiesAdmin() {
               </div>
             ) : (
               <div className="overflow-x-auto border rounded-xl dark:border-neutral-700">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-neutral-700">
                   <thead className="bg-slate-50 dark:bg-neutral-800">
                     <tr>
                       <th className="px-4 py-3 text-left w-10">
@@ -1209,7 +1246,7 @@ export default function FacilitiesAdmin() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-700">
+                  <tbody className="bg-white dark:bg-neutral-900 divide-y divide-slate-200 dark:divide-neutral-700">
                     {filteredFacilities.map((fac: any) => (
                       <tr
                         key={fac.id}
@@ -1359,10 +1396,11 @@ export default function FacilitiesAdmin() {
                           )}
                           <button
                             onClick={() => fac.id && handleDelete(fac.id, fac.name)}
-                            className="inline-flex items-center px-2 py-1.5 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
-                            title="영구 삭제"
+                            className="inline-flex items-center px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-slate-200 hover:border-rose-300 rounded-lg transition-colors"
+                            title="DB와 AI 학습 데이터에서 영구 삭제합니다"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            완전삭제
                           </button>
                         </td>
                       </tr>

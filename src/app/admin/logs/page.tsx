@@ -24,6 +24,7 @@ import {
   Cpu,
   ShieldCheck,
   FileText,
+  Trash2,
 } from 'lucide-react';
 
 interface ChatLog {
@@ -213,6 +214,57 @@ export default function OmnichannelAndRobotCenterPage() {
     navigator.clipboard.writeText(url);
     setCopiedUrl(label);
     setTimeout(() => setCopiedUrl(null), 2500);
+  };
+
+  // 상담 기록 개별/일괄 완전삭제 상태 및 핸들러
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
+  const [deletingLogs, setDeletingLogs] = useState(false);
+
+  const handleDeleteLog = async (id: string, question: string) => {
+    if (!confirm(`'${question}' 상담 기록을 DB에서 완전삭제하시겠습니까?\n(삭제 후에는 복구할 수 없습니다)`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/logs?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('삭제에 실패했습니다.');
+      setLogs((prev) => prev.filter((l) => l.id !== id));
+      setSelectedLogIds((prev) => prev.filter((item) => item !== id));
+    } catch (error: any) {
+      alert(error.message || '삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleBulkDeleteLogs = async (ids: string[], customConfirmMsg?: string) => {
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        customConfirmMsg ||
+          `선택한 ${ids.length}건의 상담 기록을 DB에서 완전삭제하시겠습니까?\n(삭제 후에는 복구할 수 없습니다)`
+      )
+    ) {
+      return;
+    }
+    setDeletingLogs(true);
+    try {
+      // Firestore batch limit (500), split if needed
+      const chunkSize = 100;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const res = await fetch(`/api/admin/logs?ids=${chunk.map(encodeURIComponent).join(',')}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('일괄 삭제에 실패했습니다.');
+      }
+      const idSet = new Set(ids);
+      setLogs((prev) => prev.filter((l) => !idSet.has(l.id)));
+      setSelectedLogIds((prev) => prev.filter((id) => !idSet.has(id)));
+    } catch (error: any) {
+      alert(error.message || '일괄 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingLogs(false);
+    }
   };
 
   const [teachVerifying, setTeachVerifying] = useState(false);
@@ -824,8 +876,8 @@ export default function OmnichannelAndRobotCenterPage() {
             </button>
           </div>
 
-          {/* 검색창 */}
-          <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl shadow-xs border border-slate-200 dark:border-neutral-800 flex items-center">
+          {/* 검색창 및 선택/일괄 완전삭제 바 */}
+          <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl shadow-xs border border-slate-200 dark:border-neutral-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
@@ -837,6 +889,65 @@ export default function OmnichannelAndRobotCenterPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-11 pr-4 py-2.5 border border-slate-300 dark:border-neutral-700 rounded-xl bg-slate-50 dark:bg-neutral-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-slate-900"
               />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {filteredLogs.length > 0 && (
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                    checked={
+                      filteredLogs.length > 0 &&
+                      filteredLogs.every((l) => selectedLogIds.includes(l.id))
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const allFilteredIds = filteredLogs.map((l) => l.id);
+                        setSelectedLogIds((prev) =>
+                          Array.from(new Set([...prev, ...allFilteredIds]))
+                        );
+                      } else {
+                        const filteredSet = new Set(filteredLogs.map((l) => l.id));
+                        setSelectedLogIds((prev) => prev.filter((id) => !filteredSet.has(id)));
+                      }
+                    }}
+                  />
+                  <span>현재 목록 전체 선택 ({filteredLogs.length}건)</span>
+                </label>
+              )}
+
+              {selectedLogIds.length > 0 && (
+                <button
+                  type="button"
+                  disabled={deletingLogs}
+                  onClick={() => handleBulkDeleteLogs(selectedLogIds)}
+                  className="inline-flex items-center px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-2xs disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  {deletingLogs
+                    ? '삭제 중...'
+                    : `선택 항목 완전삭제 (${selectedLogIds.length}건)`}
+                </button>
+              )}
+
+              {alertCount > 0 && (
+                <button
+                  type="button"
+                  disabled={deletingLogs}
+                  onClick={() => {
+                    const alertIds = logs.filter(isUnansweredOrSorry).map((l) => l.id);
+                    handleBulkDeleteLogs(
+                      alertIds,
+                      `오답·불만(확인필요) 및 쓰레기 질문 ${alertIds.length}건을 DB에서 일괄 완전삭제하시겠습니까?\n(삭제 후에는 복구할 수 없습니다)`
+                    );
+                  }}
+                  className="inline-flex items-center px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  오답·쓰레기 기록 일괄 삭제 ({alertCount}건)
+                </button>
+              )}
             </div>
           </div>
 
@@ -872,6 +983,18 @@ export default function OmnichannelAndRobotCenterPage() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-gray-100 dark:border-neutral-800">
                       <div className="flex items-center flex-wrap gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 mr-1 cursor-pointer"
+                          checked={selectedLogIds.includes(log.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLogIds((prev) => [...prev, log.id]);
+                            } else {
+                              setSelectedLogIds((prev) => prev.filter((id) => id !== log.id));
+                            }
+                          }}
+                        />
                         {/* 1. 유입 채널 배지 */}
                         {getChannelBadge(log.channel)}
 
@@ -916,8 +1039,8 @@ export default function OmnichannelAndRobotCenterPage() {
                         </span>
                       </div>
 
-                      {/* 우측 액션 버튼 2종 */}
-                      <div className="flex items-center gap-2 self-start sm:self-center">
+                      {/* 우측 액션 버튼 3종 (정답 가르치기 / 메모 / 완전삭제) */}
+                      <div className="flex items-center flex-wrap gap-2 self-start sm:self-center">
                         <button
                           onClick={() => openTeachModal(log)}
                           className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors shadow-2xs ${
@@ -937,6 +1060,15 @@ export default function OmnichannelAndRobotCenterPage() {
                           className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-gray-200 text-slate-700 dark:bg-neutral-800 dark:text-gray-300"
                         >
                           📝 메모/해결체크
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLog(log.id, log.question)}
+                          className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-rose-50 text-rose-600 border border-slate-300 hover:border-rose-300 transition-colors"
+                          title="이 상담 기록(쓰레기 정보/테스트 질문)을 DB에서 영구 삭제합니다"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />
+                          완전삭제
                         </button>
                       </div>
                     </div>
