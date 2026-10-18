@@ -54,6 +54,8 @@ export default function FacilitiesAdmin() {
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [isSyncingVectors, setIsSyncingVectors] = useState(false);
   const [isExpiringItems, setIsExpiringItems] = useState(false);
+  const [homepageSyncInfo, setHomepageSyncInfo] = useState<any | null>(null);
+  const [isSyncingHomepage, setIsSyncingHomepage] = useState(false);
   const [mergeModal, setMergeModal] = useState<{
     group: any;
     masterId: string;
@@ -73,8 +75,45 @@ export default function FacilitiesAdmin() {
     fetchFacilities();
   }, []);
 
+  const fetchHomepageSyncInfo = async () => {
+    try {
+      const res = await fetch('/api/admin/facility/homepage-sync');
+      if (res.ok) {
+        const data = await res.json();
+        setHomepageSyncInfo(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch homepage sync info:', e);
+    }
+  };
+
+  const handleHomepageSync = async () => {
+    setIsSyncingHomepage(true);
+    try {
+      const res = await fetch('/api/admin/facility/homepage-sync', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '홈페이지 동기화 실패');
+      const r = data.result;
+      alert(
+        `공식 홈페이지 최신 정보 동기화 완료!\n` +
+        `- 골프장 요금 반영: ${r.golfUpdated}건\n` +
+        `- 식음 매장 운영시간/휴무일 반영: ${r.diningUpserted}곳\n` +
+        `- 특가 패키지 최신 반영: ${r.offersUpserted}건\n` +
+        `- 종료된 패키지 자동 만료: ${r.offersExpired}건`
+      );
+      await Promise.all([fetchHomepageSyncInfo(), runRagAudit(), fetchFacilities()]);
+    } catch (e: any) {
+      alert(e.message || '홈페이지 동기화 중 오류가 발생했습니다.');
+    } finally {
+      setIsSyncingHomepage(false);
+    }
+  };
+
   const runRagAudit = async () => {
     setLoadingAudit(true);
+    fetchHomepageSyncInfo();
     try {
       const res = await fetch('/api/admin/facility/audit');
       const data = await res.json();
@@ -1369,6 +1408,70 @@ export default function FacilitiesAdmin() {
         {/* 🧹 RAG 데이터 진단 및 자동 정리 시스템 탭 */}
         {activeTab === 'audit' && (
           <div className="space-y-8">
+            {/* 🌐 벨포레 공식 홈페이지 일일 크롤링 자동 연동 카드 */}
+            <div className="bg-emerald-50/70 dark:bg-emerald-900/20 p-5 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-4">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base font-bold text-emerald-900 dark:text-emerald-200 flex items-center">
+                      <span className="mr-2">🌐</span> 벨포레 공식 홈페이지 일일 크롤링 자동 연동 (Daily Auto-Sync)
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200">
+                      매일 아침 자동 동기화 ON
+                    </span>
+                  </div>
+                  <p className="text-sm text-emerald-800 dark:text-emerald-300">
+                    매일 밤 <code>00:00 KST</code> 공식 홈페이지(<code>belleforetresort.com</code>)에서 수집된 <strong>① 특가 패키지(객실/레저)</strong>, <strong>② 식음 매장 12곳 운영시간·휴무일·연락처</strong>, <strong>③ 골프장 그린피/카트비/캐디피</strong>를 매일 아침 우리 DB와 AI 검색엔진에 자동 반영합니다.
+                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                    💡 <strong>예시:</strong> 홈페이지에서 <code>&quot;벨포레 메가 딜&quot;</code> 이벤트가 종료되면 우리 DB에서도 자동으로 만료 보관(검색 제외)되며, <code>&quot;남도예담&quot;</code>의 기존 상세 메뉴 설명은 그대로 유지한 채 최신 운영시간/휴무일만 스마트하게 덧입혀집니다.
+                  </p>
+                </div>
+                <button
+                  onClick={handleHomepageSync}
+                  disabled={isSyncingHomepage}
+                  className="inline-flex items-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm disabled:opacity-50 shrink-0 transition-colors"
+                >
+                  {isSyncingHomepage ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <span className="mr-1.5">🔄</span>}
+                  {isSyncingHomepage ? '홈페이지 최신 정보 반영 중...' : '지금 즉시 홈페이지 동기화'}
+                </button>
+              </div>
+
+              {homepageSyncInfo && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-emerald-200/70 dark:border-emerald-800/70 text-xs">
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+                    <span className="text-gray-500 dark:text-gray-400 block">홈페이지 원천 크롤링 시각</span>
+                    <strong className="text-gray-900 dark:text-white text-sm">
+                      {homepageSyncInfo.catalogPreview?.lastUpdated
+                        ? new Date(homepageSyncInfo.catalogPreview.lastUpdated).toLocaleString('ko-KR')
+                        : '확인 중'}
+                    </strong>
+                  </div>
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+                    <span className="text-gray-500 dark:text-gray-400 block">우리 DB 최근 동기화 일시</span>
+                    <strong className="text-emerald-700 dark:text-emerald-400 text-sm">
+                      {homepageSyncInfo.syncStatus?.syncedAt
+                        ? new Date(homepageSyncInfo.syncStatus.syncedAt).toLocaleString('ko-KR')
+                        : '아직 동기화 이력 없음'}
+                    </strong>
+                  </div>
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+                    <span className="text-gray-500 dark:text-gray-400 block">식음 매장 / 골프장 요금</span>
+                    <strong className="text-gray-900 dark:text-white text-sm">
+                      식음 {homepageSyncInfo.catalogPreview?.diningVenuesCount || 0}곳 · 골프장 {homepageSyncInfo.catalogPreview?.golfVerified ? '검증완료' : '대기'}
+                    </strong>
+                  </div>
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+                    <span className="text-gray-500 dark:text-gray-400 block">진행중 홈페이지 특가 패키지</span>
+                    <strong className="text-gray-900 dark:text-white text-sm">
+                      활성 {homepageSyncInfo.catalogPreview?.specialOffersCount || 0}건
+                      {homepageSyncInfo.syncStatus?.offersExpired ? ` (만료제외 ${homepageSyncInfo.syncStatus.offersExpired}건)` : ''}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 상단 직관적 안내 및 예시 배너 */}
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-1.5">

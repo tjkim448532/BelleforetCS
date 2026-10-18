@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { querySimilarDocuments } from '@/lib/pinecone';
 import { generateAnswer } from '@/lib/gemini';
 import { adminDb } from '@/lib/firebase/admin';
+import { triggerDailyHomepageSyncIfNeeded } from '@/lib/homepage-sync';
 import * as admin from 'firebase-admin';
 
 let cachedNotices: any = null;
@@ -11,6 +12,9 @@ const CACHE_TTL = 60000; // 60 seconds
 
 export async function POST(req: Request) {
   try {
+    // 매일 아침 첫 요청 시 백그라운드에서 공식 홈페이지 크롤링 데이터 자동 동기화
+    triggerDailyHomepageSyncIfNeeded();
+
     const rawIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const ip = rawIp.trim();
     const nowMs = Date.now();
