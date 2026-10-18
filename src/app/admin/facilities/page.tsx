@@ -916,18 +916,18 @@ export default function FacilitiesAdmin() {
   const expiredCount = facilities.filter((f) => f.status === 'expired').length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+    <div className="space-y-8">
       {/* 상단 초보자 친절 안내 배너 */}
-      <div className="bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-xs border border-green-200 dark:border-green-900/50">
+      <div className="bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-xs border border-slate-200 dark:border-green-900/50">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-green-100 text-green-800 mb-2">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-900 mb-2">
               메뉴 1 · AI 지식창고 (시설 · 요금 · 이용규정 통합)
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               📚 AI 지식창고 관리
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="mt-1 text-sm text-slate-600 dark:text-gray-300">
               AI 상담원이 손님에게 대답할 때 참고하는 <strong>백과사전(총 {activeCount}개 학습 중{pendingCount > 0 ? ` · 검수 대기 ${pendingCount}개` : ''})</strong>입니다. 아래 4개 버튼 중 원하시는 작업을 눌러보세요!
             </p>
           </div>
@@ -935,7 +935,7 @@ export default function FacilitiesAdmin() {
             <button
               onClick={handleExportBible}
               disabled={isExporting || facilities.length === 0}
-              className="inline-flex items-center text-xs sm:text-sm px-3.5 py-2 bg-amber-50 text-amber-800 rounded-xl hover:bg-amber-100 border border-amber-300 transition-colors disabled:opacity-50 font-bold"
+              className="inline-flex items-center text-xs sm:text-sm px-3.5 py-2 bg-slate-50 text-slate-900 rounded-xl hover:bg-slate-100 border border-slate-200 transition-colors disabled:opacity-50 font-bold"
               title="현재 AI가 알고 있는 모든 지식을 엑셀 파일로 내려받습니다"
             >
               {isExporting ? (
@@ -959,19 +959,19 @@ export default function FacilitiesAdmin() {
             }}
             className={`p-3.5 rounded-xl border text-left transition-all ${
               activeTab === 'manage'
-                ? 'bg-green-600 text-white border-green-700 shadow-sm'
-                : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
             }`}
           >
             <div className="text-sm font-extrabold flex items-center justify-between">
               <span>📋 1. 등록된 지식 찾아보기/고치기</span>
               {pendingCount > 0 && (
-                <span className="px-2 py-0.5 text-[11px] rounded-full bg-amber-400 text-gray-900 font-extrabold">
+                <span className="px-2 py-0.5 text-xs rounded-full bg-amber-400 text-slate-900 font-extrabold">
                   대기 {pendingCount}
                 </span>
               )}
             </div>
-            <div className={`text-xs mt-1 ${activeTab === 'manage' ? 'text-green-100' : 'text-gray-500'}`}>
+            <div className={`text-xs mt-1 ${activeTab === 'manage' ? 'text-slate-200' : 'text-slate-500'}`}>
               현재 AI가 아는 {activeCount}개 지식을 검색하고 수정합니다
             </div>
           </button>
@@ -984,12 +984,12 @@ export default function FacilitiesAdmin() {
             }}
             className={`p-3.5 rounded-xl border text-left transition-all ${
               activeTab === 'single'
-                ? 'bg-green-600 text-white border-green-700 shadow-sm'
-                : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
             }`}
           >
             <div className="text-sm font-extrabold">✏️ 2. 새 지식 하나씩 등록하기</div>
-            <div className={`text-xs mt-1 ${activeTab === 'single' ? 'text-green-100' : 'text-gray-500'}`}>
+            <div className={`text-xs mt-1 ${activeTab === 'single' ? 'text-slate-200' : 'text-slate-500'}`}>
               빈칸만 채우면 AI 표준 양식으로 자동 조립 &amp; 팩트체크
             </div>
           </button>
@@ -1002,12 +1002,12 @@ export default function FacilitiesAdmin() {
             }}
             className={`p-3.5 rounded-xl border text-left transition-all ${
               activeTab === 'audit'
-                ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
-                : 'bg-indigo-50/70 hover:bg-indigo-100/70 text-indigo-900 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-200'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-900 border-slate-200 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-slate-200'
             }`}
           >
             <div className="text-sm font-extrabold">🌐 3. 홈페이지 자동연동 &amp; AI 청소기</div>
-            <div className={`text-xs mt-1 ${activeTab === 'audit' ? 'text-indigo-100' : 'text-indigo-700 dark:text-indigo-300'}`}>
+            <div className={`text-xs mt-1 ${activeTab === 'audit' ? 'text-slate-200' : 'text-slate-700 dark:text-indigo-300'}`}>
               홈페이지 최신 정보 동기화 및 중복/과거 문서 정리
             </div>
           </button>
@@ -1017,12 +1017,12 @@ export default function FacilitiesAdmin() {
             onClick={() => setActiveTab('tools')}
             className={`p-3.5 rounded-xl border text-left transition-all ${
               activeTab === 'tools'
-                ? 'bg-gray-900 text-white border-gray-900 shadow-sm dark:bg-white dark:text-gray-900'
-                : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
+                ? 'bg-gray-900 text-white border-gray-900 shadow-sm dark:bg-white dark:text-slate-900'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-200'
             }`}
           >
             <div className="text-sm font-extrabold">🗂️ 4. 분류(카테고리) &amp; 엑셀 업로드</div>
-            <div className={`text-xs mt-1 ${activeTab === 'tools' ? 'opacity-80' : 'text-gray-500'}`}>
+            <div className={`text-xs mt-1 ${activeTab === 'tools' ? 'opacity-80' : 'text-slate-500'}`}>
               분류 이름을 바꾸거나 엑셀로 한 번에 올릴 때 씁니다
             </div>
           </button>
@@ -1038,14 +1038,14 @@ export default function FacilitiesAdmin() {
           <div className="space-y-5">
             {/* 검수 대기 알림 배너 */}
             {pendingCount > 0 && (
-              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-300 dark:border-amber-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="text-xs sm:text-sm text-amber-900 dark:text-amber-200">
+              <div className="bg-slate-50 dark:bg-amber-900/20 p-4 rounded-xl border border-slate-200 dark:border-amber-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="text-xs sm:text-sm text-slate-900 dark:text-amber-200">
                   ⏳ <strong>승인 대기 중인 지식이 {pendingCount}건 있습니다!</strong> 직원이 등록한 내용을 확인하시고 오른쪽 <strong>[✅ 즉시 승인]</strong> 버튼을 누르면 그 즉시 AI가 손님에게 안내를 시작합니다.
                 </div>
                 <button
                   type="button"
                   onClick={() => setCategoryFilter(categoryFilter === 'PENDING' ? 'ALL' : 'PENDING')}
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold rounded-lg shrink-0"
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold rounded-lg shrink-0"
                 >
                   {categoryFilter === 'PENDING' ? '전체 목록 보기' : `⏳ 검수 대기 ${pendingCount}건만 모아보기`}
                 </button>
@@ -1053,8 +1053,8 @@ export default function FacilitiesAdmin() {
             )}
 
             {/* 초보자 도움말 박스 */}
-            <div className="bg-gray-50 dark:bg-neutral-800/60 p-4 rounded-xl border border-gray-200 dark:border-neutral-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+            <div className="bg-slate-50 dark:bg-neutral-800/60 p-4 rounded-xl border border-slate-200 dark:border-neutral-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="text-xs sm:text-sm text-slate-700 dark:text-gray-300">
                 💡 <strong>사용 팁:</strong> 찾고 싶은 시설 이름(예: <code>마운틴카트</code>, <code>남도예담</code>)을 검색창에 입력하시고, 오른쪽 <strong>[✏️ 고치기]</strong> 버튼을 누르면 내용을 쉽게 수정할 수 있습니다.
               </div>
               <button
@@ -1063,7 +1063,7 @@ export default function FacilitiesAdmin() {
                   setActiveTab('single');
                   setFactCheckResult(null);
                 }}
-                className="inline-flex items-center px-3.5 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-extrabold rounded-lg shrink-0"
+                className="inline-flex items-center px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold rounded-lg shrink-0"
               >
                 <Plus className="w-4 h-4 mr-1" /> 새 지식 추가하러 가기
               </button>
@@ -1077,8 +1077,8 @@ export default function FacilitiesAdmin() {
                   onClick={() => setCategoryFilter('ALL')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors ${
                     categoryFilter === 'ALL'
-                      ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-gray-300'
+                      ? 'bg-gray-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'bg-slate-100 text-slate-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-gray-300'
                   }`}
                 >
                   전체 ({facilities.length})
@@ -1089,8 +1089,8 @@ export default function FacilitiesAdmin() {
                     onClick={() => setCategoryFilter('PENDING')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors ${
                       categoryFilter === 'PENDING'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-200'
                     }`}
                   >
                     ⏳ 검수 대기 ({pendingCount})
@@ -1105,8 +1105,8 @@ export default function FacilitiesAdmin() {
                       onClick={() => setCategoryFilter(cat)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                         categoryFilter === cat
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-gray-300'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-gray-300'
                       }`}
                     >
                       {cat} ({count})
@@ -1118,8 +1118,8 @@ export default function FacilitiesAdmin() {
                   onClick={() => setCategoryFilter('EXPIRED')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                     categoryFilter === 'EXPIRED'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
                   📦 만료 보관함 ({expiredCount})
@@ -1134,12 +1134,12 @@ export default function FacilitiesAdmin() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="시설 이름이나 내용 검색 (예: 썰매, 조식)"
-                    className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 pl-9 pr-8 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 pl-9 pr-8 py-2 text-sm focus:border-slate-900 focus:outline-none"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                      className="absolute right-2.5 top-2.5 text-gray-400 hover:text-slate-600"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -1156,7 +1156,7 @@ export default function FacilitiesAdmin() {
                 )}
                 <button
                   onClick={fetchFacilities}
-                  className="inline-flex items-center text-xs font-bold px-3 py-2 text-green-700 bg-green-50 hover:bg-green-100 rounded-xl border border-green-200 shrink-0"
+                  className="inline-flex items-center text-xs font-bold px-3 py-2 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 shrink-0"
                 >
                   <RefreshCw className="w-3.5 h-3.5 mr-1" /> 새로고침
                 </button>
@@ -1165,21 +1165,21 @@ export default function FacilitiesAdmin() {
 
             {loadingManage ? (
               <div className="flex justify-center py-16">
-                <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                <Loader2 className="w-8 h-8 text-slate-700 animate-spin" />
               </div>
             ) : filteredFacilities.length === 0 ? (
-              <div className="text-center py-16 text-gray-500">
+              <div className="text-center py-16 text-slate-500">
                 검색 조건에 맞는 지식 데이터가 없습니다.
               </div>
             ) : (
               <div className="overflow-x-auto border rounded-xl dark:border-neutral-700">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-                  <thead className="bg-gray-50 dark:bg-neutral-800">
+                  <thead className="bg-slate-50 dark:bg-neutral-800">
                     <tr>
                       <th className="px-4 py-3 text-left w-10">
                         <input
                           type="checkbox"
-                          className="rounded border-gray-300 text-green-600"
+                          className="rounded border-slate-300 text-slate-700"
                           checked={
                             filteredFacilities.length > 0 &&
                             selectedIds.length === filteredFacilities.length
@@ -1195,16 +1195,16 @@ export default function FacilitiesAdmin() {
                           }}
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-500">
                         시설 / 규정 이름
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 w-24">
+                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 w-24">
                         분류
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">
+                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-500">
                         AI가 알고 있는 상세 내용 &amp; 핵심 요약
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 w-56">
+                      <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 w-56">
                         관리 버튼
                       </th>
                     </tr>
@@ -1213,14 +1213,14 @@ export default function FacilitiesAdmin() {
                     {filteredFacilities.map((fac: any) => (
                       <tr
                         key={fac.id}
-                        className={`hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors ${
-                          fac.status === 'pending' ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
+                        className={`hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors ${
+                          fac.status === 'pending' ? 'bg-slate-50 dark:bg-amber-900/10' : ''
                         }`}
                       >
                         <td className="px-4 py-3.5 whitespace-nowrap">
                           <input
                             type="checkbox"
-                            className="rounded border-gray-300 text-green-600"
+                            className="rounded border-slate-300 text-slate-700"
                             checked={fac.id ? selectedIds.includes(fac.id) : false}
                             onChange={(e) => {
                               if (e.target.checked) {
@@ -1236,24 +1236,24 @@ export default function FacilitiesAdmin() {
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-sm font-extrabold text-gray-900 dark:text-white">
+                            <span className="text-sm font-extrabold text-slate-900 dark:text-white">
                               {fac.name}
                             </span>
                             {fac.status === 'expired' ? (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
                                 📦 만료보관 (검색 제외)
                               </span>
                             ) : fac.status === 'pending' ? (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                              <span className="px-2 py-0.5 rounded text-xs font-extrabold bg-slate-100 text-slate-900 border border-slate-200">
                                 ⏳ 검수 대기 (승인 전)
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-50 text-slate-700 border border-slate-200">
                                 🟢 AI 안내 중
                               </span>
                             )}
                             {fac.homepageSourceType && (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-50 text-slate-700 border border-slate-200">
                                 🌐 홈페이지 연동
                               </span>
                             )}
@@ -1265,19 +1265,19 @@ export default function FacilitiesAdmin() {
                           )}
                         </td>
                         <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300">
+                          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-gray-300">
                             {fac.category}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                        <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600 dark:text-gray-300">
                           <div
-                            className="max-w-xl line-clamp-2 leading-relaxed"
+                            className="max-w-3xl line-clamp-2 text-[15px] text-slate-800 leading-relaxed"
                             title={fac.description}
                           >
                             {fac.description || '-'}
                           </div>
                           {fac.seasonalDescription && (
-                            <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-800 border border-orange-200">
+                            <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-900 border border-slate-200">
                               ⏰ 시즌/기간: {fac.seasonalDescription}
                             </div>
                           )}
@@ -1285,22 +1285,22 @@ export default function FacilitiesAdmin() {
                           {fac.robotSpecs && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {fac.robotSpecs.operatingHours && fac.robotSpecs.operatingHours !== '미기재' && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300">
+                                <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-gray-300">
                                   ⏰ {fac.robotSpecs.operatingHours.slice(0, 28)}
                                 </span>
                               )}
                               {fac.robotSpecs.closedDays && fac.robotSpecs.closedDays !== '미기재' && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-red-50 text-red-700">
+                                <span className="px-1.5 py-0.5 rounded text-xs bg-red-50 text-red-700">
                                   🛑 {fac.robotSpecs.closedDays.slice(0, 20)}
                                 </span>
                               )}
                               {fac.robotSpecs.priceInfo && fac.robotSpecs.priceInfo !== '미기재' && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700">
+                                <span className="px-1.5 py-0.5 rounded text-xs bg-slate-50 text-slate-700">
                                   💰 {fac.robotSpecs.priceInfo.slice(0, 28)}
                                 </span>
                               )}
                               {fac.robotSpecs.petAllowed && fac.robotSpecs.petAllowed !== '미기재' && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] bg-emerald-50 text-emerald-700">
+                                <span className="px-1.5 py-0.5 rounded text-xs bg-slate-50 text-slate-700">
                                   🐶 반려견 {fac.robotSpecs.petAllowed}
                                 </span>
                               )}
@@ -1311,7 +1311,7 @@ export default function FacilitiesAdmin() {
                           {fac.status === 'pending' && (
                             <button
                               onClick={() => handleApprovePending(fac)}
-                              className="inline-flex items-center px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-2xs transition-colors"
+                              className="inline-flex items-center px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-2xs transition-colors"
                               title="검수를 완료하고 즉시 AI 챗봇이 안내하도록 승인합니다"
                             >
                               ✅ 즉시 승인
@@ -1335,7 +1335,7 @@ export default function FacilitiesAdmin() {
                               setFactCheckResult(null);
                               setIsEditModalOpen(true);
                             }}
-                            className="inline-flex items-center px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition-colors"
+                            className="inline-flex items-center px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-colors"
                           >
                             <Edit2 className="w-3.5 h-3.5 mr-1" />
                             {fac.status === 'expired' ? '다시 켜기/수정' : '고치기'}
@@ -1351,7 +1351,7 @@ export default function FacilitiesAdmin() {
                                   handleExpireAction({ facilityIds: [fac.id as string] });
                                 }
                               }}
-                              className="inline-flex items-center px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg transition-colors"
+                              className="inline-flex items-center px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200 rounded-lg transition-colors"
                               title="삭제하지 않고 AI 검색에서만 잠시 제외합니다"
                             >
                               잠시 끄기
@@ -1380,30 +1380,30 @@ export default function FacilitiesAdmin() {
         {activeTab === 'single' && (
           <div className="space-y-6">
             {/* 초보자용 원클릭 작성 예시 채우기 배너 */}
-            <div className="p-4 rounded-xl bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/60">
-              <p className="text-xs sm:text-sm font-extrabold text-amber-900 dark:text-amber-300 mb-2 flex items-center">
-                <Sparkles className="w-4 h-4 mr-1.5 text-amber-600" />
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-amber-900/20 border border-slate-200 dark:border-amber-800/60">
+              <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-amber-300 mb-2 flex items-center">
+                <Sparkles className="w-4 h-4 mr-1.5 text-slate-700" />
                 어떻게 적어야 할지 고민되시나요? 아래 예시 버튼을 누르면 모범 답안이 자동으로 채워집니다!
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => fillBeginnerExample('leisure')}
-                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors"
+                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 dark:text-gray-200 transition-colors"
                 >
                   🎢 놀이기구/레저 작성 예시 채우기
                 </button>
                 <button
                   type="button"
                   onClick={() => fillBeginnerExample('dining')}
-                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors"
+                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 dark:text-gray-200 transition-colors"
                 >
                   🍽️ 식당/카페 작성 예시 채우기
                 </button>
                 <button
                   type="button"
                   onClick={() => fillBeginnerExample('faq')}
-                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors"
+                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 dark:text-gray-200 transition-colors"
                 >
                   🐶 자주 묻는 규정(FAQ) 작성 예시 채우기
                 </button>
@@ -1413,10 +1413,10 @@ export default function FacilitiesAdmin() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
+                  <label className="block text-sm font-extrabold text-slate-800 dark:text-gray-200">
                     1. 시설 이름 또는 질문 주제 <span className="text-red-500">*</span>
                   </label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
+                  <p className="text-xs text-slate-500 mt-0.5 mb-1.5">
                     쪼개지 말고 대표 이름 하나로 적어주세요 (예: &apos;원더풀 수온&apos; ❌ ➔ &apos;원더풀&apos; ⭕)
                   </p>
                   <input
@@ -1428,15 +1428,15 @@ export default function FacilitiesAdmin() {
                       handleChange(e);
                       setFactCheckResult(null);
                     }}
-                    className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-slate-900 focus:outline-none"
                     placeholder="예: 마운틴카트, 남도예담, 반려견 동반 규정"
                   />
                   {matchedMasterFacility && (
-                    <div className="mt-2 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-2">
+                    <div className="mt-2 p-3.5 rounded-xl bg-slate-50 dark:bg-amber-900/20 border border-slate-200 dark:border-amber-800 text-xs text-slate-900 dark:text-amber-300 space-y-2">
                       <p className="font-extrabold flex items-center">
                         💡 잠깐! 이미 [{matchedMasterFacility.name}] 항목이 등록되어 있습니다!
                       </p>
-                      <p className="text-amber-800 dark:text-amber-400 leading-relaxed">
+                      <p className="text-slate-900 dark:text-amber-400 leading-relaxed">
                         비슷한 이름으로 여러 개를 만들면 AI가 헷갈립니다. 아래 버튼을 누르면 기존 <strong>[{matchedMasterFacility.name}]</strong>에 내용을 안전하게 합쳐줍니다!
                       </p>
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -1452,7 +1452,7 @@ export default function FacilitiesAdmin() {
                               }));
                               setDuplicateAction('merge');
                             }}
-                            className="px-3 py-1.5 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700 transition-colors"
+                            className="px-3 py-1.5 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors"
                           >
                             기존 &apos;{matchedMasterFacility.name}&apos;에 내용 합치기 (추천)
                           </button>
@@ -1472,7 +1472,7 @@ export default function FacilitiesAdmin() {
                                 : matchedMasterFacility.tags || '',
                             });
                           }}
-                          className="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-amber-300 text-amber-800 rounded-lg font-bold hover:bg-amber-100 transition-colors"
+                          className="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-slate-200 text-slate-900 rounded-lg font-bold hover:bg-slate-100 transition-colors"
                         >
                           기존 &apos;{matchedMasterFacility.name}&apos; 내용 불러와서 보기
                         </button>
@@ -1482,17 +1482,17 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
+                  <label className="block text-sm font-extrabold text-slate-800 dark:text-gray-200">
                     2. 분류 선택 <span className="text-red-500">*</span>
                   </label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
+                  <p className="text-xs text-slate-500 mt-0.5 mb-1.5">
                     어느 분야에 속하는지 골라주세요. (일반 규정이나 질문은 &apos;기타&apos; 선택)
                   </p>
                   <select
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-slate-900 focus:outline-none"
                   >
                     {categories.map((c) => (
                       <option key={c} value={c}>
@@ -1504,10 +1504,10 @@ export default function FacilitiesAdmin() {
               </div>
 
               <div>
-                <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
+                <label className="block text-sm font-extrabold text-slate-800 dark:text-gray-200">
                   3. 위치 안내 (선택 사항)
                 </label>
-                <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
+                <p className="text-xs text-slate-500 mt-0.5 mb-1.5">
                   손님이 &quot;어디로 가야 해요?&quot;라고 물어볼 때 안내할 위치입니다. 모르시면 비워두셔도 됩니다.
                 </p>
                 <input
@@ -1515,26 +1515,26 @@ export default function FacilitiesAdmin() {
                   name="location"
                   value={formData.location}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none"
+                  className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-slate-900 focus:outline-none"
                   placeholder="예: 웰컴센터 맞은편 / 셔틀버스 2번 정류장 근처"
                 />
               </div>
 
               {/* 🧩 직원용 초간단 빈칸 채우기 도우미 (7대 핵심 정보 자동 조립) */}
-              <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/70 space-y-3">
+              <div className="bg-slate-50 dark:bg-emerald-950/30 p-4 rounded-xl border border-slate-200 dark:border-emerald-800/70 space-y-3">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                   <div>
-                    <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 dark:text-emerald-200 flex items-center">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-200 flex items-center">
                       🧩 빈칸만 채우면 끝! AI 표준 설명문 자동 조립기 (선택 사항)
                     </h4>
-                    <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    <p className="text-xs text-slate-700 dark:text-emerald-400 mt-0.5">
                       긴 문장으로 쓰기 힘드실 때, 아래 빈칸 중 아는 것만 적고 <strong>[✨ 아래 설명 칸에 채우기]</strong>를 누르면 AI가 100% 이해하는 표준 양식으로 만들어 줍니다!
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowQuickSlotBuilder(!showQuickSlotBuilder)}
-                    className="text-xs font-bold text-emerald-800 dark:text-emerald-300 underline shrink-0"
+                    className="text-xs font-bold text-slate-900 dark:text-emerald-300 underline shrink-0"
                   >
                     {showQuickSlotBuilder ? '빈칸 도우미 접기' : '빈칸 도우미 펼치기'}
                   </button>
@@ -1544,7 +1544,7 @@ export default function FacilitiesAdmin() {
                   <div className="space-y-3 pt-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-emerald-300 mb-1">
                           ⏰ 운영시간
                         </label>
                         <input
@@ -1552,11 +1552,11 @@ export default function FacilitiesAdmin() {
                           value={quickSlots.hours}
                           onChange={(e) => setQuickSlots({ ...quickSlots, hours: e.target.value })}
                           placeholder="예: 10:00~17:30 (점심 12:30~13:30)"
-                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-emerald-300 mb-1">
                           🛑 휴무일
                         </label>
                         <input
@@ -1564,11 +1564,11 @@ export default function FacilitiesAdmin() {
                           value={quickSlots.closedDays}
                           onChange={(e) => setQuickSlots({ ...quickSlots, closedDays: e.target.value })}
                           placeholder="예: 매주 월요일 휴장 / 연중무휴"
-                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-emerald-300 mb-1">
                           💰 이용요금 및 할인
                         </label>
                         <input
@@ -1576,11 +1576,11 @@ export default function FacilitiesAdmin() {
                           value={quickSlots.price}
                           onChange={(e) => setQuickSlots({ ...quickSlots, price: e.target.value })}
                           placeholder="예: 성인 21,000원 (투숙객 20% 할인)"
-                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-emerald-300 mb-1">
                           📏 이용조건 / 키·나이 제한
                         </label>
                         <input
@@ -1588,11 +1588,11 @@ export default function FacilitiesAdmin() {
                           value={quickSlots.requirements}
                           onChange={(e) => setQuickSlots({ ...quickSlots, requirements: e.target.value })}
                           placeholder="예: 140cm 이상 단독 탑승 가능"
-                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-emerald-300 mb-1">
                           ☔ 우천 / 날씨 기준
                         </label>
                         <input
@@ -1600,11 +1600,11 @@ export default function FacilitiesAdmin() {
                           value={quickSlots.rainPolicy}
                           onChange={(e) => setQuickSlots({ ...quickSlots, rainPolicy: e.target.value })}
                           placeholder="예: 우천 시 안전을 위해 운휴"
-                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-emerald-300 mb-1">
                           🐶 반려견 동반 여부
                         </label>
                         <input
@@ -1612,7 +1612,7 @@ export default function FacilitiesAdmin() {
                           value={quickSlots.petPolicy}
                           onChange={(e) => setQuickSlots({ ...quickSlots, petPolicy: e.target.value })}
                           placeholder="예: 동반 가능(목줄 필수) / 출입 불가"
-                          className="w-full rounded-lg border border-emerald-300 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs"
                         />
                       </div>
                     </div>
@@ -1620,7 +1620,7 @@ export default function FacilitiesAdmin() {
                       <button
                         type="button"
                         onClick={applyQuickSlotsToDescription}
-                        className="inline-flex items-center px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-lg shadow-2xs transition-colors"
+                        className="inline-flex items-center px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold rounded-lg shadow-2xs transition-colors"
                       >
                         ✨ 위 빈칸 내용을 아래 [4. 상세 설명]에 AI 표준 양식으로 채우기
                       </button>
@@ -1632,10 +1632,10 @@ export default function FacilitiesAdmin() {
               <div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-1.5 gap-2">
                   <div>
-                    <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
+                    <label className="block text-sm font-extrabold text-slate-800 dark:text-gray-200">
                       4. 상세 설명 (AI가 손님에게 대답할 내용) <span className="text-red-500">*</span>
                     </label>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       운영시간, 요금, 키 제한, 특징 등을 자유롭게 적어주세요.
                     </p>
                   </div>
@@ -1644,7 +1644,7 @@ export default function FacilitiesAdmin() {
                       type="button"
                       onClick={handleRunFactCheck}
                       disabled={isFactChecking || !formData.name.trim() || !formData.description.trim()}
-                      className="inline-flex items-center text-xs font-extrabold px-3 py-1.5 bg-amber-100 text-amber-900 hover:bg-amber-200 rounded-lg border border-amber-300 transition-colors disabled:opacity-50 shrink-0"
+                      className="inline-flex items-center text-xs font-extrabold px-3 py-1.5 bg-slate-100 text-slate-900 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors disabled:opacity-50 shrink-0"
                     >
                       {isFactChecking ? (
                         <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
@@ -1656,7 +1656,7 @@ export default function FacilitiesAdmin() {
                       type="button"
                       onClick={handleSmartSplit}
                       disabled={isSmartEditing || !formData.description}
-                      className="inline-flex items-center text-xs font-bold px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 shrink-0"
+                      className="inline-flex items-center text-xs font-bold px-3 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors disabled:opacity-50 shrink-0"
                     >
                       {isSmartEditing ? (
                         <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
@@ -1675,7 +1675,7 @@ export default function FacilitiesAdmin() {
                     handleChange(e);
                     setFactCheckResult(null);
                   }}
-                  className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none leading-relaxed"
+                  className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-slate-900 focus:outline-none leading-relaxed"
                   placeholder="예: 오전 10시부터 오후 5시까지 운영합니다. 성인 15,000원, 소인 12,000원이며 투숙객은 20% 할인됩니다."
                 />
               </div>
@@ -1686,7 +1686,7 @@ export default function FacilitiesAdmin() {
                   className={`p-4 rounded-xl border space-y-3 ${
                     factCheckResult.verdict === 'CONFLICT'
                       ? 'bg-red-50/90 border-red-300 text-red-900 dark:bg-red-950/40 dark:border-red-800 dark:text-red-200'
-                      : 'bg-emerald-50/90 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-slate-200'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -1709,10 +1709,10 @@ export default function FacilitiesAdmin() {
                     {factCheckResult.conflictSummary}
                   </p>
                   <div className="bg-white/90 dark:bg-neutral-900/80 p-3 rounded-lg border border-black/10 text-xs">
-                    <div className="font-extrabold text-gray-800 dark:text-gray-200 mb-1.5">
+                    <div className="font-extrabold text-slate-800 dark:text-gray-200 mb-1.5">
                       🤖 AI &amp; 로봇/콜봇이 이 글에서 자동으로 인식한 7대 핵심 데이터:
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-700 dark:text-gray-300">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 dark:text-gray-300">
                       <div>• <strong>운영시간:</strong> {factCheckResult.extractedSpecs.operatingHours}</div>
                       <div>• <strong>휴무일:</strong> {factCheckResult.extractedSpecs.closedDays}</div>
                       <div>• <strong>요금:</strong> {factCheckResult.extractedSpecs.priceInfo}</div>
@@ -1726,10 +1726,10 @@ export default function FacilitiesAdmin() {
               )}
 
               <div>
-                <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
+                <label className="block text-sm font-extrabold text-slate-800 dark:text-gray-200">
                   5. 특정 계절이나 기간에만 적용되는 안내 (선택 사항)
                 </label>
-                <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
+                <p className="text-xs text-slate-500 mt-0.5 mb-1.5">
                   여름 성수기나 이벤트 기간처럼 특정 시기에만 해당되는 내용이 있으면 여기에 적어주세요.
                 </p>
                 <textarea
@@ -1737,16 +1737,16 @@ export default function FacilitiesAdmin() {
                   rows={2}
                   value={formData.seasonalDescription}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:outline-none"
+                  className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-slate-900 focus:outline-none"
                   placeholder="예: 7~8월 여름 성수기에는 오후 8시까지 연장 운영합니다."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-extrabold text-gray-800 dark:text-gray-200">
+                <label className="block text-sm font-extrabold text-slate-800 dark:text-gray-200">
                   6. 관련 검색어 태그 (선택 사항 · 쉼표로 구분)
                 </label>
-                <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
+                <p className="text-xs text-slate-500 mt-0.5 mb-1.5">
                   손님들이 다르게 부르는 말(별명)을 적어두면 AI가 더 잘 찾아냅니다.
                 </p>
                 <input
@@ -1754,24 +1754,24 @@ export default function FacilitiesAdmin() {
                   name="tags"
                   value={formData.tags}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none"
+                  className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-slate-900 focus:outline-none"
                   placeholder="예: 수영장, 물놀이, 아쿠아풀, 수온"
                 />
               </div>
 
               {/* 고급 옵션 */}
-              <div className="border-t border-gray-200 dark:border-neutral-800 pt-4">
+              <div className="border-t border-slate-200 dark:border-neutral-800 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAdvancedSingle(!showAdvancedSingle)}
-                  className="text-xs font-bold text-gray-500 hover:text-gray-700 flex items-center"
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center"
                 >
                   {showAdvancedSingle
                     ? '[-] 고급 설정 닫기'
                     : '[+] 이미 같은 이름이 있을 때 처리 방법 설정 (기본값: 똑똑하게 내용 합치기)'}
                 </button>
                 {showAdvancedSingle && (
-                  <div className="mt-3 p-4 bg-gray-50 dark:bg-neutral-800/50 rounded-xl border border-gray-200 dark:border-neutral-700 flex flex-wrap gap-6">
+                  <div className="mt-3 p-4 bg-slate-50 dark:bg-neutral-800/50 rounded-xl border border-slate-200 dark:border-neutral-700 flex flex-wrap gap-6">
                     <label className="flex items-center cursor-pointer text-sm">
                       <input
                         type="radio"
@@ -1781,9 +1781,9 @@ export default function FacilitiesAdmin() {
                         onChange={(e) =>
                           setDuplicateAction(e.target.value as 'merge' | 'overwrite')
                         }
-                        className="w-4 h-4 text-green-600"
+                        className="w-4 h-4 text-slate-700"
                       />
-                      <span className="ml-2 font-bold text-gray-800 dark:text-gray-200">
+                      <span className="ml-2 font-bold text-slate-800 dark:text-gray-200">
                         기존 내용에 똑똑하게 합치기 (가장 안전 · 추천)
                       </span>
                     </label>
@@ -1796,7 +1796,7 @@ export default function FacilitiesAdmin() {
                         onChange={(e) =>
                           setDuplicateAction(e.target.value as 'merge' | 'overwrite')
                         }
-                        className="w-4 h-4 text-green-600"
+                        className="w-4 h-4 text-slate-700"
                       />
                       <span className="ml-2 font-bold text-red-600">
                         기존 내용 지우고 새로 덮어쓰기
@@ -1810,7 +1810,7 @@ export default function FacilitiesAdmin() {
                 <div
                   className={`p-4 rounded-xl text-sm font-bold ${
                     message.includes('✅') || message.includes('성공') || message.includes('⏳')
-                      ? 'bg-green-50 text-green-800 border border-green-200'
+                      ? 'bg-slate-50 text-slate-900 border border-slate-200'
                       : 'bg-red-50 text-red-800 border border-red-200'
                   }`}
                 >
@@ -1823,7 +1823,7 @@ export default function FacilitiesAdmin() {
                   type="button"
                   onClick={handleRunFactCheck}
                   disabled={isFactChecking || loading || !formData.name.trim() || !formData.description.trim()}
-                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-4 py-3 text-xs sm:text-sm font-extrabold disabled:opacity-50 transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200 px-4 py-3 text-xs sm:text-sm font-extrabold disabled:opacity-50 transition-colors"
                 >
                   {isFactChecking ? (
                     <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -1838,7 +1838,7 @@ export default function FacilitiesAdmin() {
                     type="button"
                     disabled={loading}
                     onClick={() => handleSaveWithStatus('pending')}
-                    className="inline-flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 px-4 py-3 text-xs sm:text-sm font-extrabold disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-100 hover:bg-gray-200 text-slate-800 border border-slate-300 px-4 py-3 text-xs sm:text-sm font-extrabold disabled:opacity-50 transition-colors"
                     title="아직 확신이 없을 때 검수 대기함에 먼저 올려두고 매니저가 승인하게 합니다"
                   >
                     ⏳ 검수 대기열로 등록 (매니저 확인 후 반영)
@@ -1846,7 +1846,7 @@ export default function FacilitiesAdmin() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50 transition-colors"
                   >
                     {loading ? (
                       <>
@@ -1872,28 +1872,28 @@ export default function FacilitiesAdmin() {
         {activeTab === 'audit' && (
           <div className="space-y-8">
             {/* 🌐 벨포레 공식 홈페이지 일일 크롤링 자동 연동 카드 */}
-            <div className="bg-emerald-50/70 dark:bg-emerald-900/20 p-5 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-4">
+            <div className="bg-slate-50 dark:bg-emerald-900/20 p-5 rounded-xl border border-slate-200 dark:border-emerald-800 space-y-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-base font-extrabold text-emerald-900 dark:text-emerald-200 flex items-center">
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-200 flex items-center">
                       <span className="mr-2">🌐</span> 1. 벨포레 공식 홈페이지 매일 아침 자동 연동
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-900">
                       매일 아침 자동 켜짐
                     </span>
                   </div>
-                  <p className="text-sm text-emerald-800 dark:text-emerald-300">
+                  <p className="text-sm text-slate-900 dark:text-emerald-300">
                     벨포레 홈페이지(<code>belleforetresort.com</code>)에 올라온 <strong>① 특가 패키지</strong>, <strong>② 식음 매장 12곳 운영시간·휴무일·전화번호</strong>, <strong>③ 골프장 요금</strong>을 매일 아침 자동으로 읽어와 우리 DB에 최신 상태로 반영합니다.
                   </p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  <p className="text-xs text-slate-700 dark:text-emerald-400">
                     💡 <strong>안심하세요:</strong> 직원이 적어둔 기존 상세 메뉴 설명은 지워지지 않고 그대로 유지되며, 홈페이지에서 끝난 패키지는 자동으로 만료 보관함으로 이동합니다.
                   </p>
                 </div>
                 <button
                   onClick={handleHomepageSync}
                   disabled={isSyncingHomepage}
-                  className="inline-flex items-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold rounded-xl shadow-xs disabled:opacity-50 shrink-0 transition-colors"
+                  className="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-extrabold rounded-xl shadow-xs disabled:opacity-50 shrink-0 transition-colors"
                 >
                   {isSyncingHomepage ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1905,33 +1905,33 @@ export default function FacilitiesAdmin() {
               </div>
 
               {homepageSyncInfo && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-emerald-200/70 text-xs">
-                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100">
-                    <span className="text-gray-500 block">홈페이지 정보 수집 시각</span>
-                    <strong className="text-gray-900 dark:text-white text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-200 text-xs">
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-slate-200">
+                    <span className="text-slate-500 block">홈페이지 정보 수집 시각</span>
+                    <strong className="text-slate-900 dark:text-white text-sm">
                       {homepageSyncInfo.catalogPreview?.lastUpdated
                         ? new Date(homepageSyncInfo.catalogPreview.lastUpdated).toLocaleString('ko-KR')
                         : '확인 중'}
                     </strong>
                   </div>
-                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100">
-                    <span className="text-gray-500 block">우리 DB 최근 반영 시각</span>
-                    <strong className="text-emerald-700 text-sm">
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-slate-200">
+                    <span className="text-slate-500 block">우리 DB 최근 반영 시각</span>
+                    <strong className="text-slate-700 text-sm">
                       {homepageSyncInfo.syncStatus?.syncedAt
                         ? new Date(homepageSyncInfo.syncStatus.syncedAt).toLocaleString('ko-KR')
                         : '아직 이력 없음'}
                     </strong>
                   </div>
-                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100">
-                    <span className="text-gray-500 block">식음 매장 / 골프장 요금</span>
-                    <strong className="text-gray-900 dark:text-white text-sm">
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-slate-200">
+                    <span className="text-slate-500 block">식음 매장 / 골프장 요금</span>
+                    <strong className="text-slate-900 dark:text-white text-sm">
                       식음 {homepageSyncInfo.catalogPreview?.diningVenuesCount || 0}곳 · 골프장{' '}
                       {homepageSyncInfo.catalogPreview?.golfVerified ? '반영됨' : '대기'}
                     </strong>
                   </div>
-                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-emerald-100">
-                    <span className="text-gray-500 block">진행중 홈페이지 특가 패키지</span>
-                    <strong className="text-gray-900 dark:text-white text-sm">
+                  <div className="bg-white/80 dark:bg-neutral-900/60 p-3 rounded-lg border border-slate-200">
+                    <span className="text-slate-500 block">진행중 홈페이지 특가 패키지</span>
+                    <strong className="text-slate-900 dark:text-white text-sm">
                       활성 {homepageSyncInfo.catalogPreview?.specialOffersCount || 0}건
                     </strong>
                   </div>
@@ -1940,19 +1940,19 @@ export default function FacilitiesAdmin() {
             </div>
 
             {/* 🧹 AI 지식창고 자동 진단 배너 */}
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-slate-50 dark:bg-indigo-900/20 p-5 rounded-xl border border-slate-200 dark:border-indigo-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-1.5">
-                <h3 className="text-base font-extrabold text-indigo-900 dark:text-indigo-200 flex items-center">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-200 flex items-center">
                   <span className="mr-2">🧹</span> 2. AI 지식창고 건강 검진 &amp; 중복 정리기
                 </h3>
-                <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                <p className="text-sm text-slate-900 dark:text-indigo-300">
                   여러 개로 쪼개진 중복 시설이나 날짜가 지난 옛날 패키지가 있는지 AI가 자동으로 검사해 줍니다.
                 </p>
               </div>
               <button
                 onClick={runRagAudit}
                 disabled={loadingAudit}
-                className="inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-extrabold rounded-xl shadow-xs disabled:opacity-50 shrink-0 transition-colors"
+                className="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-extrabold rounded-xl shadow-xs disabled:opacity-50 shrink-0 transition-colors"
               >
                 {loadingAudit ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1965,8 +1965,8 @@ export default function FacilitiesAdmin() {
 
             {loadingAudit && !auditData ? (
               <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-                <p className="text-sm text-gray-500">
+                <Loader2 className="w-10 h-10 text-slate-700 animate-spin" />
+                <p className="text-sm text-slate-500">
                   지식창고 데이터를 꼼꼼히 점검하고 있습니다...
                 </p>
               </div>
@@ -1976,30 +1976,30 @@ export default function FacilitiesAdmin() {
                   <div
                     className={`p-5 rounded-xl border ${
                       auditData.sync?.isSynced
-                        ? 'bg-green-50/60 border-green-200'
+                        ? 'bg-slate-50 border-slate-200'
                         : 'bg-red-50/60 border-red-200'
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs font-bold text-gray-500">
+                        <p className="text-xs font-bold text-slate-500">
                           ① 지식창고 ↔ AI 두뇌 일치 상태
                         </p>
-                        <h4 className="text-2xl font-extrabold mt-1 text-gray-900 dark:text-white">
+                        <h4 className="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">
                           {auditData.sync?.approvedFirestoreCount}건 : {auditData.sync?.pineconeCount}개
                         </h4>
                       </div>
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                           auditData.sync?.isSynced
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-slate-100 text-slate-900'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
                         {auditData.sync?.isSynced ? '🟢 정상 일치' : '🔴 복구 필요'}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs text-gray-600">
+                    <p className="mt-2 text-xs text-slate-600">
                       현재 AI가 학습 중인 지식 {auditData.sync?.approvedFirestoreCount}건 (보관함{' '}
                       {auditData.sync?.expiredFirestoreCount || 0}건)
                     </p>
@@ -2017,30 +2017,30 @@ export default function FacilitiesAdmin() {
                   <div
                     className={`p-5 rounded-xl border ${
                       auditData.duplicateGroups?.length === 0
-                        ? 'bg-green-50/60 border-green-200'
-                        : 'bg-amber-50/60 border-amber-200'
+                        ? 'bg-slate-50 border-slate-200'
+                        : 'bg-slate-50 border-slate-200'
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs font-bold text-gray-500">
+                        <p className="text-xs font-bold text-slate-500">
                           ② 여러 개로 쪼개진 중복 시설
                         </p>
-                        <h4 className="text-2xl font-extrabold mt-1 text-gray-900 dark:text-white">
+                        <h4 className="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">
                           {auditData.duplicateGroups?.length || 0}개 묶음
                         </h4>
                       </div>
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                           auditData.duplicateGroups?.length === 0
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-amber-100 text-amber-800'
+                            ? 'bg-slate-100 text-slate-900'
+                            : 'bg-slate-100 text-slate-900'
                         }`}
                       >
                         {auditData.duplicateGroups?.length === 0 ? '🟢 깔끔함' : '⚠️ 합치기 권장'}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs text-gray-600">
+                    <p className="mt-2 text-xs text-slate-600">
                       비슷한 이름으로 나뉘어 있는 문서를 하나로 합쳐줍니다.
                     </p>
                   </div>
@@ -2050,16 +2050,16 @@ export default function FacilitiesAdmin() {
                       (auditData.stale?.facilities?.length || 0) +
                         (auditData.stale?.notices?.length || 0) ===
                       0
-                        ? 'bg-green-50/60 border-green-200'
-                        : 'bg-orange-50/60 border-orange-200'
+                        ? 'bg-slate-50 border-slate-200'
+                        : 'bg-slate-50 border-slate-200'
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs font-bold text-gray-500">
+                        <p className="text-xs font-bold text-slate-500">
                           ③ 날짜가 지난 옛날 패키지/공지
                         </p>
-                        <h4 className="text-2xl font-extrabold mt-1 text-gray-900 dark:text-white">
+                        <h4 className="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">
                           {(auditData.stale?.facilities?.length || 0) +
                             (auditData.stale?.notices?.length || 0)}
                           건
@@ -2070,8 +2070,8 @@ export default function FacilitiesAdmin() {
                           (auditData.stale?.facilities?.length || 0) +
                             (auditData.stale?.notices?.length || 0) ===
                           0
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-orange-100 text-orange-800'
+                            ? 'bg-slate-100 text-slate-900'
+                            : 'bg-slate-100 text-slate-900'
                         }`}
                       >
                         {(auditData.stale?.facilities?.length || 0) +
@@ -2081,7 +2081,7 @@ export default function FacilitiesAdmin() {
                           : '⏰ 확인 필요'}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs text-gray-600">
+                    <p className="mt-2 text-xs text-slate-600">
                       이미 지나간 날짜가 적힌 문서를 찾아 알려줍니다.
                     </p>
                   </div>
@@ -2090,8 +2090,8 @@ export default function FacilitiesAdmin() {
                 {/* 중복 그룹 */}
                 {auditData.duplicateGroups?.length > 0 && (
                   <div className="border dark:border-neutral-700 rounded-xl overflow-hidden">
-                    <div className="bg-gray-50 dark:bg-neutral-800 px-5 py-3.5 border-b dark:border-neutral-700">
-                      <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                    <div className="bg-slate-50 dark:bg-neutral-800 px-5 py-3.5 border-b dark:border-neutral-700">
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
                         📌 하나로 합치면 좋은 중복 문서 ({auditData.duplicateGroups.length}건)
                       </h4>
                     </div>
@@ -2103,10 +2103,10 @@ export default function FacilitiesAdmin() {
                         >
                           <div className="space-y-2 flex-1">
                             <div className="flex items-center space-x-2">
-                              <span className="px-2 py-0.5 text-xs font-bold rounded bg-amber-100 text-amber-800">
+                              <span className="px-2 py-0.5 text-xs font-bold rounded bg-slate-100 text-slate-900">
                                 {group.count}개 문서 묶음
                               </span>
-                              <span className="text-base font-bold text-gray-900 dark:text-white">
+                              <span className="text-base font-bold text-slate-900 dark:text-white">
                                 대표 이름: &quot;{group.masterName}&quot;
                               </span>
                             </div>
@@ -2114,7 +2114,7 @@ export default function FacilitiesAdmin() {
                               {group.items.map((it: any) => (
                                 <span
                                   key={it.id}
-                                  className="px-2.5 py-1 rounded-md text-xs bg-gray-100 dark:bg-neutral-800 text-gray-700 border border-gray-200"
+                                  className="px-2.5 py-1 rounded-md text-xs bg-slate-100 dark:bg-neutral-800 text-slate-700 border border-slate-200"
                                 >
                                   📄 {it.name}
                                 </span>
@@ -2123,7 +2123,7 @@ export default function FacilitiesAdmin() {
                           </div>
                           <button
                             onClick={() => handleOpenMergeModal(group)}
-                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shrink-0"
+                            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg shrink-0"
                           >
                             ✨ AI로 내용 합치기 미리보기
                           </button>
@@ -2138,8 +2138,8 @@ export default function FacilitiesAdmin() {
                   (auditData.stale?.notices?.length || 0) >
                   0 && (
                   <div className="border dark:border-neutral-700 rounded-xl overflow-hidden">
-                    <div className="bg-gray-50 dark:bg-neutral-800 px-5 py-3.5 border-b dark:border-neutral-700">
-                      <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                    <div className="bg-slate-50 dark:bg-neutral-800 px-5 py-3.5 border-b dark:border-neutral-700">
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
                         ⏰ 날짜가 지난 옛날 패키지 및 공지
                       </h4>
                     </div>
@@ -2154,7 +2154,7 @@ export default function FacilitiesAdmin() {
                             <span className="ml-2 text-xs text-red-600">
                               종료일: {notice.endDate}
                             </span>
-                            <p className="text-xs text-gray-600 mt-1">{notice.content}</p>
+                            <p className="text-xs text-slate-600 mt-1">{notice.content}</p>
                           </div>
                           <button
                             onClick={() => handleExpireAction({ noticeIds: [notice.id] })}
@@ -2172,10 +2172,10 @@ export default function FacilitiesAdmin() {
                         >
                           <div>
                             <span className="font-bold text-sm">{fac.name}</span>
-                            <span className="ml-2 text-xs text-orange-600">
+                            <span className="ml-2 text-xs text-slate-700">
                               마지막 날짜: {fac.lastDate}
                             </span>
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                               {fac.descriptionPreview}
                             </p>
                           </div>
@@ -2204,10 +2204,10 @@ export default function FacilitiesAdmin() {
             {/* 좌측: 분류(카테고리) 관리 */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
                   🏷️ 1. 분류(카테고리) 이름 관리
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   지식을 나누는 분류표를 추가하거나 이름을 바꿀 수 있습니다. 이름을 바꾸면 기존 시설들도 자동으로 함께 바뀝니다.
                 </p>
               </div>
@@ -2218,12 +2218,12 @@ export default function FacilitiesAdmin() {
                   value={newCat}
                   onChange={(e) => setNewCat(e.target.value)}
                   placeholder="새 분류 이름 입력 (예: 패키지)"
-                  className="flex-1 rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2 text-sm"
+                  className="flex-1 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2 text-sm"
                 />
                 <button
                   onClick={() => handleCategoryAction('add', { category: newCat })}
                   disabled={!newCat.trim()}
-                  className="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50"
+                  className="inline-flex items-center px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-50"
                 >
                   <Plus className="w-4 h-4 mr-1" /> 추가
                 </button>
@@ -2242,7 +2242,7 @@ export default function FacilitiesAdmin() {
                             type="text"
                             value={editCat.new}
                             onChange={(e) => setEditCat({ ...editCat, new: e.target.value })}
-                            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                            className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
                           />
                           <button
                             onClick={() =>
@@ -2251,26 +2251,26 @@ export default function FacilitiesAdmin() {
                                 newCategory: editCat.new,
                               })
                             }
-                            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg"
+                            className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg"
                           >
                             저장
                           </button>
                           <button
                             onClick={() => setEditCat(null)}
-                            className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-lg"
+                            className="px-3 py-1.5 bg-gray-200 text-slate-700 text-xs font-bold rounded-lg"
                           >
                             취소
                           </button>
                         </div>
                       ) : (
                         <>
-                          <span className="font-bold text-sm text-gray-900 dark:text-white">
+                          <span className="font-bold text-sm text-slate-900 dark:text-white">
                             {cat}
                           </span>
                           <div className="flex space-x-1.5">
                             <button
                               onClick={() => setEditCat({ old: cat, new: cat })}
-                              className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                              className="px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-50 rounded-md hover:bg-slate-100"
                             >
                               이름 변경
                             </button>
@@ -2292,19 +2292,19 @@ export default function FacilitiesAdmin() {
             {/* 우측: 엑셀(CSV) 일괄 업로드 */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
                   📊 2. 엑셀(CSV) 파일로 한 번에 여러 개 올리기
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   많은 양의 데이터를 한꺼번에 등록할 때 사용합니다. 첫 줄 제목은{' '}
-                  <code className="bg-gray-100 px-1.5 py-0.5 rounded font-bold">
+                  <code className="bg-slate-100 px-1.5 py-0.5 rounded font-bold">
                     시설명, 카테고리, 위치, 설명, 시즌설명, 태그
                   </code>{' '}
                   순서여야 합니다.
                 </p>
               </div>
 
-              <div className="border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-xl p-6 text-center relative hover:bg-gray-50 transition-colors">
+              <div className="border-2 border-dashed border-slate-300 dark:border-neutral-700 rounded-xl p-6 text-center relative hover:bg-slate-50 transition-colors">
                 <input
                   type="file"
                   accept=".csv"
@@ -2314,7 +2314,7 @@ export default function FacilitiesAdmin() {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
                   여기를 클릭하여 .csv 파일을 선택하세요
                 </p>
               </div>
@@ -2326,19 +2326,19 @@ export default function FacilitiesAdmin() {
                   placeholder="또는 CSV 내용을 여기에 직접 붙여넣으세요..."
                   rows={4}
                   disabled={isUploading}
-                  className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-xs font-mono"
+                  className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-xs font-mono"
                 />
                 <button
                   onClick={handleBulkTextUpload}
                   disabled={isUploading || !csvText.trim()}
-                  className="w-full py-2.5 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-50"
                 >
                   {isUploading ? '업로드 진행 중...' : '붙여넣은 내용 일괄 등록하기'}
                 </button>
               </div>
 
               {(isUploading || bulkProgress.total > 0) && (
-                <div className="p-4 rounded-xl bg-gray-50 border text-xs space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 border text-xs space-y-2">
                   <div className="font-bold">
                     진행 현황: {bulkProgress.current} / {bulkProgress.total}건 (성공:{' '}
                     {bulkProgress.current - bulkProgress.failed}건, 실패: {bulkProgress.failed}건)
@@ -2370,17 +2370,17 @@ export default function FacilitiesAdmin() {
             <div className="relative w-full max-w-3xl p-6 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border dark:border-neutral-800 z-10">
               <div className="flex justify-between items-center border-b dark:border-neutral-800 pb-3 mb-4">
                 <div>
-                  <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
                     ✨ AI 문서 통합 미리보기 ({mergeModal.group.count}개 ➔ 1개)
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     내용을 확인하고 [승인 및 합치기 실행]을 누르면 깔끔하게 하나로 합쳐집니다.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => !mergeModal.isExecuting && setMergeModal(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-slate-600"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -2388,15 +2388,15 @@ export default function FacilitiesAdmin() {
 
               {mergeModal.isGenerating ? (
                 <div className="py-16 flex flex-col items-center justify-center space-y-3">
-                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                  <p className="text-sm text-gray-600">
+                  <Loader2 className="w-8 h-8 text-slate-700 animate-spin" />
+                  <p className="text-sm text-slate-600">
                     AI가 여러 문서의 내용을 빠짐없이 하나로 합치고 있습니다...
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {mergeModal.summary && (
-                    <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-800">
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-900">
                       <strong>📋 AI 요약:</strong> {mergeModal.summary}
                     </div>
                   )}
@@ -2459,7 +2459,7 @@ export default function FacilitiesAdmin() {
                       type="button"
                       onClick={handleExecuteMerge}
                       disabled={mergeModal.isExecuting}
-                      className="inline-flex items-center px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-extrabold"
+                      className="inline-flex items-center px-5 py-2 rounded-lg bg-slate-900 text-white text-sm font-extrabold"
                     >
                       {mergeModal.isExecuting ? '합치는 중...' : '✅ 승인 및 합치기 실행'}
                     </button>
@@ -2483,16 +2483,16 @@ export default function FacilitiesAdmin() {
             <div className="relative w-full max-w-2xl p-6 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border dark:border-neutral-800 z-10">
               <div className="flex justify-between items-center mb-4 border-b dark:border-neutral-800 pb-3">
                 <div>
-                  <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
                     ✏️ 지식 내용 고치기
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     직접 글자를 고치시거나, 아래 <strong>[🤖 AI에게 말로 시켜서 고치기]</strong>를 쓰시면 편합니다!
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-slate-600"
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setSmartEditResult(null);
@@ -2504,11 +2504,11 @@ export default function FacilitiesAdmin() {
               </div>
 
               {/* 🤖 초보자용 AI 스마트 수정 도우미 (가장 눈에 잘 띄는 상단에 배치!) */}
-              <div className="mb-5 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800">
-                <label className="block text-xs sm:text-sm font-extrabold text-indigo-900 dark:text-indigo-200 mb-1">
+              <div className="mb-5 bg-slate-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-slate-200 dark:border-indigo-800">
+                <label className="block text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-200 mb-1">
                   🤖 AI에게 말로 시켜서 고치기 (긴 글을 직접 고치기 힘들 때 써보세요!)
                 </label>
-                <p className="text-xs text-indigo-700 dark:text-indigo-300 mb-2">
+                <p className="text-xs text-slate-700 dark:text-indigo-300 mb-2">
                   예: <code>&quot;오전 9시 오픈을 10시로 바꿔줘&quot;</code> 또는 <code>&quot;성인 요금 2만원으로 올리고 화요일 휴무라고 추가해줘&quot;</code>
                 </p>
                 <div className="flex space-x-2">
@@ -2517,13 +2517,13 @@ export default function FacilitiesAdmin() {
                     value={smartEditInstruction}
                     onChange={(e) => setSmartEditInstruction(e.target.value)}
                     placeholder="어떻게 고칠지 말하듯 적어주세요..."
-                    className="flex-1 rounded-lg border border-indigo-300 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                    className="flex-1 rounded-lg border border-slate-200 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                   />
                   <button
                     type="button"
                     onClick={handleSmartEdit}
                     disabled={isSmartEditing || !smartEditInstruction.trim()}
-                    className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs sm:text-sm font-extrabold text-white disabled:opacity-50 shrink-0"
+                    className="inline-flex items-center px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs sm:text-sm font-extrabold text-white disabled:opacity-50 shrink-0"
                   >
                     {isSmartEditing ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -2534,25 +2534,25 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 {smartEditResult && (
-                  <div className="mt-3 p-3 bg-white dark:bg-neutral-900 rounded-xl border border-indigo-300 space-y-2">
-                    <p className="text-xs font-extrabold text-indigo-700">
+                  <div className="mt-3 p-3 bg-white dark:bg-neutral-900 rounded-xl border border-slate-200 space-y-2">
+                    <p className="text-xs font-extrabold text-slate-700">
                       ✨ AI가 고친 내용 ({smartEditResult.summary}):
                     </p>
-                    <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-neutral-800 p-2.5 rounded-lg max-h-36 overflow-y-auto whitespace-pre-wrap">
+                    <div className="text-xs sm:text-sm text-slate-800 dark:text-gray-200 bg-slate-50 dark:bg-neutral-800 p-2.5 rounded-lg max-h-36 overflow-y-auto whitespace-pre-wrap">
                       {smartEditResult.updatedText}
                     </div>
                     <div className="flex justify-end space-x-2">
                       <button
                         type="button"
                         onClick={() => setSmartEditResult(null)}
-                        className="px-3 py-1 text-xs font-bold text-gray-600 bg-gray-100 rounded-md"
+                        className="px-3 py-1 text-xs font-bold text-slate-600 bg-slate-100 rounded-md"
                       >
                         취소
                       </button>
                       <button
                         type="button"
                         onClick={applySmartEdit}
-                        className="px-3 py-1 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                        className="px-3 py-1 text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 rounded-md"
                       >
                         👍 마음에 들어요! 아래 본문에 반영하기
                       </button>
@@ -2564,7 +2564,7 @@ export default function FacilitiesAdmin() {
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                       1. 시설 / 규정 이름
                     </label>
                     <input
@@ -2573,18 +2573,18 @@ export default function FacilitiesAdmin() {
                       required
                       value={formData.name}
                       onChange={handleChange}
-                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                      className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                       2. 분류
                     </label>
                     <select
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
-                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                      className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                     >
                       {categories.map((c) => (
                         <option key={c} value={c}>
@@ -2596,7 +2596,7 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                     3. 위치 안내
                   </label>
                   <input
@@ -2604,20 +2604,20 @@ export default function FacilitiesAdmin() {
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                   />
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center">
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                       4. 상세 설명 (AI가 손님에게 대답할 내용)
                     </label>
                     <button
                       type="button"
                       onClick={handleRunFactCheck}
                       disabled={isFactChecking || !formData.name.trim() || !formData.description.trim()}
-                      className="inline-flex items-center text-xs font-extrabold px-2.5 py-1 bg-amber-100 text-amber-900 hover:bg-amber-200 rounded-md border border-amber-300 disabled:opacity-50"
+                      className="inline-flex items-center text-xs font-extrabold px-2.5 py-1 bg-slate-100 text-slate-900 hover:bg-slate-200 rounded-md border border-slate-200 disabled:opacity-50"
                     >
                       {isFactChecking ? (
                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -2635,16 +2635,16 @@ export default function FacilitiesAdmin() {
                       handleChange(e);
                       setFactCheckResult(null);
                     }}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm leading-relaxed"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm leading-relaxed"
                   />
                 </div>
 
                 {factCheckResult && (
-                  <div className="p-3 rounded-xl bg-emerald-50/90 border border-emerald-300 text-xs space-y-1.5">
-                    <div className="font-extrabold text-emerald-900">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                    <div className="font-extrabold text-slate-900">
                       🤖 수정된 본문에서 AI가 자동으로 인식한 7대 핵심 슬롯:
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5 text-gray-800">
+                    <div className="grid grid-cols-2 gap-1.5 text-slate-800">
                       <div>• <strong>운영시간:</strong> {factCheckResult.extractedSpecs.operatingHours}</div>
                       <div>• <strong>휴무일:</strong> {factCheckResult.extractedSpecs.closedDays}</div>
                       <div>• <strong>요금:</strong> {factCheckResult.extractedSpecs.priceInfo}</div>
@@ -2657,7 +2657,7 @@ export default function FacilitiesAdmin() {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                     5. 시즌/기간 안내 (선택 사항)
                   </label>
                   <textarea
@@ -2665,12 +2665,12 @@ export default function FacilitiesAdmin() {
                     rows={2}
                     value={formData.seasonalDescription}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                     6. 검색어 태그 (쉼표로 구분)
                   </label>
                   <input
@@ -2678,7 +2678,7 @@ export default function FacilitiesAdmin() {
                     name="tags"
                     value={formData.tags}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                   />
                 </div>
 
@@ -2691,14 +2691,14 @@ export default function FacilitiesAdmin() {
                       setSmartEditInstruction('');
                       setFactCheckResult(null);
                     }}
-                    className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-2.5 text-sm font-extrabold text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-extrabold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                   >
                     {loading ? (
                       <>

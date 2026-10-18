@@ -29,7 +29,6 @@ export default function AdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showBeginnerGuide, setShowBeginnerGuide] = useState(false);
 
-  // 로그인 페이지에서는 네비게이션 숨김
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
@@ -52,55 +51,52 @@ export default function AdminLayout({
       href: '/admin/facilities',
       step: '1',
       label: 'AI 지식창고',
-      subLabel: '시설 · 요금 · 자주 묻는 규정',
+      subLabel: '시설 · 요금 · 상시 규정',
       icon: BookOpen,
-      activeColor: 'bg-green-50 border-green-600 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     },
     {
       href: '/admin/operations',
       step: '2',
       label: '오늘의 긴급 공지',
-      subLabel: '갑작스러운 휴장 · 시간 변경',
+      subLabel: '임시 휴장 · 시간 변경',
       icon: Bell,
-      activeColor: 'bg-red-50 border-red-600 text-red-800 dark:bg-red-900/30 dark:text-red-300',
     },
     {
       href: '/admin/logs',
       step: '3',
       label: '통합 인박스 & 로봇DB',
-      subLabel: '웹·카톡·AI전화 · 로봇데이터',
+      subLabel: '웹 · 카톡 · 전화 · 로봇데이터',
       icon: MessageSquare,
-      activeColor: 'bg-indigo-50 border-indigo-600 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
     },
     {
       href: '/admin/settings',
       step: '4',
       label: 'AI 말투 설정',
-      subLabel: '호텔리어 · 가이드 · 영어 모드',
+      subLabel: '응대 톤앤매너 설정',
       icon: Smile,
-      activeColor: 'bg-amber-50 border-amber-600 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      {/* 상단 고정 헤더 */}
-      <nav className="bg-white dark:bg-neutral-900 shadow-sm border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* 좌측 로고 & 타이틀 */}
-            <div className="flex items-center space-x-6">
-              <Link href="/admin/facilities" className="flex flex-col">
-                <span className="text-xl font-extrabold text-green-700 dark:text-green-400 tracking-tight flex items-center">
-                  🌲 벨포레 AI 상담 관리자
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  초보자도 쉽게 쓰는 스마트 CS 관리실
+    <div className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+      {/* 상단 고정 헤더 (데스크탑 와이드 1줄 최적화 · 무채색 슬레이트 톤) */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-10">
+          <div className="flex justify-between items-center h-16 gap-6">
+            {/* 좌측 로고 & 데스크탑 메뉴 */}
+            <div className="flex items-center gap-8 min-w-0">
+              <Link
+                href="/admin/facilities"
+                className="flex items-center gap-2.5 whitespace-nowrap shrink-0"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-900" />
+                <span className="text-lg font-bold text-slate-900 tracking-tight">
+                  벨포레 AI 상담 관리실
                 </span>
               </Link>
 
-              {/* 데스크탑 4대 핵심 메뉴 */}
-              <div className="hidden lg:flex items-center space-x-2">
+              {/* 데스크탑 4대 핵심 메뉴 (줄바꿈 방지 및 단일 톤앤매너) */}
+              <div className="hidden lg:flex items-center gap-1.5">
                 {navLinks.map((link) => {
                   const Icon = link.icon;
                   const isActive = pathname.startsWith(link.href);
@@ -108,74 +104,66 @@ export default function AdminLayout({
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`flex items-center px-3.5 py-2 rounded-xl border-b-2 transition-all ${
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] whitespace-nowrap transition-colors ${
                         isActive
-                          ? `${link.activeColor} font-bold shadow-xs`
-                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800'
+                          ? 'bg-slate-900 text-white font-semibold shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
                       }`}
                     >
-                      <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white dark:bg-neutral-800 shadow-2xs mr-2.5 text-xs font-extrabold border border-gray-200 dark:border-neutral-700">
-                        {link.step}
-                      </div>
-                      <div className="flex flex-col text-left">
-                        <span className="text-sm leading-tight flex items-center">
-                          <Icon className="w-3.5 h-3.5 mr-1 opacity-80" />
-                          {link.label}
-                        </span>
-                        <span className="text-[11px] text-gray-500 dark:text-gray-400 font-normal mt-0.5">
-                          {link.subLabel}
-                        </span>
-                      </div>
+                      <Icon className="w-4 h-4 shrink-0 opacity-85" />
+                      <span>
+                        {link.step}. {link.label}
+                      </span>
                     </Link>
                   );
                 })}
               </div>
             </div>
 
-            {/* 우측 도움말 / 챗봇 열기 / 로그아웃 버튼 */}
-            <div className="flex items-center space-x-2">
+            {/* 우측 도구 모음 (데스크탑 1줄 정렬) */}
+            <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
               <button
                 type="button"
                 onClick={() => setShowBeginnerGuide(!showBeginnerGuide)}
-                className={`inline-flex items-center px-3 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold border transition-colors ${
                   showBeginnerGuide
-                    ? 'bg-amber-500 text-white border-amber-600'
-                    : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                 }`}
               >
-                <HelpCircle className="w-4 h-4 mr-1.5" />
-                <span>초보자 1분 사용법</span>
+                <HelpCircle className="w-4 h-4" />
+                <span>화면별 사용 안내</span>
                 {showBeginnerGuide ? (
-                  <ChevronUp className="w-4 h-4 ml-1" />
+                  <ChevronUp className="w-4 h-4" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 ml-1" />
+                  <ChevronDown className="w-4 h-4" />
                 )}
               </button>
 
               <Link
                 href="/"
                 target="_blank"
-                className="hidden sm:inline-flex items-center px-3.5 py-2 border border-green-300 dark:border-green-800 text-xs sm:text-sm font-bold rounded-lg text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/20 transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-300 text-sm font-semibold rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
                 title="새 창에서 고객용 챗봇 화면을 열어 직접 질문해 봅니다"
               >
-                <ExternalLink className="w-4 h-4 mr-1.5" />
-                고객용 챗봇 열기
+                <ExternalLink className="w-4 h-4" />
+                <span>고객용 챗봇 열기</span>
               </Link>
 
               <button
                 onClick={handleLogout}
-                className="hidden sm:inline-flex items-center px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-red-900/20 transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 title="관리자 페이지에서 로그아웃합니다"
               >
-                <LogOut className="w-4 h-4 mr-1" />
-                로그아웃
+                <LogOut className="w-4 h-4" />
+                <span>로그아웃</span>
               </button>
 
-              {/* 모바일/태블릿 메뉴 버튼 */}
+              {/* 모바일 햄버거 버튼 */}
               <div className="flex items-center lg:hidden">
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                  className="inline-flex items-center justify-center p-2 rounded-lg text-slate-600 hover:bg-slate-100"
                 >
                   <span className="sr-only">메뉴 열기</span>
                   {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -185,24 +173,24 @@ export default function AdminLayout({
           </div>
         </div>
 
-        {/* 💡 어디서나 볼 수 있는 초보자 1분 사용 설명서 (펼침 패널) */}
+        {/* 상황별 빠른 사용 안내 패널 (차분한 무채색 카드) */}
         {showBeginnerGuide && (
-          <div className="bg-amber-50/95 dark:bg-neutral-900 border-t border-b border-amber-200 dark:border-amber-800/60 shadow-inner">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-              <div className="flex justify-between items-start mb-4">
+          <div className="bg-slate-100/80 border-t border-slate-200">
+            <div className="max-w-[1600px] mx-auto px-6 lg:px-10 py-6">
+              <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="text-base font-extrabold text-amber-900 dark:text-amber-300 flex items-center">
-                    👋 처음 오셨나요? 상황별로 딱 맞는 메뉴를 골라보세요!
+                  <h3 className="text-base font-bold text-slate-900">
+                    상황별 메뉴 선택 가이드
                   </h3>
-                  <p className="text-xs text-amber-800 dark:text-amber-400 mt-0.5">
-                    어려운 컴퓨터 지식이 없어도 괜찮습니다. 아래 4가지 상황 중 오늘 하실 일만 클릭하시면 됩니다.
+                  <p className="text-sm text-slate-600 mt-0.5">
+                    업무 목적에 맞는 메뉴를 선택하면 해당 관리 화면으로 바로 이동합니다.
                   </p>
                 </div>
                 <button
                   onClick={() => setShowBeginnerGuide(false)}
-                  className="text-xs font-bold text-amber-800 dark:text-amber-400 hover:underline flex items-center"
+                  className="text-sm font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1"
                 >
-                  닫기 <X className="w-4 h-4 ml-1" />
+                  닫기 <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -210,64 +198,64 @@ export default function AdminLayout({
                 <Link
                   href="/admin/facilities"
                   onClick={() => setShowBeginnerGuide(false)}
-                  className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-amber-200 dark:border-neutral-700 hover:border-green-500 transition-all shadow-2xs"
+                  className="bg-white p-5 rounded-xl border border-slate-200 hover:border-slate-400 transition-all"
                 >
-                  <div className="text-xs font-extrabold text-green-700 dark:text-green-400 mb-1">
-                    상황 1️⃣ 평상시 요금·시간·규정이 바뀌었을 때
+                  <div className="text-xs font-semibold text-slate-500 mb-1">
+                    메뉴 1 · 상시 운영 정보
                   </div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white mb-1.5">
-                    👉 [1. AI 지식창고] 메뉴 클릭
+                  <div className="text-base font-bold text-slate-900 mb-2">
+                    1. AI 지식창고
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                    마운틴카트 요금, 식당 메뉴, 반려견 입장 규정 등 <strong>계속 유지되는 정보</strong>를 찾거나 수정합니다. (홈페이지 기본 정보는 매일 아침 자동 업데이트됩니다!)
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    시설 운영시간, 이용요금, 키 제한, 회원 할인 등 상시 유지되는 규정을 등록하거나 수정합니다.
                   </p>
                 </Link>
 
                 <Link
                   href="/admin/operations"
                   onClick={() => setShowBeginnerGuide(false)}
-                  className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-amber-200 dark:border-neutral-700 hover:border-red-500 transition-all shadow-2xs"
+                  className="bg-white p-5 rounded-xl border border-slate-200 hover:border-slate-400 transition-all"
                 >
-                  <div className="text-xs font-extrabold text-red-600 dark:text-red-400 mb-1">
-                    상황 2️⃣ 오늘 비가 오거나 갑자기 문을 닫을 때
+                  <div className="text-xs font-semibold text-slate-500 mb-1">
+                    메뉴 2 · 일시적 현장 변경
                   </div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white mb-1.5">
-                    👉 [2. 오늘의 긴급 공지] 메뉴 클릭
+                  <div className="text-base font-bold text-slate-900 mb-2">
+                    2. 오늘의 긴급 공지
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                    우천 휴장, 기계 점검 등 <strong>일시적인 현장 상황</strong>을 올립니다. 종료 날짜만 정해주면 날짜가 지난 뒤 AI가 알아서 공지를 내립니다!
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    우천 휴장, 시설 점검 등 당일 또는 특정 기간에만 적용되는 임시 공지를 최우선으로 안내합니다.
                   </p>
                 </Link>
 
                 <Link
                   href="/admin/logs"
                   onClick={() => setShowBeginnerGuide(false)}
-                  className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-amber-200 dark:border-neutral-700 hover:border-indigo-500 transition-all shadow-2xs"
+                  className="bg-white p-5 rounded-xl border border-slate-200 hover:border-slate-400 transition-all"
                 >
-                  <div className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 mb-1">
-                    상황 3️⃣ 손님들이 뭘 물어봤는지 궁금할 때
+                  <div className="text-xs font-semibold text-slate-500 mb-1">
+                    메뉴 3 · 대화 내역 &amp; 카톡 학습
                   </div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white mb-1.5">
-                    👉 [3. 고객 질문 &amp; 오답노트] 클릭
+                  <div className="text-base font-bold text-slate-900 mb-2">
+                    3. 통합 인박스 &amp; 로봇DB
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                    고객과 AI의 실제 대화 내용을 확인하고, AI가 대답하지 못한 질문을 버튼 한 번으로 AI에게 가르쳐 줄 수 있습니다.
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    웹·카카오톡 대화 내역을 확인하고, 직원이 카톡에서 응대한 답변을 AI 지식창고로 흡수합니다.
                   </p>
                 </Link>
 
                 <Link
                   href="/admin/settings"
                   onClick={() => setShowBeginnerGuide(false)}
-                  className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-amber-200 dark:border-neutral-700 hover:border-amber-500 transition-all shadow-2xs"
+                  className="bg-white p-5 rounded-xl border border-slate-200 hover:border-slate-400 transition-all"
                 >
-                  <div className="text-xs font-extrabold text-amber-700 dark:text-amber-400 mb-1">
-                    상황 4️⃣ AI의 말투를 바꾸고 싶을 때
+                  <div className="text-xs font-semibold text-slate-500 mb-1">
+                    메뉴 4 · 응답 스타일
                   </div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white mb-1.5">
-                    👉 [4. AI 말투 설정] 메뉴 클릭
+                  <div className="text-base font-bold text-slate-900 mb-2">
+                    4. AI 말투 설정
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                    정중한 호텔리어 말투, 친근한 가이드 말투, 외국인 전용 영어 모드 중 원하는 스타일을 선택합니다.
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    친절한 호텔리어 말투, 간결한 요약형, 테마파크 가이드, 외국인 영어 모드 중 응대 톤을 선택합니다.
                   </p>
                 </Link>
               </div>
@@ -277,8 +265,8 @@ export default function AdminLayout({
 
         {/* 모바일/태블릿 드롭다운 메뉴 */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 shadow-lg">
-            <div className="p-3 space-y-1">
+          <div className="lg:hidden bg-white border-b border-slate-200 shadow-lg">
+            <div className="p-4 space-y-1.5">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = pathname.startsWith(link.href);
@@ -287,16 +275,24 @@ export default function AdminLayout({
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center px-3 py-3 rounded-lg text-sm font-bold ${
+                    className={`flex items-center px-4 py-3 rounded-lg text-sm font-semibold ${
                       isActive
-                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                        : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-neutral-800'
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
                     <div>
-                      <div>{link.step}. {link.label}</div>
-                      <div className="text-xs font-normal text-gray-500">{link.subLabel}</div>
+                      <div>
+                        {link.step}. {link.label}
+                      </div>
+                      <div
+                        className={`text-xs font-normal mt-0.5 ${
+                          isActive ? 'text-slate-300' : 'text-slate-500'
+                        }`}
+                      >
+                        {link.subLabel}
+                      </div>
                     </div>
                   </Link>
                 );
@@ -305,7 +301,7 @@ export default function AdminLayout({
                 href="/"
                 target="_blank"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center px-3 py-3 rounded-lg text-sm font-bold text-green-700 hover:bg-green-50"
+                className="flex items-center px-4 py-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100"
               >
                 <ExternalLink className="w-5 h-5 mr-3" />
                 고객용 챗봇 열기 (새 창)
@@ -315,7 +311,7 @@ export default function AdminLayout({
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="w-full flex items-center px-3 py-3 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50"
+                className="w-full flex items-center px-4 py-3 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 <LogOut className="w-5 h-5 mr-3" />
                 로그아웃
@@ -325,7 +321,7 @@ export default function AdminLayout({
         )}
       </nav>
 
-      <main className="py-6 sm:py-8">
+      <main className="max-w-[1600px] mx-auto px-6 lg:px-10 py-8">
         {children}
       </main>
     </div>

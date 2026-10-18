@@ -626,20 +626,20 @@ export default function OmnichannelAndRobotCenterPage() {
   const getChannelBadge = (channel?: string) => {
     if (channel === 'kakao') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-300 text-neutral-900 shadow-2xs">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-200 text-slate-900 shadow-2xs">
           💬 카카오톡 채널
         </span>
       );
     }
     if (channel === 'voice') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-purple-600 text-white shadow-2xs">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-900 text-white shadow-2xs">
           📞 AI 전화 콜센터
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-green-600 text-white shadow-2xs">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-900 text-white shadow-2xs">
         💻 홈페이지 웹 챗봇
       </span>
     );
@@ -648,17 +648,17 @@ export default function OmnichannelAndRobotCenterPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* 1. 상단 헤더 & 4대 핵심 기능 탭 */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 shadow-xs border border-indigo-100 dark:border-neutral-800">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 shadow-xs border border-slate-200 dark:border-neutral-800">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 mb-2">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-900 dark:bg-indigo-900/40 dark:text-indigo-300 mb-2">
               차세대 옴니채널 CS & 로봇 데이터베이스 센터
             </span>
-            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center">
-              <MessageSquare className="w-7 h-7 mr-2.5 text-indigo-600 shrink-0" />
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center">
+              <MessageSquare className="w-7 h-7 mr-2.5 text-slate-700 shrink-0" />
               통합 상담 인박스 (웹 · 카톡 · AI전화) & CS 로봇 DB
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
               고객이 <strong>홈페이지 챗봇, 카카오톡 채널, 전화 콜센터</strong>로 물어본 모든 질문을 한곳에서 모아서 분류하고, 향후 <strong>CS 안내 로봇 개발 기업</strong>에 즉시 납품할 수 있는 표준 데이터셋으로 자동 변환합니다.
             </p>
           </div>
@@ -667,7 +667,7 @@ export default function OmnichannelAndRobotCenterPage() {
               fetchLogs();
               fetchRobotSummary();
             }}
-            className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 transition-colors self-start lg:self-center shrink-0"
+            className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-gray-200 bg-slate-100 dark:bg-neutral-800 hover:bg-gray-200 transition-colors self-start lg:self-center shrink-0"
           >
             <RefreshCw className="w-4 h-4 mr-1.5" />
             최신 기록 새로고침
@@ -680,14 +680,14 @@ export default function OmnichannelAndRobotCenterPage() {
             onClick={() => setActiveMainTab('inbox')}
             className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
               activeMainTab === 'inbox'
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'bg-gray-50 dark:bg-neutral-800/70 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-neutral-700 hover:bg-gray-100'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 dark:bg-neutral-800/70 text-slate-700 dark:text-gray-300 border-slate-200 dark:border-neutral-700 hover:bg-slate-100'
             }`}
           >
             <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
             <div>
               <div className="text-sm font-extrabold">1. 통합 상담 인박스</div>
-              <div className={`text-xs ${activeMainTab === 'inbox' ? 'text-indigo-100' : 'text-gray-500'}`}>
+              <div className={`text-xs ${activeMainTab === 'inbox' ? 'text-slate-200' : 'text-slate-500'}`}>
                 웹·카톡·전화 질문분류 & 오답노트
               </div>
             </div>
@@ -697,14 +697,14 @@ export default function OmnichannelAndRobotCenterPage() {
             onClick={() => setActiveMainTab('kakao')}
             className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
               activeMainTab === 'kakao'
-                ? 'bg-amber-400 text-neutral-950 border-amber-500 shadow-sm'
-                : 'bg-amber-50/60 dark:bg-neutral-800/70 text-gray-800 dark:text-gray-200 border-amber-200 dark:border-neutral-700 hover:bg-amber-100/60'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 dark:bg-neutral-800/70 text-slate-800 dark:text-gray-200 border-slate-200 dark:border-neutral-700 hover:bg-slate-100'
             }`}
           >
             <Sparkles className="w-5 h-5 mr-3 shrink-0" />
             <div>
               <div className="text-sm font-extrabold">2. 카카오톡 채널 연동</div>
-              <div className={`text-xs ${activeMainTab === 'kakao' ? 'text-neutral-800' : 'text-gray-500'}`}>
+              <div className={`text-xs ${activeMainTab === 'kakao' ? 'text-neutral-800' : 'text-slate-500'}`}>
                 실시간 카톡 챗봇 & 대화파일 흡수
               </div>
             </div>
@@ -714,14 +714,14 @@ export default function OmnichannelAndRobotCenterPage() {
             onClick={() => setActiveMainTab('voice')}
             className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
               activeMainTab === 'voice'
-                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                : 'bg-purple-50/50 dark:bg-neutral-800/70 text-gray-800 dark:text-gray-200 border-purple-200 dark:border-neutral-700 hover:bg-purple-100/50'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 dark:bg-neutral-800/70 text-slate-800 dark:text-gray-200 border-slate-200 dark:border-neutral-700 hover:bg-slate-100'
             }`}
           >
             <PhoneCall className="w-5 h-5 mr-3 shrink-0" />
             <div>
               <div className="text-sm font-extrabold">3. AI 전화 콜센터</div>
-              <div className={`text-xs ${activeMainTab === 'voice' ? 'text-purple-100' : 'text-gray-500'}`}>
+              <div className={`text-xs ${activeMainTab === 'voice' ? 'text-slate-200' : 'text-slate-500'}`}>
                 음성으로 직접 통화 체험 & 연동
               </div>
             </div>
@@ -731,14 +731,14 @@ export default function OmnichannelAndRobotCenterPage() {
             onClick={() => setActiveMainTab('robot')}
             className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
               activeMainTab === 'robot'
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                : 'bg-emerald-50/50 dark:bg-neutral-800/70 text-gray-800 dark:text-gray-200 border-emerald-200 dark:border-neutral-700 hover:bg-emerald-100/50'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 dark:bg-neutral-800/70 text-slate-800 dark:text-gray-200 border-slate-200 dark:border-neutral-700 hover:bg-slate-100'
             }`}
           >
             <Bot className="w-5 h-5 mr-3 shrink-0" />
             <div>
               <div className="text-sm font-extrabold">4. CS 로봇 데이터센터</div>
-              <div className={`text-xs ${activeMainTab === 'robot' ? 'text-emerald-100' : 'text-gray-500'}`}>
+              <div className={`text-xs ${activeMainTab === 'robot' ? 'text-slate-200' : 'text-slate-500'}`}>
                 로봇 기업 납품용 DB 현대화·추출
               </div>
             </div>
@@ -757,11 +757,11 @@ export default function OmnichannelAndRobotCenterPage() {
               onClick={() => setChannelFilter('all')}
               className={`p-4 rounded-2xl border text-left transition-all ${
                 channelFilter === 'all'
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                  : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 hover:border-indigo-300'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-slate-200 dark:border-neutral-800 hover:border-slate-200'
               }`}
             >
-              <div className={`text-xs font-bold ${channelFilter === 'all' ? 'text-indigo-100' : 'text-gray-500'}`}>
+              <div className={`text-xs font-bold ${channelFilter === 'all' ? 'text-slate-200' : 'text-slate-500'}`}>
                 📬 전체 누적 상담
               </div>
               <div className="text-2xl font-extrabold mt-1">{logs.length}건</div>
@@ -785,11 +785,11 @@ export default function OmnichannelAndRobotCenterPage() {
               onClick={() => setChannelFilter('kakao')}
               className={`p-4 rounded-2xl border text-left transition-all ${
                 channelFilter === 'kakao'
-                  ? 'bg-amber-400 text-neutral-950 border-amber-500 shadow-sm'
-                  : 'bg-white dark:bg-neutral-900 border-amber-200 dark:border-amber-900/40 hover:border-amber-400'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-slate-200 dark:border-amber-900/40 hover:border-amber-400'
               }`}
             >
-              <div className={`text-xs font-bold ${channelFilter === 'kakao' ? 'text-neutral-800' : 'text-amber-700'}`}>
+              <div className={`text-xs font-bold ${channelFilter === 'kakao' ? 'text-neutral-800' : 'text-slate-700'}`}>
                 💬 카카오톡 채널
               </div>
               <div className="text-2xl font-extrabold mt-1">{kakaoCount}건</div>
@@ -799,11 +799,11 @@ export default function OmnichannelAndRobotCenterPage() {
               onClick={() => setChannelFilter('voice')}
               className={`p-4 rounded-2xl border text-left transition-all ${
                 channelFilter === 'voice'
-                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                  : 'bg-white dark:bg-neutral-900 border-purple-200 dark:border-purple-900/40 hover:border-purple-400'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-slate-200 dark:border-purple-900/40 hover:border-purple-400'
               }`}
             >
-              <div className={`text-xs font-bold ${channelFilter === 'voice' ? 'text-purple-100' : 'text-purple-600'}`}>
+              <div className={`text-xs font-bold ${channelFilter === 'voice' ? 'text-slate-200' : 'text-slate-700'}`}>
                 📞 AI 전화 콜센터
               </div>
               <div className="text-2xl font-extrabold mt-1">{voiceCount}건</div>
@@ -813,11 +813,11 @@ export default function OmnichannelAndRobotCenterPage() {
               onClick={() => setChannelFilter('web')}
               className={`p-4 rounded-2xl border text-left transition-all ${
                 channelFilter === 'web'
-                  ? 'bg-green-600 text-white border-green-600 shadow-sm'
-                  : 'bg-white dark:bg-neutral-900 border-green-200 dark:border-green-900/40 hover:border-green-400'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-slate-200 dark:border-green-900/40 hover:border-green-400'
               }`}
             >
-              <div className={`text-xs font-bold ${channelFilter === 'web' ? 'text-green-100' : 'text-green-600'}`}>
+              <div className={`text-xs font-bold ${channelFilter === 'web' ? 'text-slate-200' : 'text-slate-700'}`}>
                 💻 홈페이지 챗봇
               </div>
               <div className="text-2xl font-extrabold mt-1">{webCount}건</div>
@@ -825,7 +825,7 @@ export default function OmnichannelAndRobotCenterPage() {
           </div>
 
           {/* 검색창 */}
-          <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl shadow-xs border border-gray-200 dark:border-neutral-800 flex items-center">
+          <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl shadow-xs border border-slate-200 dark:border-neutral-800 flex items-center">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
@@ -835,23 +835,23 @@ export default function OmnichannelAndRobotCenterPage() {
                 placeholder="질문 내용, AI 답변, 질문 분류(예: 루지, 우천, 골프, 반려견)로 검색해 보세요..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-11 pr-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-xl bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500"
+                className="block w-full pl-11 pr-4 py-2.5 border border-slate-300 dark:border-neutral-700 rounded-xl bg-slate-50 dark:bg-neutral-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-slate-900"
               />
             </div>
           </div>
 
           {/* 대화 목록 */}
           {loading ? (
-            <div className="p-12 text-center text-gray-500 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
+            <div className="p-12 text-center text-slate-500 bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800">
               상담 기록을 불러오는 중입니다...
             </div>
           ) : filteredLogs.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
+            <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800">
               <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-              <p className="text-base font-bold text-gray-900 dark:text-white">
+              <p className="text-base font-bold text-slate-900 dark:text-white">
                 해당 조건의 상담 기록이 없습니다!
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 상단 [2. 카카오톡 채널 연동] 또는 [3. AI 전화 콜센터] 탭에서 바로 카톡/전화를 테스트해 보세요.
               </p>
             </div>
@@ -864,10 +864,10 @@ export default function OmnichannelAndRobotCenterPage() {
                     key={log.id}
                     className={`bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-xs border transition-all ${
                       log.isResolved
-                        ? 'border-emerald-300 dark:border-emerald-800/60'
+                        ? 'border-slate-200 dark:border-emerald-800/60'
                         : isSorry
                         ? 'border-red-300 dark:border-red-800/70 ring-1 ring-red-100 dark:ring-red-900/20'
-                        : 'border-gray-200 dark:border-neutral-800'
+                        : 'border-slate-200 dark:border-neutral-800'
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-gray-100 dark:border-neutral-800">
@@ -877,21 +877,21 @@ export default function OmnichannelAndRobotCenterPage() {
 
                         {/* 2. 자동 분류된 의도(Intent) 배지 */}
                         {log.intentLabel && (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-50 text-slate-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-slate-200 dark:border-indigo-800">
                             🏷️ [{log.category || '일반'}] {log.intentLabel}
                           </span>
                         )}
 
                         {/* 2-1. 중복 질문 누적 횟수 배지 */}
                         {log.askCount && log.askCount > 1 && (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-orange-900/40 dark:text-orange-300 border border-slate-200 dark:border-orange-800">
                             🔥 {log.askCount}회 질문됨 (중복 자동병합)
                           </span>
                         )}
 
                         {/* 3. 감정/상태 배지 */}
                         {log.isResolved ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-emerald-900/40 dark:text-emerald-300">
                             ✅ 상담원 확인·학습 완료
                           </span>
                         ) : isSorry ? (
@@ -900,13 +900,13 @@ export default function OmnichannelAndRobotCenterPage() {
                             {log.sentimentLabel || 'AI 답변 미흡 / 상담원 확인 필요'}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-300">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 dark:bg-neutral-800 dark:text-gray-300">
                             {log.sentimentLabel || '🙂 정상 자동 응대'}
                           </span>
                         )}
 
                         {log.callerPhone && (
-                          <span className="text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded-md">
+                          <span className="text-xs font-mono text-slate-700 dark:text-purple-300 bg-slate-50 dark:bg-purple-900/20 px-2 py-0.5 rounded-md">
                             발신: {log.callerPhone}
                           </span>
                         )}
@@ -923,7 +923,7 @@ export default function OmnichannelAndRobotCenterPage() {
                           className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors shadow-2xs ${
                             isSorry && !log.isResolved
                               ? 'bg-red-600 hover:bg-red-700 text-white'
-                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                           }`}
                         >
                           <PlusCircle className="w-3.5 h-3.5 mr-1" />
@@ -934,7 +934,7 @@ export default function OmnichannelAndRobotCenterPage() {
                             setNoteLog(log);
                             setStaffNoteText(log.staffNote || '');
                           }}
-                          className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-neutral-800 dark:text-gray-300"
+                          className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-gray-200 text-slate-700 dark:bg-neutral-800 dark:text-gray-300"
                         >
                           📝 메모/해결체크
                         </button>
@@ -944,29 +944,29 @@ export default function OmnichannelAndRobotCenterPage() {
                     {/* 질문 & 답변 본문 */}
                     <div className="space-y-2.5">
                       <div className="flex items-start space-x-2.5">
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 shrink-0 mt-0.5">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-blue-900/40 dark:text-blue-300 shrink-0 mt-0.5">
                           고객 질문
                         </span>
-                        <p className="text-base font-bold text-gray-900 dark:text-white">
+                        <p className="text-base font-bold text-slate-900 dark:text-white">
                           {log.question}
                         </p>
                       </div>
 
-                      <div className="flex items-start space-x-2.5 bg-gray-50 dark:bg-neutral-800/60 p-3.5 rounded-xl border border-gray-100 dark:border-neutral-800">
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 shrink-0 mt-0.5">
+                      <div className="flex items-start space-x-2.5 bg-slate-50 dark:bg-neutral-800/60 p-3.5 rounded-xl border border-gray-100 dark:border-neutral-800">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-green-900/40 dark:text-green-300 shrink-0 mt-0.5">
                           AI 답변
                         </span>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                        <p className="text-sm text-slate-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                           {log.answer}
                         </p>
                       </div>
 
                       {log.staffNote && (
-                        <div className="flex items-start space-x-2.5 bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-emerald-600 text-white shrink-0">
+                        <div className="flex items-start space-x-2.5 bg-slate-50 dark:bg-emerald-950/30 p-3 rounded-xl border border-slate-200 dark:border-emerald-800/50">
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-slate-900 text-white shrink-0">
                             상담원 조치
                           </span>
-                          <p className="text-xs font-medium text-emerald-900 dark:text-emerald-200 whitespace-pre-wrap">
+                          <p className="text-xs font-medium text-slate-900 dark:text-slate-200 whitespace-pre-wrap">
                             {log.staffNote}
                           </p>
                         </div>
@@ -988,30 +988,30 @@ export default function OmnichannelAndRobotCenterPage() {
           {/* 좌측 (7칸): 실시간 카카오톡 챗봇 시뮬레이터 & 웹훅 연결 주소 */}
           <div className="lg:col-span-7 space-y-6">
             {/* 1. 공식 웹훅 주소 안내 카드 */}
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-amber-200 dark:border-neutral-800 shadow-xs">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-slate-200 dark:border-neutral-800 shadow-xs">
               <div className="flex items-center justify-between mb-3">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-amber-300 text-neutral-900">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-slate-200 text-slate-900">
                   방법 2 · 실시간 카카오톡 채널 공식 연동 (Webhook)
                 </span>
-                <span className="text-xs font-bold text-green-600 flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+                <span className="text-xs font-bold text-slate-700 flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-slate-500 mr-1.5 animate-pulse" />
                   웹훅 서버 가동 중
                 </span>
               </div>
-              <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
                 카카오톡 채널과 우리 앱을 연결하는 전용 주소 (Skill URL)
               </h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-gray-400 mt-1 leading-relaxed">
                 카카오 비즈니스(카카오 i 오픈빌더) 관리자 화면의 <strong>[스킬(Skill) URL]</strong> 칸에 아래 주소를 복사해서 붙여넣기만 하면, 고객이 카카오톡으로 질문할 때 우리 AI가 1초 만에 대답하고 모든 대화가 <strong>[1. 통합 상담 인박스]</strong>에 실시간 저장됩니다.
               </p>
 
-              <div className="mt-4 flex items-center gap-2 bg-gray-50 dark:bg-neutral-800 p-3 rounded-xl border border-gray-200 dark:border-neutral-700">
-                <code className="text-xs sm:text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400 flex-1 truncate">
+              <div className="mt-4 flex items-center gap-2 bg-slate-50 dark:bg-neutral-800 p-3 rounded-xl border border-slate-200 dark:border-neutral-700">
+                <code className="text-xs sm:text-sm font-mono font-bold text-slate-700 dark:text-indigo-400 flex-1 truncate">
                   {originUrl}/api/kakao/webhook
                 </code>
                 <button
                   onClick={() => handleCopyUrl(`${originUrl}/api/kakao/webhook`, 'kakao')}
-                  className="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-extrabold bg-amber-400 hover:bg-amber-500 text-neutral-950 shrink-0 transition-colors"
+                  className="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-extrabold bg-amber-400 hover:bg-slate-500 text-neutral-950 shrink-0 transition-colors"
                 >
                   {copiedUrl === 'kakao' ? (
                     <>
@@ -1027,7 +1027,7 @@ export default function OmnichannelAndRobotCenterPage() {
             </div>
 
             {/* 2. 실시간 카카오톡 챗봇 라이브 체험기 */}
-            <div className="bg-[#B2C7DA] dark:bg-neutral-900 rounded-2xl p-5 border border-amber-300 dark:border-neutral-800 shadow-sm">
+            <div className="bg-[#B2C7DA] dark:bg-neutral-900 rounded-2xl p-5 border border-slate-200 dark:border-neutral-800 shadow-sm">
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-black/10 dark:border-neutral-800">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-9 h-9 rounded-xl bg-amber-300 flex items-center justify-center font-extrabold text-neutral-900 shadow-2xs">
@@ -1069,7 +1069,7 @@ export default function OmnichannelAndRobotCenterPage() {
                             <button
                               type="button"
                               onClick={() => handleCopyUrl(msg.text, `kakao_msg_${idx}`)}
-                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-[#FEE500] hover:bg-amber-400 text-neutral-950 shadow-2xs transition-colors"
+                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-[#FEE500] hover:bg-amber-400 text-neutral-950 shadow-2xs transition-colors"
                             >
                               {copiedUrl === `kakao_msg_${idx}` ? (
                                 <>
@@ -1105,7 +1105,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 ))}
                 {kakaoSimSending && (
                   <div className="flex justify-start">
-                    <div className="bg-white dark:bg-neutral-800 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-500">
+                    <div className="bg-white dark:bg-neutral-800 rounded-2xl px-4 py-2.5 text-xs font-bold text-slate-500">
                       💬 벨포레 AI가 카카오톡 답변을 작성하고 있습니다...
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@ export default function OmnichannelAndRobotCenterPage() {
                   value={kakaoSimInput}
                   onChange={(e) => setKakaoSimInput(e.target.value)}
                   placeholder="외부 카톡으로 온 고객 질문을 그대로 복사해 붙여넣으세요 (예: [홍길동] [오후 2:10] 루지 요금 얼마예요?)"
-                  className="flex-1 px-3 py-2 text-sm bg-transparent text-gray-900 dark:text-white focus:outline-none"
+                  className="flex-1 px-3 py-2 text-sm bg-transparent text-slate-900 dark:text-white focus:outline-none"
                 />
                 <button
                   type="submit"
@@ -1141,14 +1141,14 @@ export default function OmnichannelAndRobotCenterPage() {
 
           {/* 우측 (5칸): 방법 1 — 카카오톡 대화 내보내기 파일(.txt) 자동 흡수기 */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800 shadow-xs">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 mb-2">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-slate-200 dark:border-neutral-800 shadow-xs">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-indigo-900/40 dark:text-indigo-300 mb-2">
                 방법 1 · 과거 카카오톡 상담 내역 자동 흡수기
               </span>
-              <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
                 카카오톡 [대화 내보내기] 텍스트 붙여넣기
               </h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-gray-400 mt-1 leading-relaxed">
                 기존에 직원들이 카카오톡으로 상담했던 대화방에서 <strong>[대화 내용 내보내기]</strong> 한 텍스트를 아래에 붙여넣으면, AI가 <strong>고객 전화번호(010-****-****)를 자동 마스킹</strong>하고 핵심 질문·답변만 발라내어 우리 DB에 자동으로 쌓아줍니다!
               </p>
 
@@ -1156,13 +1156,13 @@ export default function OmnichannelAndRobotCenterPage() {
                 <button
                   type="button"
                   onClick={loadSampleKakaoExport}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-900 transition-colors"
                 >
                   <FileText className="w-3.5 h-3.5 mr-1.5" />
                   샘플 카카오톡 대화 불러오기 (1초 테스트)
                 </button>
 
-                <label className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 cursor-pointer">
+                <label className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-gray-200 dark:bg-neutral-800 text-slate-700 dark:text-gray-300 cursor-pointer">
                   <Upload className="w-3.5 h-3.5 mr-1.5" />
                   .txt 파일 선택
                   <input
@@ -1185,15 +1185,15 @@ export default function OmnichannelAndRobotCenterPage() {
                 value={rawKakaoText}
                 onChange={(e) => setRawKakaoText(e.target.value)}
                 placeholder="여기에 카카오톡 대화 내용을 붙여넣으세요..."
-                className="mt-3 block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-xs font-mono bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                className="mt-3 block w-full rounded-xl border border-slate-300 dark:border-neutral-700 p-3 text-xs font-mono bg-slate-50 dark:bg-neutral-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900"
               />
 
-              <label className="flex items-center space-x-2 mt-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
+              <label className="flex items-center space-x-2 mt-3 text-xs font-bold text-slate-700 dark:text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={saveExtractedToRag}
                   onChange={(e) => setSaveExtractedToRag(e.target.checked)}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded border-slate-300 text-slate-700 focus:ring-slate-900"
                 />
                 <span>추출된 상담 Q&A를 AI 지식창고(RAG)에도 즉시 학습시키기</span>
               </label>
@@ -1202,7 +1202,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 type="button"
                 onClick={handleIngestKakaoExport}
                 disabled={ingestingKakao || !rawKakaoText.trim()}
-                className="mt-4 w-full py-3 px-4 rounded-xl text-sm font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm transition-colors flex items-center justify-center"
+                className="mt-4 w-full py-3 px-4 rounded-xl text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 shadow-sm transition-colors flex items-center justify-center"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 {ingestingKakao
@@ -1211,22 +1211,22 @@ export default function OmnichannelAndRobotCenterPage() {
               </button>
 
               {ingestResult && (
-                <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
-                  <div className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">
+                <div className="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-emerald-950/30 border border-slate-200 dark:border-emerald-800 space-y-2">
+                  <div className="text-xs font-extrabold text-slate-900 dark:text-emerald-300">
                     ✅ {ingestResult.message}
                   </div>
                   {ingestResult.extractedPairs.map((pair, idx) => (
                     <div
                       key={idx}
-                      className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-emerald-100 dark:border-neutral-800 text-xs space-y-1"
+                      className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-xs space-y-1"
                     >
-                      <div className="font-bold text-indigo-600">
+                      <div className="font-bold text-slate-700">
                         [{pair.category}] {pair.intentLabel}
                       </div>
-                      <div className="font-bold text-gray-900 dark:text-white">
+                      <div className="font-bold text-slate-900 dark:text-white">
                         Q. {pair.question}
                       </div>
-                      <div className="text-gray-600 dark:text-gray-400">
+                      <div className="text-slate-600 dark:text-gray-400">
                         A. {pair.answer}
                       </div>
                     </div>
@@ -1244,16 +1244,16 @@ export default function OmnichannelAndRobotCenterPage() {
       {activeMainTab === 'voice' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 좌측 (7칸): 브라우저 실시간 AI 전화 통화 체험기 */}
-          <div className="lg:col-span-7 bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-purple-200 dark:border-neutral-800 shadow-xs space-y-5">
+          <div className="lg:col-span-7 bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-slate-200 dark:border-neutral-800 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-neutral-800">
               <div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 mb-1.5">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-purple-900/40 dark:text-purple-300 mb-1.5">
                   AI 보이스 컨시어지 (STT ➔ 초고속 RAG ➔ TTS 음성 응답)
                 </span>
-                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center">
+                <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center">
                   📞 벨포레 AI 전화 콜센터 실시간 체험기
                 </h2>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-xs text-slate-600 dark:text-gray-400 mt-1">
                   스피커 볼륨을 켜고 <strong>[전화 걸기]</strong>나 아래 <strong>[원클릭 음성 질문]</strong>을 눌러보세요! AI 상담원이 실제 목소리로 대답하고 알림톡 문자까지 준비합니다.
                 </p>
               </div>
@@ -1263,7 +1263,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 className={`inline-flex items-center px-5 py-3 rounded-2xl text-sm font-extrabold shadow-sm transition-all shrink-0 ${
                   isCallActive
                     ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-slate-900 hover:bg-slate-800 text-white'
                 }`}
               >
                 <PhoneCall className="w-4 h-4 mr-2" />
@@ -1273,7 +1273,7 @@ export default function OmnichannelAndRobotCenterPage() {
 
             {/* 원클릭 음성 질문 테스트 버튼 */}
             <div>
-              <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+              <div className="text-xs font-bold text-slate-500 dark:text-gray-400 mb-2">
                 👇 마이크가 없어도 아래 버튼을 누르면 고객이 전화로 말한 것처럼 즉시 AI 목소리로 대답합니다:
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1287,7 +1287,7 @@ export default function OmnichannelAndRobotCenterPage() {
                     key={i}
                     onClick={() => sendVoiceQuestion(q)}
                     disabled={voiceSending}
-                    className="px-3 py-2 rounded-xl text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200 border border-purple-200 dark:border-purple-800 transition-colors"
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-900 dark:bg-purple-900/30 dark:text-slate-200 border border-slate-200 dark:border-purple-800 transition-colors"
                   >
                     🎙️ &ldquo;{q}&rdquo;
                   </button>
@@ -1296,7 +1296,7 @@ export default function OmnichannelAndRobotCenterPage() {
             </div>
 
             {/* 통화 대화창 */}
-            <div className="bg-gray-50 dark:bg-neutral-800/70 rounded-2xl p-4 min-h-64 max-h-96 overflow-y-auto space-y-3 border border-gray-200 dark:border-neutral-800">
+            <div className="bg-slate-50 dark:bg-neutral-800/70 rounded-2xl p-4 min-h-64 max-h-96 overflow-y-auto space-y-3 border border-slate-200 dark:border-neutral-800">
               {voiceTranscripts.length === 0 ? (
                 <div className="text-center py-14 text-gray-400 text-sm">
                   <PhoneCall className="w-10 h-10 mx-auto mb-2 text-purple-400 opacity-70" />
@@ -1313,19 +1313,19 @@ export default function OmnichannelAndRobotCenterPage() {
                     <div
                       className={`max-w-[85%] rounded-2xl p-3.5 text-sm shadow-2xs ${
                         item.speaker === 'guest'
-                          ? 'bg-purple-600 text-white font-semibold'
-                          : 'bg-white dark:bg-neutral-900 text-gray-900 dark:text-white border border-purple-100 dark:border-neutral-700'
+                          ? 'bg-slate-900 text-white font-semibold'
+                          : 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-white border border-slate-200 dark:border-neutral-700'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3 mb-1">
-                        <span className="text-[11px] font-extrabold opacity-75">
+                        <span className="text-xs font-extrabold opacity-75">
                           {item.speaker === 'guest' ? '👤 전화 건 고객님' : '👩‍💼 벨포레 AI 보이스 컨시어지'}
                         </span>
                         {item.speaker === 'ai' && (
                           <button
                             type="button"
                             onClick={() => speakKoreanText(item.text)}
-                            className="inline-flex items-center text-[11px] font-bold text-purple-600 hover:underline"
+                            className="inline-flex items-center text-xs font-bold text-slate-700 hover:underline"
                           >
                             <Volume2 className="w-3.5 h-3.5 mr-0.5" /> 다시 듣기
                           </button>
@@ -1334,11 +1334,11 @@ export default function OmnichannelAndRobotCenterPage() {
                       <p className="leading-relaxed">{item.text}</p>
 
                       {item.smsPreview && (
-                        <div className="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-neutral-800 text-xs text-gray-600 dark:text-gray-400 bg-amber-50/70 dark:bg-neutral-800 p-2.5 rounded-xl">
-                          <div className="font-extrabold text-amber-800 dark:text-amber-300 mb-1">
+                        <div className="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-neutral-800 text-xs text-slate-600 dark:text-gray-400 bg-slate-50 dark:bg-neutral-800 p-2.5 rounded-xl">
+                          <div className="font-extrabold text-slate-900 dark:text-amber-300 mb-1">
                             📲 통화 종료 후 고객 휴대폰({callerPhoneSim})으로 자동 발송할 요약 문자:
                           </div>
-                          <div className="whitespace-pre-wrap text-[11px]">{item.smsPreview}</div>
+                          <div className="whitespace-pre-wrap text-xs">{item.smsPreview}</div>
                         </div>
                       )}
                     </div>
@@ -1346,7 +1346,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 ))
               )}
               {voiceSending && (
-                <div className="text-xs font-bold text-purple-600 animate-pulse">
+                <div className="text-xs font-bold text-slate-700 animate-pulse">
                   📞 AI 콜센터가 지식을 검색하여 음성 답변을 생성하고 있습니다...
                 </div>
               )}
@@ -1366,7 +1366,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 className={`inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
                   isListeningMic
                     ? 'bg-red-600 text-white animate-pulse'
-                    : 'bg-purple-100 hover:bg-purple-200 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-purple-900/40 dark:text-slate-200'
                 }`}
               >
                 {isListeningMic ? (
@@ -1384,12 +1384,12 @@ export default function OmnichannelAndRobotCenterPage() {
                 value={voiceInputText}
                 onChange={(e) => setVoiceInputText(e.target.value)}
                 placeholder="전화로 물어볼 내용을 입력하거나 [마이크로 말하기]를 누르세요..."
-                className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-sm text-gray-900 dark:text-white"
+                className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-800 text-sm text-slate-900 dark:text-white"
               />
               <button
                 type="submit"
                 disabled={voiceSending || !voiceInputText.trim()}
-                className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-extrabold bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 shrink-0"
+                className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50 shrink-0"
               >
                 음성 응답 듣기
               </button>
@@ -1398,48 +1398,48 @@ export default function OmnichannelAndRobotCenterPage() {
 
           {/* 우측 (5칸): 실제 전화망(SIP / Twilio / AI 보이스봇) 연동 규격 */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800 shadow-xs space-y-4">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-slate-200 dark:border-neutral-800 shadow-xs space-y-4">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-900">
                 실제 리조트 대표전화 연동 규격 (Twilio / SIP / KT AI콜센터 호환)
               </span>
-              <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
                 오는 전화를 AI가 직접 받는 공식 Voice Webhook
               </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-gray-400 leading-relaxed">
                 우리 앱에는 이미 통신사 보이스 게이트웨이(Twilio Voice, SIP Trunking, 클라우드 콜센터)와 직결할 수 있는 <strong>양방향 음성 웹훅(TwiML XML 및 JSON 동시 지원)</strong>이 탑재되어 있습니다.
               </p>
 
-              <div className="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800 p-3 rounded-xl border border-gray-200 dark:border-neutral-700">
-                <code className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 flex-1 truncate">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-neutral-800 p-3 rounded-xl border border-slate-200 dark:border-neutral-700">
+                <code className="text-xs font-mono font-bold text-slate-700 dark:text-purple-400 flex-1 truncate">
                   {originUrl}/api/voice/webhook
                 </code>
                 <button
                   onClick={() => handleCopyUrl(`${originUrl}/api/voice/webhook`, 'voice')}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-extrabold bg-purple-600 hover:bg-purple-700 text-white shrink-0"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white shrink-0"
                 >
                   {copiedUrl === 'voice' ? '복사됨!' : '주소 복사'}
                 </button>
               </div>
 
-              <div className="space-y-2.5 pt-2 text-xs text-gray-600 dark:text-gray-400">
-                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-neutral-800 border border-purple-100 dark:border-neutral-700">
-                  <div className="font-extrabold text-purple-900 dark:text-purple-300">
+              <div className="space-y-2.5 pt-2 text-xs text-slate-600 dark:text-gray-400">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="font-extrabold text-slate-900 dark:text-purple-300">
                     1단계: 고객 전화 수신 & 음성 인식 (STT)
                   </div>
                   <p className="mt-0.5">
                     고객이 리조트로 전화를 걸어 말하면 통신사 게이트웨이가 음성을 텍스트로 변환해 위 주소로 전달합니다.
                   </p>
                 </div>
-                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-neutral-800 border border-purple-100 dark:border-neutral-700">
-                  <div className="font-extrabold text-purple-900 dark:text-purple-300">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="font-extrabold text-slate-900 dark:text-purple-300">
                     2단계: 0.8초 초고속 RAG 검색 & 구어체 변환
                   </div>
                   <p className="mt-0.5">
                     특수기호나 표를 제거하고 귀로 듣기 가장 편한 2~3문장 호텔리어 구어체로 답변을 만들어 읽어줍니다.
                   </p>
                 </div>
-                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-neutral-800 border border-purple-100 dark:border-neutral-700">
-                  <div className="font-extrabold text-purple-900 dark:text-purple-300">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="font-extrabold text-slate-900 dark:text-purple-300">
                     3단계: 불만/예약변경 감지 시 즉시 인간 상담원 연결
                   </div>
                   <p className="mt-0.5">
@@ -1458,17 +1458,17 @@ export default function OmnichannelAndRobotCenterPage() {
       {activeMainTab === 'robot' && (
         <div className="space-y-6">
           {/* 상단: 로봇 DB 현대화 & 2대 표준 파일 다운로드 */}
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-emerald-200 dark:border-neutral-800 shadow-xs">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-slate-200 dark:border-neutral-800 shadow-xs">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-neutral-800">
               <div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 mb-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-900 dark:bg-emerald-900/40 dark:text-emerald-300 mb-2">
                   Robotics & Embodied AI Standard Schema v2.0
                 </span>
-                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center">
-                  <Bot className="w-6 h-6 mr-2 text-emerald-600" />
+                <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center">
+                  <Bot className="w-6 h-6 mr-2 text-slate-700" />
                   CS 안내 로봇 개발 기업 납품용 데이터베이스 센터
                 </h2>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 max-w-3xl leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-gray-400 mt-1 max-w-3xl leading-relaxed">
                   로봇 전문 기업(LG 클로이, 베어로보틱스 등)이 벨포레 전용 CS 로봇을 제작할 때는 줄글 텍스트가 아닌 <strong>① 정형 시설 스펙(숫자형 요금, 키 제한 cm, 우천 운행 코드, 자율주행 구역 Zone)</strong>과 <strong>② 의도(Intent)가 분류된 Golden Q&A 학습셋(.jsonl)</strong>이 필요합니다. 아래 버튼으로 언제든 최신 로봇 데이터셋을 추출하세요.
                 </p>
               </div>
@@ -1477,7 +1477,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 <button
                   onClick={handleUpgradeAllDbForRobot}
                   disabled={upgradingDb}
-                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white shadow-sm disabled:opacity-50 transition-colors"
                 >
                   <Cpu className="w-4 h-4 mr-1.5" />
                   {upgradingDb
@@ -1488,7 +1488,7 @@ export default function OmnichannelAndRobotCenterPage() {
                 <a
                   href="/api/admin/robot-dataset?format=jsonl"
                   download
-                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
+                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-colors"
                 >
                   <Download className="w-4 h-4 mr-1.5" />
                   1. 로봇 학습용 Q&A 데이터셋 (.jsonl) 다운로드
@@ -1507,57 +1507,57 @@ export default function OmnichannelAndRobotCenterPage() {
 
             {/* 로봇 데이터 준비 현황 KPI */}
             {loadingRobot || !robotData ? (
-              <div className="py-8 text-center text-sm text-gray-500">
+              <div className="py-8 text-center text-sm text-slate-500">
                 로봇 데이터베이스 현황을 분석하고 있습니다...
               </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
-                <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-neutral-800 border border-emerald-200 dark:border-neutral-700">
-                  <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-slate-900 dark:text-emerald-300">
                     🤖 로봇 정형스펙 완비 시설
                   </div>
-                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                     {robotData.summary.robotReadyFacilitiesCount} / {robotData.summary.totalFacilities}개
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-1">
+                  <div className="text-xs text-slate-500 mt-1">
                     자율주행 Zone · 숫자요금 · 키제한 자동 구조화
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-neutral-800 border border-indigo-200 dark:border-neutral-700">
-                  <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-slate-900 dark:text-indigo-300">
                     🧠 로봇 파인튜닝 Golden 대화셋
                   </div>
-                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                     {robotData.summary.goldenLogsCount}건
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-1">
+                  <div className="text-xs text-slate-500 mt-1">
                     검증 완료된 고품질 고객 질문·답변 쌍
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-neutral-800 border border-amber-200 dark:border-neutral-700">
-                  <div className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-slate-900 dark:text-amber-300">
                     🏷️ 자동 분류된 고객 질문 카테고리
                   </div>
-                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                     {Object.keys(robotData.summary.categoryCounts || {}).length}개 분야
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-1 truncate">
+                  <div className="text-xs text-slate-500 mt-1 truncate">
                     {Object.entries(robotData.summary.categoryCounts || {})
                       .map(([k, v]) => `${k}(${v})`)
                       .join(', ') || '집계 중'}
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-neutral-800 border border-blue-200 dark:border-neutral-700">
-                  <div className="text-xs font-bold text-blue-800 dark:text-blue-300 flex items-center">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-slate-900 dark:text-blue-300 flex items-center">
                     <ShieldCheck className="w-4 h-4 mr-1" /> 개인정보 비식별화 보호
                   </div>
-                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                     100% 적용
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-1">
+                  <div className="text-xs text-slate-500 mt-1">
                     전화번호·계좌·이메일 자동 마스킹 완료
                   </div>
                 </div>
@@ -1567,18 +1567,18 @@ export default function OmnichannelAndRobotCenterPage() {
 
           {/* 하단: 시설별 로봇 정형 스펙(Robot Specs) 실시간 미리보기 테이블 */}
           {robotData && robotData.sampleFacilities && (
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800 shadow-xs">
-              <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-1">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-slate-200 dark:border-neutral-800 shadow-xs">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">
                 🔍 시설별 로봇 정형 데이터(Robot-Ready Structured Specs) 미리보기
               </h3>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-slate-500 mb-4">
                 시설 설명글을 수정하거나 홈페이지 동기화가 돌 때마다 AI가 아래의 로봇 전용 정형 필드를 자동으로 추출·갱신합니다.
               </p>
 
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-200 dark:border-neutral-800 text-gray-500 font-extrabold bg-gray-50 dark:bg-neutral-800/60">
+                    <tr className="border-b border-slate-200 dark:border-neutral-800 text-slate-500 font-extrabold bg-slate-50 dark:bg-neutral-800/60">
                       <th className="py-3 px-3 rounded-tl-xl">시설명</th>
                       <th className="py-3 px-3">로봇 주행구역 (Zone)</th>
                       <th className="py-3 px-3">성인 요금(숫자)</th>
@@ -1593,11 +1593,11 @@ export default function OmnichannelAndRobotCenterPage() {
                     {robotData.sampleFacilities.map((fac) => {
                       const s = fac.robotSpecs || {};
                       return (
-                        <tr key={fac.id} className="hover:bg-gray-50/80 dark:hover:bg-neutral-800/40">
-                          <td className="py-3 px-3 font-extrabold text-gray-900 dark:text-white">
+                        <tr key={fac.id} className="hover:bg-slate-50/80 dark:hover:bg-neutral-800/40">
+                          <td className="py-3 px-3 font-extrabold text-slate-900 dark:text-white">
                             [{fac.category}] {fac.title}
                           </td>
-                          <td className="py-3 px-3 font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                          <td className="py-3 px-3 font-mono text-slate-700 dark:text-indigo-400 font-bold">
                             {s.navigationZone || '-'}
                           </td>
                           <td className="py-3 px-3 font-bold">
@@ -1610,7 +1610,7 @@ export default function OmnichannelAndRobotCenterPage() {
                             {s.minHeightCm != null ? `${s.minHeightCm}cm 이상` : '제한없음'}
                           </td>
                           <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
                               {s.rainOperation || 'WEATHER_DEPENDENT'}
                             </span>
                           </td>
@@ -1623,7 +1623,7 @@ export default function OmnichannelAndRobotCenterPage() {
                               ? '🚫 동반불가'
                               : s.petAllowed || '-'}
                           </td>
-                          <td className="py-3 px-3 text-gray-500">
+                          <td className="py-3 px-3 text-slate-500">
                             {s.operatingHours || '-'} {s.contactPhone ? `(${s.contactPhone})` : ''}
                           </td>
                         </tr>
@@ -1651,22 +1651,22 @@ export default function OmnichannelAndRobotCenterPage() {
               className="fixed inset-0 bg-black/60 transition-opacity"
               onClick={() => setTeachingLog(null)}
             />
-            <div className="relative inline-block bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-gray-200 dark:border-neutral-800">
+            <div className="relative inline-block bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-slate-200 dark:border-neutral-800">
               <form onSubmit={handleTeachSubmit}>
                 <div className="px-6 pt-6 pb-4">
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-neutral-800">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-neutral-800">
                     <div>
-                      <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-xs font-extrabold text-slate-700 dark:text-indigo-400">
                         원클릭 AI 정답 학습 & 로봇 데이터셋 등록
                       </span>
-                      <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mt-0.5">
+                      <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">
                         ✏️ 이 질문의 정확한 정답을 AI에게 알려주세요
                       </h3>
                     </div>
                     <button
                       type="button"
                       onClick={() => setTeachingLog(null)}
-                      className="text-gray-400 hover:text-gray-500"
+                      className="text-gray-400 hover:text-slate-500"
                     >
                       <X className="h-6 w-6" />
                     </button>
@@ -1674,13 +1674,13 @@ export default function OmnichannelAndRobotCenterPage() {
 
                   <div className="mt-4 space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-gray-300 mb-1">
                         어느 분야의 지식인가요?
                       </label>
                       <select
                         value={teachCategory}
                         onChange={(e) => setTeachCategory(e.target.value)}
-                        className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-2.5 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                        className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 p-2.5 text-sm bg-white dark:bg-neutral-800 text-slate-900 dark:text-white"
                       >
                         <option value="자주묻는질문(FAQ)">자주묻는질문(FAQ)</option>
                         <option value="액티비티/레저">액티비티/레저</option>
@@ -1692,7 +1692,7 @@ export default function OmnichannelAndRobotCenterPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-gray-300 mb-1">
                         고객 질문 제목
                       </label>
                       <input
@@ -1700,20 +1700,20 @@ export default function OmnichannelAndRobotCenterPage() {
                         required
                         value={teachTitle}
                         onChange={(e) => setTeachTitle(e.target.value)}
-                        className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-2.5 text-sm bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white font-bold"
+                        className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 p-2.5 text-sm bg-slate-50 dark:bg-neutral-800 text-slate-900 dark:text-white font-bold"
                       />
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
                           앞으로 AI가 대답할 정확한 안내 내용
                         </label>
                         <button
                           type="button"
                           onClick={handleVerifyTeachAnswer}
                           disabled={teachVerifying || !teachAnswer.trim()}
-                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300 transition-colors disabled:opacity-50"
+                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-amber-900/40 dark:text-amber-300 transition-colors disabled:opacity-50"
                         >
                           <Sparkles className="w-3.5 h-3.5 mr-1" />
                           {teachVerifying ? '기존 DB와 대조 검증 중...' : '🔍 기존 DB 충돌/정답 AI 팩트체크'}
@@ -1724,7 +1724,7 @@ export default function OmnichannelAndRobotCenterPage() {
                         required
                         value={teachAnswer}
                         onChange={(e) => setTeachAnswer(e.target.value)}
-                        className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white leading-relaxed"
+                        className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 p-3 text-sm bg-white dark:bg-neutral-800 text-slate-900 dark:text-white leading-relaxed"
                       />
 
                       {teachVerifyResult && (
@@ -1732,14 +1732,14 @@ export default function OmnichannelAndRobotCenterPage() {
                           className={`mt-3 p-3.5 rounded-xl border text-xs space-y-2 ${
                             teachVerifyResult.verdict === 'WARN'
                               ? 'bg-red-50 border-red-200 text-red-900 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200'
-                              : 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200'
+                              : 'bg-slate-50 border-slate-200 text-slate-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-slate-200'
                           }`}
                         >
                           <div className="font-extrabold flex items-center justify-between">
                             <span>{teachVerifyResult.conflictSummary}</span>
                           </div>
                           {teachVerifyResult.matchedFacilities.length > 0 && (
-                            <div className="text-[11px] opacity-80">
+                            <div className="text-xs opacity-80">
                               대조한 공식 문서: {teachVerifyResult.matchedFacilities.join(', ')}
                             </div>
                           )}
@@ -1747,13 +1747,13 @@ export default function OmnichannelAndRobotCenterPage() {
                             teachVerifyResult.polishedAnswer !== teachAnswer && (
                               <div className="pt-2 border-t border-black/10 dark:border-white/10">
                                 <div className="font-bold mb-1">✨ AI 교정 표준 문장 제안:</div>
-                                <div className="p-2 rounded-lg bg-white/80 dark:bg-neutral-900/80 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                                <div className="p-2 rounded-lg bg-white/80 dark:bg-neutral-900/80 text-slate-800 dark:text-gray-200 whitespace-pre-wrap">
                                   {teachVerifyResult.polishedAnswer}
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => setTeachAnswer(teachVerifyResult.polishedAnswer)}
-                                  className="mt-2 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white hover:bg-indigo-700"
+                                  className="mt-2 inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-900 text-white hover:bg-slate-800"
                                 >
                                   이 다듬어진 문장으로 바꾸기
                                 </button>
@@ -1765,11 +1765,11 @@ export default function OmnichannelAndRobotCenterPage() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-neutral-800/60 px-6 py-4 flex flex-wrap justify-between items-center gap-2">
+                <div className="bg-slate-50 dark:bg-neutral-800/60 px-6 py-4 flex flex-wrap justify-between items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setTeachingLog(null)}
-                    className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-neutral-700 text-xs font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800"
+                    className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-neutral-700 text-xs font-bold text-slate-700 dark:text-gray-300 bg-white dark:bg-neutral-800"
                   >
                     취소
                   </button>
@@ -1778,14 +1778,14 @@ export default function OmnichannelAndRobotCenterPage() {
                       type="button"
                       disabled={teachSubmitting}
                       onClick={() => submitTeachKnowledge('pending')}
-                      className="px-3.5 py-2 rounded-xl text-xs font-extrabold text-amber-900 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 disabled:opacity-50"
+                      className="px-3.5 py-2 rounded-xl text-xs font-extrabold text-slate-900 bg-slate-100 hover:bg-slate-200 dark:bg-amber-900/40 dark:text-amber-200 disabled:opacity-50"
                     >
                       ⏳ 관리자 검수 대기열로 등록
                     </button>
                     <button
                       type="submit"
                       disabled={teachSubmitting}
-                      className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+                      className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 shadow-sm"
                     >
                       {teachSubmitting ? '저장 중...' : '✅ 검증 완료 — AI 즉시 반영'}
                     </button>
@@ -1804,13 +1804,13 @@ export default function OmnichannelAndRobotCenterPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div className="fixed inset-0 bg-black/60 transition-opacity" onClick={() => setNoteLog(null)} />
-            <div className="relative inline-block bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full border border-gray-200 dark:border-neutral-800">
+            <div className="relative inline-block bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full border border-slate-200 dark:border-neutral-800">
               <form onSubmit={handleSaveStaffNote}>
                 <div className="px-6 pt-6 pb-4">
-                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                     📝 상담원 조치 메모 및 [해결 완료] 체크
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     전화 콜백 완료 여부나 특이사항을 적어두면 다른 직원들과 공유되며 [해결 완료] 상태로 변경됩니다.
                   </p>
                   <textarea
@@ -1818,21 +1818,21 @@ export default function OmnichannelAndRobotCenterPage() {
                     value={staffNoteText}
                     onChange={(e) => setStaffNoteText(e.target.value)}
                     placeholder="예: 고객님께 전화드려 루지 탑승 규정 상세 안내 완료함 (담당: 김벨포레)"
-                    className="mt-3 block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-sm bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white"
+                    className="mt-3 block w-full rounded-xl border border-slate-300 dark:border-neutral-700 p-3 text-sm bg-slate-50 dark:bg-neutral-800 text-slate-900 dark:text-white"
                   />
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800/60 px-6 py-3.5 flex justify-end gap-2">
+                <div className="bg-slate-50 dark:bg-neutral-800/60 px-6 py-3.5 flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setNoteLog(null)}
-                    className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 bg-white"
+                    className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 bg-white"
                   >
                     닫기
                   </button>
                   <button
                     type="submit"
                     disabled={noteSaving}
-                    className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700"
+                    className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800"
                   >
                     {noteSaving ? '저장 중...' : '✅ 메모 저장 및 해결 완료'}
                   </button>

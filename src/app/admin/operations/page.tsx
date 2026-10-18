@@ -8,7 +8,6 @@ import {
   Edit2,
   Plus,
   AlertCircle,
-  Sparkles,
   Calendar,
   Power,
   RefreshCw,
@@ -68,7 +67,7 @@ export default function OperationsAdmin() {
       .slice(0, 16);
   };
 
-  // 초보자용 기간 원클릭 도우미
+  // 기간 원클릭 도우미
   const applyQuickPeriod = (mode: 'today' | 'tomorrow' | 'week' | 'always') => {
     const now = new Date();
     const start = new Date(now);
@@ -97,7 +96,7 @@ export default function OperationsAdmin() {
     }));
   };
 
-  // 초보자용 원클릭 공지 양식 채우기
+  // 원클릭 공지 양식 채우기
   const applyTemplate = (type: 'rain' | 'inspect' | 'extend' | 'soldout') => {
     applyQuickPeriod('today');
     setDraftCheckResult(null);
@@ -222,7 +221,7 @@ export default function OperationsAdmin() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '일괄 삭제 실패');
-      alert(`✅ 불필요한 과거 공지 ${data.deletedCount}건이 깔끔하게 삭제되었습니다!`);
+      alert(`불필요한 과거 공지 ${data.deletedCount}건이 삭제되었습니다.`);
       fetchNotices();
     } catch (e: any) {
       alert(e.message || '삭제 중 오류가 발생했습니다.');
@@ -254,7 +253,7 @@ export default function OperationsAdmin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '이관 실패');
       alert(
-        `✅ '${data.facilityName}' 항목이 [1. AI 지식창고]로 안전하게 이동되었으며 긴급 공지 목록에서 정리되었습니다!`
+        `'${data.facilityName}' 항목이 [1. AI 지식창고]로 이동되었으며 긴급 공지 목록에서 정리되었습니다.`
       );
       fetchNotices();
     } catch (e: any) {
@@ -298,8 +297,8 @@ export default function OperationsAdmin() {
 
       setMessage(
         isEditing
-          ? '✅ 공지가 성공적으로 수정되어 AI 챗봇에 즉시 반영되었습니다!'
-          : '✅ 새 긴급 공지가 등록되어 AI 챗봇이 지금부터 이 내용으로 안내합니다! (종료일이 지나면 자동으로 꺼집니다)'
+          ? '공지가 성공적으로 수정되어 AI 챗봇에 즉시 반영되었습니다.'
+          : '새 긴급 공지가 등록되어 AI 챗봇이 지금부터 이 내용으로 안내합니다.'
       );
       resetForm();
       fetchNotices();
@@ -386,98 +385,98 @@ export default function OperationsAdmin() {
   const migrateCandidates = notices.filter((n) => n.audit?.verdict === 'MIGRATE_TO_KNOWLEDGE');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
-      {/* 상단 초보자 친절 설명 배너 */}
-      <div className="bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-xs border border-red-200 dark:border-red-900/50">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-8">
+      {/* 상단 헤더 카드 (차분한 무채색 & 높은 가독성) */}
+      <div className="bg-white p-7 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 mb-2">
-              메뉴 2 · 현장 긴급 속보 전용 (AI 날짜·내용 자동 검수 탑재)
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              🚨 오늘의 긴급 공지 (갑작스러운 휴장 · 시간 변경)
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              메뉴 2 · 현장 긴급 속보 관리
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              오늘의 긴급 공지 (임시 휴장 · 운영시간 변경)
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              여기에 글을 올리면 AI 챗봇이 <strong>평소 기본 안내보다 이 공지를 무조건 1순위로 먼저</strong> 손님에게 안내합니다!
+            <p className="mt-1.5 text-[15px] text-slate-600 leading-relaxed">
+              여기에 등록된 공지는 평소 기본 정보보다 <strong className="text-slate-900 font-semibold">1순위로 최우선 안내</strong>되며, 종료일(또는 본문 내 날짜)이 지나면 자동으로 안내가 종료됩니다.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-neutral-800 text-xs sm:text-sm">
-          <div className="bg-red-50/70 dark:bg-red-900/15 p-3.5 rounded-xl border border-red-100 dark:border-red-800/40">
-            <p className="font-bold text-red-800 dark:text-red-300 mb-1">
-              ⭕ 이럴 때 여기에 적으세요! (임시 변경)
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 pt-5 border-t border-slate-100">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p className="text-sm font-bold text-slate-900 mb-1.5">
+              작성 대상 (일시적 현장 변동 사항)
             </p>
-            <ul className="text-red-700 dark:text-red-400 space-y-1 list-disc list-inside text-xs">
-              <li>&quot;오늘 비가 와서 마운틴카트랑 썰매장 안 해요&quot;</li>
-              <li>&quot;오늘 기계 점검 때문에 오후 2시까지 루지 쉬어요&quot;</li>
-              <li>&quot;이번 연휴에만 특별히 밤 9시까지 야간개장 해요&quot;</li>
+            <ul className="text-slate-600 space-y-1 list-disc list-inside text-sm leading-relaxed">
+              <li>당일 우천·기상 악화로 인한 마운틴카트/썰매장 임시 휴장</li>
+              <li>시설 안전 점검으로 인한 특정 시간대 임시 운휴</li>
+              <li>연휴·행사 기간 특정 매장 영업시간 임시 연장 또는 조기 마감</li>
             </ul>
           </div>
-          <div className="bg-blue-50/70 dark:bg-blue-900/15 p-3.5 rounded-xl border border-blue-100 dark:border-blue-800/40">
-            <p className="font-bold text-blue-800 dark:text-blue-300 mb-1">
-              🤖 AI 자동 종료일 추출 &amp; 청소 기능이 켜져 있습니다!
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p className="text-sm font-bold text-slate-900 mb-1.5">
+              AI 자동 종료일 인식 및 정리 안내
             </p>
-            <ul className="text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside text-xs">
-              <li>직원이 종료일을 안 골라도 본문에 날짜(예: <code>8월 23일</code>)가 적혀 있으면 AI가 알아서 종료일을 세팅합니다.</li>
-              <li>기한이 지난 과거 공지나 상시 규정은 오른쪽 목록에서 <strong>원클릭으로 삭제·정리</strong>할 수 있습니다.</li>
+            <ul className="text-slate-600 space-y-1 list-disc list-inside text-sm leading-relaxed">
+              <li>종료일을 비워두어도 본문에 적힌 날짜(예: <code className="text-slate-900 font-semibold">10월 25일</code>)를 AI가 인식해 기한 경과 시 자동 차단합니다.</li>
+              <li>계속 유지되는 상시 혜택·규정은 우측 목록에서 <strong className="text-slate-900 font-semibold">지식창고로 원클릭 승격</strong>할 수 있습니다.</li>
             </ul>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* 데스크탑 2단 레이아웃 (좌측 입력 5 : 우측 목록 7) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* 좌측: 공지 작성 폼 (5칸) */}
-        <div className="lg:col-span-5 bg-white dark:bg-neutral-900 rounded-2xl shadow-xs border border-neutral-200 dark:border-neutral-800 p-6 self-start sticky top-24">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center">
-              {isEditing ? '✏️ 공지 내용 고치기' : '📝 새 긴급 공지 올리기'}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-2xs p-7 lg:sticky lg:top-24">
+          <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-100">
+            <h2 className="text-lg font-bold text-slate-900">
+              {isEditing ? '공지 내용 수정하기' : '새 긴급 공지 등록'}
             </h2>
             {isEditing && (
               <button
                 onClick={resetForm}
-                className="text-xs font-bold px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-800 rounded-md text-gray-700 dark:text-gray-300 flex items-center"
+                className="text-sm font-semibold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 flex items-center gap-1 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5 mr-1" /> 취소하고 새로 쓰기
+                <Plus className="w-4 h-4" /> 취소하고 새로 작성
               </button>
             )}
           </div>
 
-          {/* 초보자용 원클릭 양식 자동 채우기 */}
+          {/* 빠른 예시 문구 채우기 */}
           {!isEditing && (
-            <div className="mb-5 p-3.5 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/60">
-              <p className="text-xs font-bold text-amber-900 dark:text-amber-300 mb-2 flex items-center">
-                <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-600" />
-                글쓰기가 막막하신가요? 버튼을 누르면 예시 문장이 자동으로 채워집니다!
+            <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <p className="text-sm font-semibold text-slate-800 mb-2.5">
+                자주 쓰는 공지 양식 (클릭 시 자동 입력)
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => applyTemplate('rain')}
-                  className="text-left px-2.5 py-2 text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-200 dark:border-neutral-700 rounded-lg text-gray-800 dark:text-gray-200 transition-colors"
+                  className="text-left px-3 py-2 text-sm font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-800 transition-colors"
                 >
-                  🌧️ 비/날씨로 휴장할 때
+                  비·날씨로 휴장할 때
                 </button>
                 <button
                   type="button"
                   onClick={() => applyTemplate('inspect')}
-                  className="text-left px-2.5 py-2 text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-200 dark:border-neutral-700 rounded-lg text-gray-800 dark:text-gray-200 transition-colors"
+                  className="text-left px-3 py-2 text-sm font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-800 transition-colors"
                 >
-                  🔧 시설 안전 점검할 때
+                  시설 안전 점검할 때
                 </button>
                 <button
                   type="button"
                   onClick={() => applyTemplate('extend')}
-                  className="text-left px-2.5 py-2 text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-200 dark:border-neutral-700 rounded-lg text-gray-800 dark:text-gray-200 transition-colors"
+                  className="text-left px-3 py-2 text-sm font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-800 transition-colors"
                 >
-                  ⏰ 운영시간 임시 변경
+                  운영시간 임시 변경
                 </button>
                 <button
                   type="button"
                   onClick={() => applyTemplate('soldout')}
-                  className="text-left px-2.5 py-2 text-xs font-semibold bg-white dark:bg-neutral-800 hover:bg-amber-100 border border-amber-200 dark:border-neutral-700 rounded-lg text-gray-800 dark:text-gray-200 transition-colors"
+                  className="text-left px-3 py-2 text-sm font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-800 transition-colors"
                 >
-                  🎫 오늘 티켓 조기 마감
+                  현장 매표 조기 마감
                 </button>
               </div>
             </div>
@@ -485,33 +484,28 @@ export default function OperationsAdmin() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-800 dark:text-gray-200">
-                1. 공지 제목 <span className="text-red-500">*</span>
+              <label className="block text-sm font-bold text-slate-900 mb-1.5">
+                1. 공지 제목 <span className="text-rose-600">*</span>
               </label>
-              <p className="text-xs text-gray-500 mt-0.5 mb-1.5">
-                어떤 시설의 무슨 공지인지 한눈에 알아볼 수 있게 적어주세요.
-              </p>
               <input
                 type="text"
                 name="title"
                 required
                 value={formData.title}
                 onChange={handleChange}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-                placeholder="예: 오늘 비가 와서 마운틴카트 임시 휴장"
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none"
+                placeholder="예: 오늘 우천으로 인한 마운틴카트 임시 휴장"
               />
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-200">
-                    2. 상세 내용 (AI가 손님에게 안내할 내용) <span className="text-red-500">*</span>
-                  </label>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    손님에게 말하듯 편하게 적어주시면 AI가 예쁜 문장으로 다듬어 대답합니다.
-                  </p>
-                </div>
+              <div className="mb-1.5">
+                <label className="block text-sm font-bold text-slate-900">
+                  2. 상세 내용 (AI가 고객에게 안내할 내용) <span className="text-rose-600">*</span>
+                </label>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  핵심 내용을 적어주시면 AI가 자연스러운 문장으로 고객에게 전달합니다.
+                </p>
               </div>
               <textarea
                 name="content"
@@ -519,146 +513,130 @@ export default function OperationsAdmin() {
                 rows={4}
                 value={formData.content}
                 onChange={handleChange}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 leading-relaxed"
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none leading-relaxed"
                 placeholder="예: 오늘 우천으로 인해 마운틴카트와 사계절썰매는 휴장합니다. 실내 미디어아트센터는 정상 운영합니다."
               />
-              <div className="mt-2 flex justify-end">
+              <div className="mt-2.5 flex justify-end">
                 <button
                   type="button"
                   onClick={handleAiCheckDraft}
                   disabled={isCheckingDraft || !formData.title.trim() || !formData.content.trim()}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-extrabold disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-sm font-semibold disabled:opacity-50 transition-colors"
                 >
-                  {isCheckingDraft ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                  ) : (
-                    <span className="mr-1">🤖</span>
-                  )}
-                  AI로 종료일 자동 맞추기 &amp; 내용 검수
+                  {isCheckingDraft && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+                  AI 종료일 자동 추출 및 내용 검수
                 </button>
               </div>
             </div>
 
             {draftCheckResult && (
-              <div
-                className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
-                  draftCheckResult.verdict === 'KEEP_ACTIVE'
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                    : 'bg-amber-50 border-amber-300 text-amber-900'
-                }`}
-              >
-                <div className="font-extrabold">
+              <div className="p-4 rounded-xl border border-slate-300 bg-slate-50 text-sm text-slate-800 space-y-1.5">
+                <div className="font-bold text-slate-900">
                   {draftCheckResult.verdict === 'KEEP_ACTIVE'
-                    ? '🟢 AI 검수 완료: 긴급 공지로 적절합니다!'
+                    ? 'AI 검수 완료: 긴급 공지로 적합합니다.'
                     : draftCheckResult.verdict === 'MIGRATE_TO_KNOWLEDGE'
-                    ? '💡 AI 안내: 이 내용은 상시 규정에 가깝습니다 ([1. AI 지식창고] 등록 권장)'
-                    : '⚠️ AI 주의: 본문 속 날짜가 이미 지난 과거 날짜인지 확인해 주세요!'}
+                    ? 'AI 안내: 상시 규정에 해당하므로 [1. AI 지식창고] 등록을 권장합니다.'
+                    : 'AI 주의: 본문 속 날짜가 이미 지난 과거 날짜인지 확인해 주세요.'}
                 </div>
-                <p className="leading-relaxed">{draftCheckResult.advice}</p>
+                <p className="leading-relaxed text-slate-700">{draftCheckResult.advice}</p>
                 {draftCheckResult.suggestedEndDate && (
-                  <p className="font-bold text-indigo-700">
-                    📅 추천 자동 종료일: {draftCheckResult.suggestedEndDate.replace('T', ' ')}
+                  <p className="font-semibold text-slate-900">
+                    추천 자동 종료일: {draftCheckResult.suggestedEndDate.replace('T', ' ')}
                   </p>
                 )}
               </div>
             )}
 
             {/* 기간 설정 영역 */}
-            <div className="p-4 rounded-xl bg-gray-50 dark:bg-neutral-800/60 border border-gray-200 dark:border-neutral-700 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3.5">
               <div>
-                <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center">
-                  <Calendar className="w-4 h-4 mr-1.5 text-green-600" />
-                  3. 언제까지 이 공지를 띄울까요? (자동 종료 설정)
+                <label className="block text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-slate-700" />
+                  3. 공지 적용 기간 (자동 종료 설정)
                 </label>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  아래 버튼만 누르면 날짜가 자동으로 맞춰집니다! (비워두셔도 본문 날짜를 AI가 자동 인식합니다)
+                <p className="text-sm text-slate-500 mt-0.5">
+                  종료 시각이 지나면 자동으로 비활성화됩니다.
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => applyQuickPeriod('today')}
-                  className="px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-md transition-colors"
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
-                  ⚡ 오늘 하루만 적용
+                  오늘 하루만 적용
                 </button>
                 <button
                   type="button"
                   onClick={() => applyQuickPeriod('tomorrow')}
-                  className="px-2.5 py-1.5 bg-white dark:bg-neutral-800 hover:bg-gray-100 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-md transition-colors"
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-colors"
                 >
                   내일까지 적용
                 </button>
                 <button
                   type="button"
                   onClick={() => applyQuickPeriod('week')}
-                  className="px-2.5 py-1.5 bg-white dark:bg-neutral-800 hover:bg-gray-100 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-md transition-colors"
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-colors"
                 >
                   일주일 동안
                 </button>
                 <button
                   type="button"
                   onClick={() => applyQuickPeriod('always')}
-                  className="px-2.5 py-1.5 bg-white dark:bg-neutral-800 hover:bg-gray-100 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-md transition-colors"
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-colors"
                 >
-                  직접 끌 때까지 계속
+                  직접 끌 때까지 유지
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">
-                    시작 날짜/시간
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    시작 일시
                   </label>
                   <input
                     type="datetime-local"
                     name="startDate"
                     value={formData.startDate}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2.5 py-1.5 text-xs focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">
-                    종료 날짜/시간 (이 시간이 지나면 자동 해제)
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    종료 일시 (경과 시 자동 해제)
                   </label>
                   <input
                     type="datetime-local"
                     name="endDate"
                     value={formData.endDate}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2.5 py-1.5 text-xs focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center p-3 rounded-lg bg-green-50/60 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40">
+            <div className="flex items-center p-3.5 rounded-xl bg-slate-50 border border-slate-200">
               <input
                 id="isActive"
                 name="isActive"
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
               />
               <label
                 htmlFor="isActive"
-                className="ml-2.5 block text-sm text-gray-900 dark:text-white font-bold cursor-pointer"
+                className="ml-2.5 block text-sm text-slate-900 font-semibold cursor-pointer"
               >
-                등록 즉시 AI 챗봇에게 알려주기 (켜짐)
+                등록 즉시 AI 챗봇 안내에 적용 (켜짐)
               </label>
             </div>
 
             {message && (
-              <div
-                className={`p-3.5 rounded-lg text-sm font-medium ${
-                  message.includes('✅') || message.includes('성공')
-                    ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-300'
-                    : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-300'
-                }`}
-              >
+              <div className="p-3.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-900 border border-slate-300">
                 {message}
               </div>
             )}
@@ -666,34 +644,35 @@ export default function OperationsAdmin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full inline-flex items-center justify-center rounded-xl bg-green-600 px-4 py-3 text-base font-extrabold text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+              className="w-full inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3.5 text-[15px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
             >
               {loading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <Save className="mr-2 h-5 w-5" />
               )}
-              {isEditing ? '고친 내용 저장하기' : '지금 바로 긴급 공지 올리기'}
+              {isEditing ? '수정 내용 저장하기' : '긴급 공지 등록하기'}
             </button>
           </form>
         </div>
 
         {/* 우측: 현재 등록된 공지 목록 & AI 자동 검수/정리 (7칸) */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* 🧹 AI 공지 자동 검수 & 원클릭 정리 배너 */}
+        <div className="lg:col-span-7 space-y-5">
+          {/* AI 공지 자동 검수 & 원클릭 정리 배너 */}
           {(expiredDeleteIds.length > 0 || migrateCandidates.length > 0) && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 p-5 rounded-2xl border border-amber-300 dark:border-amber-800 space-y-3 shadow-2xs">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="bg-white p-5 rounded-2xl border border-slate-300 shadow-2xs">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-amber-900 dark:text-amber-200 flex items-center">
-                    🧹 AI 긴급 공지 자동 검수 결과: 정리가 필요한 공지가 발견되었습니다!
+                  <h3 className="text-base font-bold text-slate-900">
+                    AI 공지 검수 결과: 정리가 필요한 항목이 있습니다
                   </h3>
-                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
-                    • 날짜가 지났거나 이미 종료된 과거 공지: <strong>{expiredDeleteIds.length}건</strong>
+                  <p className="text-sm text-slate-600 mt-1">
+                    기한이 지난 과거 공지 <strong className="text-slate-900">{expiredDeleteIds.length}건</strong>
                     {migrateCandidates.length > 0 && (
                       <>
                         {' '}
-                        · [1. AI 지식창고]로 옮기면 좋은 상시 규정: <strong>{migrateCandidates.length}건</strong>
+                        · 지식창고로 이동 권장하는 상시 규정{' '}
+                        <strong className="text-slate-900">{migrateCandidates.length}건</strong>
                       </>
                     )}
                   </p>
@@ -703,54 +682,54 @@ export default function OperationsAdmin() {
                     type="button"
                     onClick={() => handleBulkDeleteExpired(expiredDeleteIds)}
                     disabled={isCleaningUp}
-                    className="inline-flex items-center px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl shadow-2xs shrink-0 disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shrink-0 disabled:opacity-50 transition-colors whitespace-nowrap"
                   >
                     {isCleaningUp ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                     ) : (
-                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      <Trash2 className="w-4 h-4 mr-1.5" />
                     )}
-                    불필요한 과거 공지 {expiredDeleteIds.length}건 한 번에 지우기
+                    만료된 공지 {expiredDeleteIds.length}건 일괄 삭제
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xs border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex justify-between items-center bg-gray-50/60 dark:bg-neutral-900/50">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/70">
               <div>
-                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
-                  📋 등록된 긴급 공지 목록 ({notices.length}건)
+                <h3 className="text-lg font-bold text-slate-900">
+                  등록된 긴급 공지 목록 ({notices.length}건)
                 </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  AI가 각 공지의 <strong>종료일과 본문 날짜·내용</strong>을 자동으로 검수하여 삭제 또는 이동이 필요한 항목을 표시합니다.
+                <p className="text-sm text-slate-500 mt-0.5">
+                  AI 안내 중 상태인 공지만 현재 챗봇 답변에 반영됩니다.
                 </p>
               </div>
               <button
                 onClick={fetchNotices}
-                className="inline-flex items-center px-3 py-1.5 text-xs font-bold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors"
+                className="inline-flex items-center px-3.5 py-2 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 transition-colors whitespace-nowrap"
               >
-                <RefreshCw className="w-3.5 h-3.5 mr-1" /> 새로고침
+                <RefreshCw className="w-4 h-4 mr-1.5" /> 새로고침
               </button>
             </div>
 
             {loadingManage ? (
-              <div className="flex justify-center py-16">
-                <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+              <div className="flex justify-center py-20">
+                <Loader2 className="w-7 h-7 text-slate-500 animate-spin" />
               </div>
             ) : notices.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-                <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              <div className="text-center py-20 px-6">
+                <AlertCircle className="mx-auto h-10 w-10 text-slate-400 mb-3" />
+                <h3 className="text-base font-bold text-slate-900">
                   현재 등록된 긴급 공지가 없습니다
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  모든 시설이 평상시 기본 정보대로 정상 안내되고 있습니다.
+                <p className="mt-1.5 text-sm text-slate-500">
+                  모든 시설이 평상시 기본 정보(AI 지식창고) 기준으로 정상 안내되고 있습니다.
                 </p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-200 dark:divide-neutral-800">
+              <ul className="divide-y divide-slate-200">
                 {notices.map((notice) => {
                   const isActiveNow = checkIsCurrentlyActive(notice);
                   const audit = notice.audit;
@@ -758,97 +737,90 @@ export default function OperationsAdmin() {
                   return (
                     <li
                       key={notice.id}
-                      className={`p-5 transition-colors ${
+                      className={`p-6 transition-colors ${
                         editingId === notice.id
-                          ? 'bg-blue-50/50 dark:bg-blue-900/10'
+                          ? 'bg-slate-50'
                           : isActiveNow
-                          ? 'bg-white dark:bg-neutral-900'
-                          : 'bg-gray-50/70 dark:bg-neutral-900/40 opacity-85'
+                          ? 'bg-white'
+                          : 'bg-slate-50/50'
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center flex-wrap gap-2">
+                        <div className="flex items-center flex-wrap gap-2.5">
                           <button
                             type="button"
                             onClick={() => handleQuickToggleActive(notice)}
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold border transition-colors ${
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap ${
                               isActiveNow
-                                ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300'
-                                : 'bg-gray-200 text-gray-700 border-gray-300 hover:bg-gray-300 dark:bg-neutral-800 dark:text-gray-400'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
                             }`}
                             title="클릭하면 이 공지를 즉시 켜거나 끕니다"
                           >
-                            <Power className="w-3 h-3 mr-1" />
-                            {isActiveNow ? '🟢 현재 AI 안내 중 (클릭 시 끄기)' : '⚪ 안내 종료됨 (클릭 시 켜기)'}
+                            <Power className="w-3.5 h-3.5 mr-1.5" />
+                            {isActiveNow ? 'AI 안내 중 (클릭 시 종료)' : '안내 종료됨 (클릭 시 켜기)'}
                           </button>
-                          <h4 className="text-base font-extrabold text-gray-900 dark:text-white">
+                          <h4 className="text-lg font-bold text-slate-900">
                             {notice.title}
                           </h4>
                           {audit?.verdict === 'EXPIRED_DELETE' && (
-                            <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-red-100 text-red-800 border border-red-300">
-                              🗑️ 불필요/기간경과 (삭제 권장)
+                            <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+                              기한 경과 · 삭제 권장
                             </span>
                           )}
                           {audit?.verdict === 'MIGRATE_TO_KNOWLEDGE' && (
-                            <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-300">
-                              📚 상시 규정 (지식창고 이동 권장)
+                            <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+                              상시 규정 · 지식창고 이동 권장
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center flex-wrap gap-1.5 shrink-0">
+                        <div className="flex items-center flex-wrap gap-2 shrink-0">
                           {audit?.verdict === 'MIGRATE_TO_KNOWLEDGE' && (
                             <button
                               type="button"
                               onClick={() => handleMigrateToFacility(notice)}
                               disabled={migratingId === notice.id}
-                              className="inline-flex items-center px-2.5 py-1.5 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs disabled:opacity-50 transition-colors"
+                              className="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap"
                               title="이 상시 규정을 [1. AI 지식창고]에 정식 등록하고 긴급 공지에서는 지웁니다"
                             >
-                              {migratingId === notice.id ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                              ) : (
-                                <span className="mr-1">📚</span>
+                              {migratingId === notice.id && (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                               )}
-                              지식창고로 옮기고 지우기
+                              지식창고로 이관
                             </button>
                           )}
                           <button
                             onClick={() => handleEdit(notice)}
-                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 transition-colors whitespace-nowrap"
                           >
-                            <Edit2 className="w-3.5 h-3.5 mr-1" /> 내용 고치기
+                            <Edit2 className="w-3.5 h-3.5 mr-1.5" /> 수정
                           </button>
                           <button
                             onClick={() => notice.id && handleDelete(notice.id, notice.title)}
-                            className="inline-flex items-center px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors"
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-rose-600 bg-white hover:bg-rose-50 rounded-lg border border-slate-300 transition-colors whitespace-nowrap"
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-1" /> 지우기
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> 삭제
                           </button>
                         </div>
                       </div>
 
                       {audit && audit.verdict !== 'KEEP_ACTIVE' && (
-                        <div
-                          className={`mt-2.5 p-2.5 rounded-lg text-xs font-medium border ${
-                            audit.verdict === 'EXPIRED_DELETE'
-                              ? 'bg-red-50/80 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-300'
-                              : 'bg-indigo-50/80 border-indigo-200 text-indigo-800 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-300'
-                          }`}
-                        >
-                          🤖 <strong>AI 검수 의견:</strong> {audit.reason}
+                        <div className="mt-3 p-3.5 rounded-xl text-sm bg-slate-50 border border-slate-200 text-slate-700">
+                          <strong className="text-slate-900 font-semibold">AI 검수 의견:</strong>{' '}
+                          {audit.reason}
                         </div>
                       )}
 
-                      <div className="mt-3 text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-neutral-800 p-3.5 rounded-xl border border-gray-200/80 dark:border-neutral-700 whitespace-pre-wrap leading-relaxed">
+                      <div className="mt-4 text-[15px] text-slate-800 bg-slate-50 p-4 rounded-xl border border-slate-200 whitespace-pre-wrap leading-7">
                         {notice.content}
                       </div>
 
-                      <div className="mt-2.5 flex flex-wrap items-center text-xs text-gray-500 gap-4">
+                      <div className="mt-3 flex flex-wrap items-center text-sm text-slate-500 gap-4">
                         {notice.startDate || notice.endDate ? (
                           <div>
-                            <span className="font-bold text-gray-700 dark:text-gray-300 mr-1">
-                              📅 안내 기간:
+                            <span className="font-semibold text-slate-700 mr-1.5">
+                              적용 기간:
                             </span>
                             {notice.startDate
                               ? new Date(notice.startDate).toLocaleString('ko-KR')
@@ -859,11 +831,11 @@ export default function OperationsAdmin() {
                               : '계속'}
                           </div>
                         ) : audit?.detectedMaxDate ? (
-                          <span className="text-amber-700 font-bold">
-                            📅 종료일 미설정 (본문 감지 종료일: {audit.detectedMaxDate})
+                          <span className="text-slate-700 font-medium">
+                            종료일 미입력 (본문 감지 종료일: {audit.detectedMaxDate})
                           </span>
                         ) : (
-                          <span>♾️ 기간 제한 없음 (직접 끌 때까지 안내)</span>
+                          <span>기간 제한 없음 (직접 종료할 때까지 안내)</span>
                         )}
                       </div>
                     </li>
