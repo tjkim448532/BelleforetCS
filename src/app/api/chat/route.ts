@@ -181,12 +181,23 @@ export async function POST(req: Request) {
           // AI 마크다운 후처리 (스트리밍 완료 후 DB 저장 시에만 적용)
           let cleanAnswer = fullAnswer.replace(/\*\*/g, '').replace(/^\s*\*\s/gm, '- ');
 
-          // 백그라운드에서 로그 저장
+          const { classifyConversation } = await import('@/lib/cs-intelligence');
+          const cls = classifyConversation(question, cleanAnswer, 'web');
+
+          // 백그라운드에서 로그 저장 (자동 분류·의도·감정·로봇 학습용 메타데이터 포함)
           logRef.set({
             question,
             answer: cleanAnswer,
             contextUsed: similarDocs.map(d => d.id),
             ip: ip,
+            channel: 'web',
+            category: cls.category,
+            intentCode: cls.intentCode,
+            intentLabel: cls.intentLabel,
+            sentiment: cls.sentiment,
+            sentimentLabel: cls.sentimentLabel,
+            needsHumanHandoff: cls.needsHumanHandoff,
+            isResolved: cls.isResolved,
             timestamp: new Date().toISOString(),
           }).catch(err => console.error('Failed to save chat log:', err));
 

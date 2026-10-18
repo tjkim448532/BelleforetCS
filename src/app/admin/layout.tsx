@@ -67,8 +67,8 @@ export default function AdminLayout({
     {
       href: '/admin/logs',
       step: '3',
-      label: '고객 질문 & 오답노트',
-      subLabel: '대화 기록 · AI 대답 못한 질문',
+      label: '통합 인박스 & 로봇DB',
+      subLabel: '웹·카톡·AI전화 · 로봇데이터',
       icon: MessageSquare,
       activeColor: 'bg-indigo-50 border-indigo-600 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
     },

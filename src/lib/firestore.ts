@@ -11,6 +11,17 @@ export interface Facility {
   tags: string[];
   status: 'pending' | 'approved' | 'expired';
   type?: string;
+  robotSpecs?: {
+    priceAdult?: number | null;
+    priceChild?: number | null;
+    minHeightCm?: number | null;
+    rainOperation?: string;
+    petAllowed?: string;
+    operatingHours?: string;
+    closedDay?: string;
+    contactPhone?: string;
+    navigationZone?: string;
+  };
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -62,6 +73,17 @@ export interface ChatLog {
   ip?: string;
   timestamp: string;
   feedback?: 'up' | 'down';
+  channel?: 'web' | 'kakao' | 'voice';
+  externalUserId?: string;
+  callerPhone?: string;
+  category?: string;
+  intentCode?: string;
+  intentLabel?: string;
+  sentiment?: 'positive' | 'neutral' | 'urgent' | 'complaint';
+  sentimentLabel?: string;
+  needsHumanHandoff?: boolean;
+  isResolved?: boolean;
+  staffNote?: string;
 }
 
 const FACILITIES_COL = 'facilities';

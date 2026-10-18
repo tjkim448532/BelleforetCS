@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { upsertDocument, deleteDocument } from '@/lib/pinecone';
 import { mergeFacilityDescription } from '@/lib/gemini';
+import { extractRobotSpecsFromText } from '@/lib/cs-intelligence';
 
 export async function POST(req: Request) {
   try {
@@ -45,6 +46,14 @@ export async function POST(req: Request) {
       }
     }
 
+    const robotSpecs = extractRobotSpecsFromText({
+      name,
+      category: category || '기타',
+      location: location || '',
+      description: finalDescription,
+      seasonalDescription: finalSeasonalDescription,
+    });
+
     const facilityData: Record<string, unknown> = {
       name,
       category: category || '기타',
@@ -54,6 +63,7 @@ export async function POST(req: Request) {
       tags: tags || [],
       status: status || 'pending',
       type: type || 'facility',
+      robotSpecs,
       updatedAt: new Date().toISOString(),
     };
 
@@ -150,6 +160,14 @@ export async function PUT(req: Request) {
       }
     }
 
+    const robotSpecs = extractRobotSpecsFromText({
+      name,
+      category: category || '기타',
+      location: location || '',
+      description: finalDescription,
+      seasonalDescription: finalSeasonalDescription,
+    });
+
     const updatedFacility = {
       name,
       category: category || '기타',
@@ -159,6 +177,7 @@ export async function PUT(req: Request) {
       tags: tags || [],
       status: status || 'approved',
       type: type || 'facility',
+      robotSpecs,
       updatedAt: new Date().toISOString(),
     };
 

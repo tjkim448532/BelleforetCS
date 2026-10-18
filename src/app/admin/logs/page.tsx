@@ -1,893 +1,1706 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-  Download,
-  BarChart2,
-  ThumbsUp,
-  ThumbsDown,
-  Bot,
-  Plus,
-  PieChart as PieChartIcon,
+  MessageSquare,
   Search,
+  AlertTriangle,
+  CheckCircle2,
+  PlusCircle,
   X,
-  Edit3,
-  Save,
+  HelpCircle,
+  Sparkles,
+  PhoneCall,
+  Bot,
+  Download,
+  Copy,
+  Check,
+  Upload,
+  Volume2,
+  Mic,
+  MicOff,
+  Send,
+  RefreshCw,
+  Cpu,
+  ShieldCheck,
+  FileText,
 } from 'lucide-react';
-import { ChatLog } from '@/lib/firestore';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 
-const COLORS = [
-  '#16a34a',
-  '#3b82f6',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-];
+interface ChatLog {
+  id: string;
+  question: string;
+  answer: string;
+  timestamp: string;
+  channel?: 'web' | 'kakao' | 'voice' | 'naver';
+  externalUserId?: string;
+  callerPhone?: string;
+  category?: string;
+  intentCode?: string;
+  intentLabel?: string;
+  sentiment?: 'positive' | 'neutral' | 'negative' | 'urgent';
+  sentimentLabel?: string;
+  needsHumanHandoff?: boolean;
+  isResolved?: boolean;
+  staffNote?: string;
+}
 
-export default function LogsAdmin() {
+interface RobotSummaryData {
+  summary: {
+    totalLogs: number;
+    goldenLogsCount: number;
+    totalFacilities: number;
+    robotReadyFacilitiesCount: number;
+    channelCounts: Record<string, number>;
+    categoryCounts: Record<string, number>;
+    sentimentCounts: Record<string, number>;
+    needsHandoffCount: number;
+  };
+  sampleFacilities: Array<{
+    id: string;
+    title: string;
+    category: string;
+    robotSpecs?: {
+      navigationZone?: string;
+      priceAdult?: number | null;
+      priceChild?: number | null;
+      minHeightCm?: number | null;
+      rainOperation?: string;
+      petAllowed?: boolean | string | null;
+      operatingHours?: string;
+      closedDay?: string;
+      contactPhone?: string;
+    };
+  }>;
+}
+
+// AI가 답변하지 못했거나 죄송하다고 한 오답/미숙지 답변 자동 판별기
+function isUnansweredOrSorry(log: ChatLog): boolean {
+  if (log.needsHumanHandoff) return true;
+  if (log.sentiment === 'urgent' || log.sentiment === 'negative') return true;
+  const answer = log.answer || '';
+  const sorryKeywords = [
+    '확인이 어렵습니다',
+    '정보가 없습니다',
+    '찾을 수 없습니다',
+    '문의해 주시기 바랍니다',
+    '안내해 드리기 어렵습니다',
+    '정확한 안내가 어렵',
+    '데이터에 없',
+    '제공된 정보에',
+    '등록되어 있지 않',
+  ];
+  return sorryKeywords.some((kw) => answer.includes(kw));
+}
+
+export default function OmnichannelAndRobotCenterPage() {
+  const [activeMainTab, setActiveMainTab] = useState<'inbox' | 'kakao' | 'voice' | 'robot'>('inbox');
   const [logs, setLogs] = useState<ChatLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [channelFilter, setChannelFilter] = useState<'all' | 'alert' | 'kakao' | 'voice' | 'web'>('all');
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
-  // 필터 및 검색 상태
-  const [filterMode, setFilterMode] = useState<'all' | 'failed' | 'good'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  // [정답 가르치기] 모달 상태
+  const [teachingLog, setTeachingLog] = useState<ChatLog | null>(null);
+  const [teachCategory, setTeachCategory] = useState('자주묻는질문(FAQ)');
+  const [teachTitle, setTeachTitle] = useState('');
+  const [teachAnswer, setTeachAnswer] = useState('');
+  const [teachSubmitting, setTeachSubmitting] = useState(false);
 
-  // 삭제 상태
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // [상담원 메모] 모달 상태
+  const [noteLog, setNoteLog] = useState<ChatLog | null>(null);
+  const [staffNoteText, setStaffNoteText] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
 
-  // AI 오답노트 자동 제안 상태
-  const [analyzingSuggestions, setAnalyzingSuggestions] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
-  const [addingSuggestionIndex, setAddingSuggestionIndex] = useState<number | null>(null);
+  // [탭 2: 카카오톡 시뮬레이터 & 대화 흡수기] 상태
+  const [kakaoSimInput, setKakaoSimInput] = useState('');
+  const [kakaoSimMessages, setKakaoSimMessages] = useState<
+    Array<{
+      sender: 'user' | 'bot';
+      text: string;
+      quickReplies?: Array<{ label: string; messageText: string }>;
+      timestamp: string;
+    }>
+  >([
+    {
+      sender: 'bot',
+      text: '안녕하세요! 🌲 벨포레 리조트 공식 카카오톡 AI 컨시어지입니다.\n궁금하신 시설 요금, 운영시간, 우천 운행 여부를 카톡으로 편하게 물어보세요!',
+      quickReplies: [
+        { label: '🏎️ 루지 요금·키제한', messageText: '루지 성인 요금이랑 탑승 키 제한 알려줘' },
+        { label: '🌧️ 우천 시 운행여부', messageText: '오늘 비 오는데 마운틴카트랑 루지 운행하나요?' },
+        { label: '🍖 남도예담 운영시간', messageText: '남도예담 운영시간이랑 휴무일 알려줘' },
+        { label: '⛳ 골프장 그린피·캐디피', messageText: '블랙스톤 벨포레 골프장 주중 주말 그린피랑 캐디피 얼마야?' },
+      ],
+      timestamp: '방금 전',
+    },
+  ]);
+  const [kakaoSimSending, setKakaoSimSending] = useState(false);
 
-  // 초보자용 "이 질문 정답 바로 가르쳐주기" 모달 상태
-  const [teachModal, setTeachModal] = useState<{
-    question: string;
-    name: string;
-    category: string;
-    description: string;
-    saving: boolean;
+  // 카카오톡 대화 파일 흡수기 상태
+  const [rawKakaoText, setRawKakaoText] = useState('');
+  const [saveExtractedToRag, setSaveExtractedToRag] = useState(true);
+  const [ingestingKakao, setIngestingKakao] = useState(false);
+  const [ingestResult, setIngestResult] = useState<{
+    message: string;
+    extractedPairs: Array<{
+      question: string;
+      answer: string;
+      category: string;
+      intentLabel: string;
+    }>;
   } | null>(null);
+
+  // [탭 3: AI 전화 콜센터 체험기] 상태
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [isListeningMic, setIsListeningMic] = useState(false);
+  const [callerPhoneSim, setCallerPhoneSim] = useState('010-1234-5678');
+  const [voiceInputText, setVoiceInputText] = useState('');
+  const [voiceSending, setVoiceSending] = useState(false);
+  const [voiceTranscripts, setVoiceTranscripts] = useState<
+    Array<{
+      speaker: 'guest' | 'ai';
+      text: string;
+      smsPreview?: string;
+      intentLabel?: string;
+      time: string;
+    }>
+  >([]);
+
+  // [탭 4: CS 로봇 데이터셋 센터] 상태
+  const [robotData, setRobotData] = useState<RobotSummaryData | null>(null);
+  const [loadingRobot, setLoadingRobot] = useState(false);
+  const [upgradingDb, setUpgradingDb] = useState(false);
+
+  const originUrl = typeof window !== 'undefined' ? window.location.origin : 'https://belleforet-cs.vercel.app';
+
+  useEffect(() => {
+    fetchLogs();
+    fetchRobotSummary();
+  }, []);
 
   const fetchLogs = async () => {
     setLoading(true);
-    setError('');
     try {
       const res = await fetch('/api/admin/logs');
-      if (!res.ok) {
-        throw new Error('대화 기록을 불러오는데 실패했습니다.');
-      }
       const data = await res.json();
-      setLogs(data.logs || []);
-    } catch (err: unknown) {
-      setError((err as Error).message);
+      if (data.logs) {
+        setLogs(data.logs);
+      }
+    } catch (error) {
+      console.error('Failed to fetch logs:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchLogs();
-  }, []);
-
-  const formatDate = (isoString: string) => {
-    if (!isoString) return '-';
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return '-';
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-      d.getDate()
-    ).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(
-      d.getMinutes()
-    ).padStart(2, '0')}`;
-  };
-
-  const isFailedLog = (log: ChatLog) => {
-    return (
-      log.feedback === 'down' ||
-      (log.contextUsed && log.contextUsed.length === 0) ||
-      (log.answer || '').includes('제가 아는 정보가 없습니다') ||
-      (log.answer || '').includes('확인되지 않습니다') ||
-      (log.answer || '').includes('어렵습니다')
-    );
-  };
-
-  const failedLogs = useMemo(() => logs.filter(isFailedLog), [logs]);
-  const goodLogs = useMemo(() => logs.filter((l) => l.feedback === 'up'), [logs]);
-
-  const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      if (filterMode === 'failed' && !isFailedLog(log)) return false;
-      if (filterMode === 'good' && log.feedback !== 'up') return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (
-          (log.question || '').toLowerCase().includes(q) ||
-          (log.answer || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [logs, filterMode, searchQuery]);
-
-  // CSV 다운로드 기능
-  const exportToCSV = (onlyFailed = false) => {
-    const targetList = onlyFailed ? failedLogs : logs;
-    if (targetList.length === 0) {
-      alert('다운로드할 대화 내역이 없습니다.');
-      return;
-    }
-
-    const headers = ['일시', '고객 질문', 'AI 답변', '상태'];
-    const csvRows = targetList.map((log) => {
-      const date = formatDate(log.timestamp);
-      const question = `"${(log.question || '').replace(/"/g, '""')}"`;
-      const answer = `"${(log.answer || '').replace(/"/g, '""')}"`;
-      const status = isFailedLog(log) ? '보완필요(미답변/불만족)' : '정상응답';
-      return [date, question, answer, status].join(',');
-    });
-
-    const csvContent = [headers.join(','), ...csvRows].join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], {
-      type: 'text/csv;charset=utf-8;',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute(
-      'download',
-      `belleforet_${onlyFailed ? 'failed_questions' : 'chat_logs'}_${new Date()
-        .toISOString()
-        .slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 대화 기록을 삭제하시겠습니까?')) return;
-
+  const fetchRobotSummary = async () => {
+    setLoadingRobot(true);
     try {
-      const response = await fetch(`/api/admin/logs?id=${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('삭제 실패');
-
-      fetchLogs();
-      setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
-    } catch (error: unknown) {
-      alert((error as Error).message);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) return;
-    if (!confirm(`선택한 ${selectedIds.length}개의 대화 기록을 삭제하시겠습니까?`))
-      return;
-
-    setIsDeleting(true);
-    try {
-      const response = await fetch(
-        `/api/admin/logs?ids=${selectedIds.join(',')}`,
-        {
-          method: 'DELETE',
-        }
-      );
-      if (!response.ok) throw new Error('일괄 삭제 실패');
-
-      setSelectedIds([]);
-      fetchLogs();
-    } catch (error: unknown) {
-      alert((error as Error).message);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleAnalyzeSuggestions = async () => {
-    setAnalyzingSuggestions(true);
-    try {
-      const res = await fetch('/api/admin/logs/suggestions');
+      const res = await fetch('/api/admin/robot-dataset?format=summary');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setAiSuggestions(data.suggestions || []);
-      if (data.suggestions && data.suggestions.length === 0) {
-        alert('현재 보완이 필요한 미답변 질문이 없습니다.');
+      if (data.summary) {
+        setRobotData(data);
       }
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error) {
+      console.error('Failed to fetch robot summary:', error);
     } finally {
-      setAnalyzingSuggestions(false);
+      setLoadingRobot(false);
     }
   };
 
-  const handleAddSuggestion = async (suggestion: any, index: number) => {
-    setAddingSuggestionIndex(index);
-    try {
-      const payload = {
-        name: suggestion.suggestedName,
-        category: suggestion.suggestedCategory || '기타',
-        location: '',
-        description: suggestion.suggestedDescription,
-        tags: (suggestion.suggestedTags || '')
-          .split(',')
-          .map((t: string) => t.trim())
-          .filter(Boolean),
-        status: 'approved',
-      };
-
-      const response = await fetch('/api/admin/facility', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error('지식 추가 실패');
-
-      alert('✅ AI 지식창고에 추가되어 지금부터 챗봇이 대답할 수 있습니다!');
-      setAiSuggestions((prev) => prev.filter((_, i) => i !== index));
-    } catch (error: any) {
-      alert(error.message);
-    } finally {
-      setAddingSuggestionIndex(null);
-    }
+  const handleCopyUrl = (url: string, label: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(label);
+    setTimeout(() => setCopiedUrl(null), 2500);
   };
 
-  const handleSaveTeachModal = async (e: React.FormEvent) => {
+  // [정답 가르치기] 모달 열기
+  const openTeachModal = (log: ChatLog) => {
+    setTeachingLog(log);
+    setTeachCategory(log.category || '자주묻는질문(FAQ)');
+    setTeachTitle(log.question);
+    setTeachAnswer(
+      isUnansweredOrSorry(log)
+        ? `네, 고객님! 문의하신 "${log.question}"에 대해 안내해 드립니다.\n\n- 상세 내용: `
+        : log.answer
+    );
+  };
+
+  // [정답 가르치기] 저장 -> AI 지식창고(Facility + Pinecone) 등록 + 로그 해결 처리
+  const handleTeachSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teachModal) return;
-    setTeachModal((prev) => (prev ? { ...prev, saving: true } : null));
+    if (!teachTitle.trim() || !teachAnswer.trim()) return;
+
+    setTeachSubmitting(true);
     try {
       const res = await fetch('/api/admin/facility', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: teachModal.name.trim(),
-          category: teachModal.category,
-          location: '',
-          description: teachModal.description.trim(),
-          tags: ['고객질문보완'],
-          status: 'approved',
-          duplicateAction: 'merge',
+          name: `[상담학습] ${teachTitle.trim()}`,
+          category: teachCategory,
+          type: 'faq',
+          description: `[고객 자주 묻는 질문]\n질문: ${teachTitle.trim()}\n\n[공식 답변 및 안내]\n${teachAnswer.trim()}`,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '지식 등록 실패');
 
-      alert(
-        `✅ "${teachModal.name}" 지식이 성공적으로 학습되었습니다!\n이제 같은 질문이 들어오면 AI가 정확히 대답합니다.`
-      );
-      setTeachModal(null);
-    } catch (err: any) {
-      alert(err.message);
-      setTeachModal((prev) => (prev ? { ...prev, saving: false } : null));
+      if (res.ok && teachingLog) {
+        await fetch('/api/admin/robot-dataset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_staff_reply',
+            logId: teachingLog.id,
+            staffNote: `[AI 지식창고 학습 완료] ${teachAnswer.trim()}`,
+            isResolved: true,
+          }),
+        });
+        alert(
+          '🎉 AI 지식창고(RAG)와 로봇 학습 DB에 정답이 동시에 등록되었습니다!\n이제부터 웹·카카오톡·AI전화 어디서든 이 질문이 들어오면 방금 알려주신 정답으로 즉시 대답합니다.'
+        );
+        setTeachingLog(null);
+        fetchLogs();
+        fetchRobotSummary();
+      } else {
+        const data = await res.json();
+        alert(`오류: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to teach AI:', error);
+      alert('지식 등록 중 오류가 발생했습니다.');
+    } finally {
+      setTeachSubmitting(false);
     }
   };
 
-  // 일자별 질문 차트 데이터
-  const dailyData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    logs.forEach((log) => {
-      if (!log.timestamp) return;
-      const date = log.timestamp.split('T')[0];
-      counts[date] = (counts[date] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(-14)
-      .map(([date, count]) => ({ date: date.slice(5), count }));
-  }, [logs]);
-
-  // 핫 키워드 Top 5
-  const keywordData = useMemo(() => {
-    const stopWords = [
-      '있나요',
-      '어디에',
-      '어떻게',
-      '알려줘',
-      '무엇인가요',
-      '어디인가요',
-      '몇시까지',
-      '있나요?',
-      '어디서',
-      '어디',
-      '어떤',
-      '무슨',
-      '무엇',
-      '얼마인가요',
-      '되나요',
-      '안녕하세요',
-      '벨포레',
-      '리조트',
-      '알려주세요',
-      '궁금합니다',
-      '대한',
-      '대해',
-      '부탁드립니다',
-      '혹시',
-    ];
-    const wordCounts: Record<string, number> = {};
-
-    logs.forEach((log) => {
-      const rawWords = (log.question || '').split(/[\s,?.!]+/);
-      rawWords.forEach((w) => {
-        const word = w.replace(/(은|는|이|가|을|를|에|에서|의|로|으로)$/, '').trim();
-        if (word.length >= 2 && !stopWords.includes(word)) {
-          wordCounts[word] = (wordCounts[word] || 0) + 1;
-        }
+  // [상담원 메모] 저장
+  const handleSaveStaffNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteLog) return;
+    setNoteSaving(true);
+    try {
+      const res = await fetch('/api/admin/robot-dataset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_staff_reply',
+          logId: noteLog.id,
+          staffNote: staffNoteText.trim(),
+          isResolved: true,
+        }),
       });
-    });
+      if (res.ok) {
+        alert('✅ 상담원 조치 메모가 저장되고 [해결 완료] 처리되었습니다.');
+        setNoteLog(null);
+        fetchLogs();
+      }
+    } catch (error) {
+      console.error('Failed to save note:', error);
+    } finally {
+      setNoteSaving(false);
+    }
+  };
 
-    return Object.entries(wordCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([word, count]) => ({ name: word, value: count }));
-  }, [logs]);
+  // [탭 2] 실시간 카카오톡 웹훅 시뮬레이터 전송
+  const sendKakaoSimMessage = async (textToSend?: string) => {
+    const utterance = (textToSend ?? kakaoSimInput).trim();
+    if (!utterance || kakaoSimSending) return;
+
+    setKakaoSimInput('');
+    setKakaoSimSending(true);
+    setKakaoSimMessages((prev) => [
+      ...prev,
+      {
+        sender: 'user',
+        text: utterance,
+        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+
+    try {
+      const res = await fetch('/api/kakao/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userRequest: {
+            utterance,
+            user: { id: 'kakao_live_tester_01' },
+          },
+        }),
+      });
+      const data = await res.json();
+      const botText =
+        data?.template?.outputs?.[0]?.simpleText?.text ||
+        '응답을 불러오지 못했습니다.';
+      const quickReplies = data?.template?.quickReplies || [];
+
+      setKakaoSimMessages((prev) => [
+        ...prev,
+        {
+          sender: 'bot',
+          text: botText,
+          quickReplies,
+          timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+      // 통합 인박스 로그 새로고침
+      fetchLogs();
+      fetchRobotSummary();
+    } catch (error) {
+      console.error('Kakao simulation error:', error);
+    } finally {
+      setKakaoSimSending(false);
+    }
+  };
+
+  // [탭 2] 샘플 카카오톡 내보내기 텍스트 채우기
+  const loadSampleKakaoExport = () => {
+    setRawKakaoText(
+      `벨포레 리조트 고객상담 님과 카카오톡 대화\n저장한 날짜 : 2026-10-18 13:30\n\n--------------- 2026년 10월 18일 일요일 ---------------\n[고객 김민수] [오전 10:12] 안녕하세요 제 번호는 010-9876-5432 인데요, 강아지 데리고 벨포레 갈 건데 루지나 마운틴카트에 강아지 같이 탈 수 있나요?\n[벨포레 상담원] [오전 10:14] 안녕하세요 고객님! 루지와 마운틴카트 등 탑승형 레저시설은 안전상의 이유로 반려동물 동반 탑승이 불가합니다. 대신 벨포레 목장(일부 구역)과 산책로, 펫 포레스트에서는 반려견과 즐거운 시간을 보내실 수 있습니다.\n[고객 박지영] [오후 2:05] 오늘 비가 조금 내리는데 사계절썰매장이랑 회전목마 운영하나요?\n[벨포레 상담원] [오후 2:06] 고객님, 회전목마는 실내/지붕 구조 및 기상 상황에 따라 비교적 정상 운영되나, 사계절썰매장과 익스트림 루지는 노면 안전을 위해 우천 시 일시 운휴될 수 있습니다. 방문 전 1566-0162로 확인 부탁드립니다.`
+    );
+  };
+
+  // [탭 2] 카카오톡 대화 텍스트 자동 흡수 실행
+  const handleIngestKakaoExport = async () => {
+    if (!rawKakaoText.trim() || ingestingKakao) return;
+    setIngestingKakao(true);
+    setIngestResult(null);
+    try {
+      const res = await fetch('/api/admin/kakao/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText: rawKakaoText,
+          saveToKnowledgeBase: saveExtractedToRag,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIngestResult({
+          message: data.message,
+          extractedPairs: data.extractedPairs || [],
+        });
+        fetchLogs();
+        fetchRobotSummary();
+      } else {
+        alert(`오류: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Kakao ingest error:', error);
+      alert('카카오톡 대화 분석 중 오류가 발생했습니다.');
+    } finally {
+      setIngestingKakao(false);
+    }
+  };
+
+  // [탭 3] AI 전화 콜센터 음성 읽기(TTS)
+  const speakKoreanText = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    utterance.rate = 1.03;
+    utterance.pitch = 1.05;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // [탭 3] 전화 통화 시작 / 종료
+  const togglePhoneCall = () => {
+    if (isCallActive) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsCallActive(false);
+      setIsListeningMic(false);
+    } else {
+      setIsCallActive(true);
+      const greeting =
+        '안녕하세요, 벨포레 리조트 AI 보이스 컨시어지입니다. 객실, 레저 요금, 식당 운영시간 등 무엇을 도와드릴까요?';
+      setVoiceTranscripts([
+        {
+          speaker: 'ai',
+          text: greeting,
+          time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+      speakKoreanText(greeting);
+    }
+  };
+
+  // [탭 3] 전화 질문 전송 -> /api/voice/webhook 호출 -> 음성 출력
+  const sendVoiceQuestion = async (speechText?: string) => {
+    const query = (speechText ?? voiceInputText).trim();
+    if (!query || voiceSending) return;
+
+    if (!isCallActive) {
+      setIsCallActive(true);
+    }
+    setVoiceInputText('');
+    setVoiceSending(true);
+    setVoiceTranscripts((prev) => [
+      ...prev,
+      {
+        speaker: 'guest',
+        text: query,
+        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+
+    try {
+      const res = await fetch('/api/voice/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          speechText: query,
+          callerPhone: callerPhoneSim,
+        }),
+      });
+      const data = await res.json();
+      const spokenAnswer =
+        data.spokenAnswer || '죄송합니다. 다시 한 번 말씀해 주세요.';
+
+      setVoiceTranscripts((prev) => [
+        ...prev,
+        {
+          speaker: 'ai',
+          text: spokenAnswer,
+          smsPreview: data.followUpSmsText,
+          intentLabel: data.classification?.intentLabel,
+          time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+
+      speakKoreanText(spokenAnswer);
+      fetchLogs();
+      fetchRobotSummary();
+    } catch (error) {
+      console.error('Voice webhook error:', error);
+    } finally {
+      setVoiceSending(false);
+    }
+  };
+
+  // [탭 3] 브라우저 마이크 음성인식(STT) 시작
+  const startMicrophoneRecognition = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition =
+      (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
+        .SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert(
+        '현재 브라우저에서 마이크 음성 인식을 지원하지 않습니다. 아래의 [원클릭 음성 질문 버튼]이나 텍스트 입력창을 이용해 주세요!'
+      );
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition = new (SpeechRecognition as any)();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setIsListeningMic(true);
+    recognition.start();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setIsListeningMic(false);
+      sendVoiceQuestion(transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsListeningMic(false);
+    };
+
+    recognition.onend = () => {
+      setIsListeningMic(false);
+    };
+  };
+
+  // [탭 4] 전체 DB 로봇 규격으로 원클릭 현대화 실행
+  const handleUpgradeAllDbForRobot = async () => {
+    setUpgradingDb(true);
+    try {
+      const res = await fetch('/api/admin/robot-dataset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'upgrade_all_db' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`🎉 ${data.message}`);
+        fetchLogs();
+        fetchRobotSummary();
+      } else {
+        alert(`오류: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Upgrade DB error:', error);
+      alert('DB 현대화 중 오류가 발생했습니다.');
+    } finally {
+      setUpgradingDb(false);
+    }
+  };
+
+  // 통계 계산
+  const alertCount = logs.filter(isUnansweredOrSorry).length;
+  const kakaoCount = logs.filter((l) => l.channel === 'kakao').length;
+  const voiceCount = logs.filter((l) => l.channel === 'voice').length;
+  const webCount = logs.filter((l) => !l.channel || l.channel === 'web').length;
+
+  const filteredLogs = logs.filter((log) => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      (log.question || '').toLowerCase().includes(q) ||
+      (log.answer || '').toLowerCase().includes(q) ||
+      (log.intentLabel || '').toLowerCase().includes(q) ||
+      (log.category || '').toLowerCase().includes(q);
+    if (!matchesSearch) return false;
+
+    if (channelFilter === 'alert') return isUnansweredOrSorry(log);
+    if (channelFilter === 'kakao') return log.channel === 'kakao';
+    if (channelFilter === 'voice') return log.channel === 'voice';
+    if (channelFilter === 'web') return !log.channel || log.channel === 'web';
+    return true;
+  });
+
+  const getChannelBadge = (channel?: string) => {
+    if (channel === 'kakao') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-300 text-neutral-900 shadow-2xs">
+          💬 카카오톡 채널
+        </span>
+      );
+    }
+    if (channel === 'voice') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-purple-600 text-white shadow-2xs">
+          📞 AI 전화 콜센터
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-green-600 text-white shadow-2xs">
+        💻 홈페이지 웹 챗봇
+      </span>
+    );
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
-      {/* 상단 초보자 안내 배너 */}
-      <div className="bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-xs border border-indigo-200 dark:border-indigo-900/50">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+    <div className="space-y-6 pb-12">
+      {/* 1. 상단 헤더 & 4대 핵심 기능 탭 */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 shadow-xs border border-indigo-100 dark:border-neutral-800">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800 mb-2">
-              메뉴 3 · 상담 내역 및 AI 오답노트
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 mb-2">
+              차세대 옴니채널 CS & 로봇 데이터베이스 센터
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              💬 고객 질문 내역 &amp; AI 오답노트
+            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center">
+              <MessageSquare className="w-7 h-7 mr-2.5 text-indigo-600 shrink-0" />
+              통합 상담 인박스 (웹 · 카톡 · AI전화) & CS 로봇 DB
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              손님들이 챗봇에게 실제로 무엇을 물어봤는지 확인하고, <strong>AI가 몰라서 대답 못 한 질문은 [✏️ 정답 가르쳐주기] 버튼</strong>으로 바로 알려줄 수 있습니다.
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              고객이 <strong>홈페이지 챗봇, 카카오톡 채널, 전화 콜센터</strong>로 물어본 모든 질문을 한곳에서 모아서 분류하고, 향후 <strong>CS 안내 로봇 개발 기업</strong>에 즉시 납품할 수 있는 표준 데이터셋으로 자동 변환합니다.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => exportToCSV(true)}
-              disabled={failedLogs.length === 0}
-              className="inline-flex items-center px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs sm:text-sm font-bold transition-colors disabled:opacity-50"
-            >
-              <Download className="w-4 h-4 mr-1.5" />
-              미답변 질문만 엑셀 저장 ({failedLogs.length}건)
-            </button>
-            <button
-              onClick={() => exportToCSV(false)}
-              disabled={logs.length === 0}
-              className="inline-flex items-center px-3.5 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <Download className="w-4 h-4 mr-1.5" />
-              전체 대화 엑셀 저장
-            </button>
-            <button
-              onClick={fetchLogs}
-              disabled={loading}
-              className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-xl text-xs sm:text-sm font-bold text-white transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-              새로고침
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              fetchLogs();
+              fetchRobotSummary();
+            }}
+            className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 transition-colors self-start lg:self-center shrink-0"
+          >
+            <RefreshCw className="w-4 h-4 mr-1.5" />
+            최신 기록 새로고침
+          </button>
         </div>
 
-        {/* 한눈에 보는 3대 요약 카드 (클릭 시 바로 필터링) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-5 border-t border-gray-100 dark:border-neutral-800">
+        {/* 4대 메인 탭 네비게이션 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mt-6 pt-5 border-t border-gray-100 dark:border-neutral-800">
           <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            className={`text-left p-4 rounded-xl border transition-all ${
-              filterMode === 'all'
-                ? 'bg-gray-900 text-white border-gray-900 shadow-sm dark:bg-white dark:text-gray-900'
-                : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-900 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white'
+            onClick={() => setActiveMainTab('inbox')}
+            className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
+              activeMainTab === 'inbox'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-gray-50 dark:bg-neutral-800/70 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-neutral-700 hover:bg-gray-100'
             }`}
           >
-            <span className="text-xs font-bold opacity-80 block">1. 전체 고객 상담 건수 (클릭 시 전체보기)</span>
-            <span className="text-2xl font-extrabold mt-1 block">{logs.length}건</span>
+            <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
+            <div>
+              <div className="text-sm font-extrabold">1. 통합 상담 인박스</div>
+              <div className={`text-xs ${activeMainTab === 'inbox' ? 'text-indigo-100' : 'text-gray-500'}`}>
+                웹·카톡·전화 질문분류 & 오답노트
+              </div>
+            </div>
           </button>
 
           <button
-            type="button"
-            onClick={() => setFilterMode('failed')}
-            className={`text-left p-4 rounded-xl border transition-all ${
-              filterMode === 'failed'
-                ? 'bg-red-600 text-white border-red-700 shadow-sm'
-                : 'bg-red-50/70 hover:bg-red-100/80 border-red-200 text-red-900 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
+            onClick={() => setActiveMainTab('kakao')}
+            className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
+              activeMainTab === 'kakao'
+                ? 'bg-amber-400 text-neutral-950 border-amber-500 shadow-sm'
+                : 'bg-amber-50/60 dark:bg-neutral-800/70 text-gray-800 dark:text-gray-200 border-amber-200 dark:border-neutral-700 hover:bg-amber-100/60'
             }`}
           >
-            <span className="text-xs font-bold opacity-90 block">
-              2. 🚨 AI가 대답 못한 질문 (클릭 시 모아보기)
-            </span>
-            <span className="text-2xl font-extrabold mt-1 block">
-              {failedLogs.length}건
-              <span className="text-xs font-normal ml-2 opacity-85">
-                {failedLogs.length > 0 ? '👈 눌러서 확인해보세요!' : '(모두 잘 대답함)'}
-              </span>
-            </span>
+            <Sparkles className="w-5 h-5 mr-3 shrink-0" />
+            <div>
+              <div className="text-sm font-extrabold">2. 카카오톡 채널 연동</div>
+              <div className={`text-xs ${activeMainTab === 'kakao' ? 'text-neutral-800' : 'text-gray-500'}`}>
+                실시간 카톡 챗봇 & 대화파일 흡수
+              </div>
+            </div>
           </button>
 
           <button
-            type="button"
-            onClick={() => setFilterMode('good')}
-            className={`text-left p-4 rounded-xl border transition-all ${
-              filterMode === 'good'
-                ? 'bg-green-600 text-white border-green-700 shadow-sm'
-                : 'bg-green-50/70 hover:bg-green-100/80 border-green-200 text-green-900 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200'
+            onClick={() => setActiveMainTab('voice')}
+            className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
+              activeMainTab === 'voice'
+                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                : 'bg-purple-50/50 dark:bg-neutral-800/70 text-gray-800 dark:text-gray-200 border-purple-200 dark:border-neutral-700 hover:bg-purple-100/50'
             }`}
           >
-            <span className="text-xs font-bold opacity-90 block">
-              3. 👍 고객이 만족(좋아요) 누른 답변
-            </span>
-            <span className="text-2xl font-extrabold mt-1 block">{goodLogs.length}건</span>
+            <PhoneCall className="w-5 h-5 mr-3 shrink-0" />
+            <div>
+              <div className="text-sm font-extrabold">3. AI 전화 콜센터</div>
+              <div className={`text-xs ${activeMainTab === 'voice' ? 'text-purple-100' : 'text-gray-500'}`}>
+                음성으로 직접 통화 체험 & 연동
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveMainTab('robot')}
+            className={`flex items-center p-3.5 rounded-xl border text-left transition-all ${
+              activeMainTab === 'robot'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                : 'bg-emerald-50/50 dark:bg-neutral-800/70 text-gray-800 dark:text-gray-200 border-emerald-200 dark:border-neutral-700 hover:bg-emerald-100/50'
+            }`}
+          >
+            <Bot className="w-5 h-5 mr-3 shrink-0" />
+            <div>
+              <div className="text-sm font-extrabold">4. CS 로봇 데이터센터</div>
+              <div className={`text-xs ${activeMainTab === 'robot' ? 'text-emerald-100' : 'text-gray-500'}`}>
+                로봇 기업 납품용 DB 현대화·추출
+              </div>
+            </div>
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="p-4 bg-red-50 text-red-800 rounded-xl flex items-center border border-red-200">
-          <AlertCircle className="w-5 h-5 mr-2" />
-          {error}
-        </div>
-      )}
-
-      {/* AI 오답노트 자동 분석 배너 */}
-      {!loading && failedLogs.length > 0 && (
-        <div className="bg-indigo-50/80 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-5 rounded-2xl shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start">
-              <Bot className="h-7 w-7 text-indigo-600 dark:text-indigo-400 mr-3 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-base font-extrabold text-indigo-900 dark:text-indigo-200">
-                  🤖 AI 오답노트 자동 분석 도우미 ({failedLogs.length}건 감지됨)
-                </h3>
-                <p className="mt-1 text-xs sm:text-sm text-indigo-800 dark:text-indigo-300">
-                  오른쪽 버튼을 누르면 AI가 대답하지 못했던 질문들을 스스로 읽고, <strong>&quot;이런 지식을 추가하면 좋겠습니다&quot;</strong>라고 초안을 만들어 줍니다.
-                </p>
-              </div>
-            </div>
+      {/* ===================================================================== */}
+      {/* [탭 1] 통합 상담 인박스 (웹 · 카카오톡 · AI 전화) */}
+      {/* ===================================================================== */}
+      {activeMainTab === 'inbox' && (
+        <div className="space-y-5">
+          {/* 채널별 요약 카드 5개 */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <button
-              onClick={handleAnalyzeSuggestions}
-              disabled={analyzingSuggestions}
-              className="whitespace-nowrap inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-extrabold text-white transition-colors disabled:opacity-50 shrink-0"
+              onClick={() => setChannelFilter('all')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                channelFilter === 'all'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 hover:border-indigo-300'
+              }`}
             >
-              {analyzingSuggestions ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Bot className="w-4 h-4 mr-2" />
-              )}
-              {analyzingSuggestions ? 'AI가 오답 분석 중...' : 'AI에게 보완할 지식 추천받기'}
+              <div className={`text-xs font-bold ${channelFilter === 'all' ? 'text-indigo-100' : 'text-gray-500'}`}>
+                📬 전체 누적 상담
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{logs.length}건</div>
+            </button>
+
+            <button
+              onClick={() => setChannelFilter('alert')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                channelFilter === 'alert'
+                  ? 'bg-red-600 text-white border-red-600 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-red-200 dark:border-red-900/40 hover:border-red-400'
+              }`}
+            >
+              <div className={`text-xs font-bold ${channelFilter === 'alert' ? 'text-red-100' : 'text-red-600'}`}>
+                🚨 오답·불만 (확인필요)
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{alertCount}건</div>
+            </button>
+
+            <button
+              onClick={() => setChannelFilter('kakao')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                channelFilter === 'kakao'
+                  ? 'bg-amber-400 text-neutral-950 border-amber-500 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-amber-200 dark:border-amber-900/40 hover:border-amber-400'
+              }`}
+            >
+              <div className={`text-xs font-bold ${channelFilter === 'kakao' ? 'text-neutral-800' : 'text-amber-700'}`}>
+                💬 카카오톡 채널
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{kakaoCount}건</div>
+            </button>
+
+            <button
+              onClick={() => setChannelFilter('voice')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                channelFilter === 'voice'
+                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-purple-200 dark:border-purple-900/40 hover:border-purple-400'
+              }`}
+            >
+              <div className={`text-xs font-bold ${channelFilter === 'voice' ? 'text-purple-100' : 'text-purple-600'}`}>
+                📞 AI 전화 콜센터
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{voiceCount}건</div>
+            </button>
+
+            <button
+              onClick={() => setChannelFilter('web')}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                channelFilter === 'web'
+                  ? 'bg-green-600 text-white border-green-600 shadow-sm'
+                  : 'bg-white dark:bg-neutral-900 border-green-200 dark:border-green-900/40 hover:border-green-400'
+              }`}
+            >
+              <div className={`text-xs font-bold ${channelFilter === 'web' ? 'text-green-100' : 'text-green-600'}`}>
+                💻 홈페이지 챗봇
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{webCount}건</div>
             </button>
           </div>
 
-          {aiSuggestions.length > 0 && (
-            <div className="mt-5 pt-4 border-t border-indigo-200 dark:border-indigo-800 space-y-3">
-              <h4 className="text-sm font-extrabold text-indigo-900 dark:text-indigo-200">
-                ✨ AI가 추천하는 보완 지식 ({aiSuggestions.length}건) — 내용을 확인하고 [이 지식 추가하기]만 누르세요!
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {aiSuggestions.map((suggestion, idx) => (
+          {/* 검색창 */}
+          <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl shadow-xs border border-gray-200 dark:border-neutral-800 flex items-center">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="질문 내용, AI 답변, 질문 분류(예: 루지, 우천, 골프, 반려견)로 검색해 보세요..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-11 pr-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-xl bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* 대화 목록 */}
+          {loading ? (
+            <div className="p-12 text-center text-gray-500 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
+              상담 기록을 불러오는 중입니다...
+            </div>
+          ) : filteredLogs.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
+              <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+              <p className="text-base font-bold text-gray-900 dark:text-white">
+                해당 조건의 상담 기록이 없습니다!
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                상단 [2. 카카오톡 채널 연동] 또는 [3. AI 전화 콜센터] 탭에서 바로 카톡/전화를 테스트해 보세요.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredLogs.map((log) => {
+                const isSorry = isUnansweredOrSorry(log);
+                return (
                   <div
-                    key={idx}
-                    className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-indigo-200 dark:border-indigo-800 flex flex-col justify-between"
+                    key={log.id}
+                    className={`bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-xs border transition-all ${
+                      log.isResolved
+                        ? 'border-emerald-300 dark:border-emerald-800/60'
+                        : isSorry
+                        ? 'border-red-300 dark:border-red-800/70 ring-1 ring-red-100 dark:ring-red-900/20'
+                        : 'border-gray-200 dark:border-neutral-800'
+                    }`}
                   >
-                    <div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 mb-2">
-                        원인: {suggestion.problem}
-                      </span>
-                      <h5 className="text-base font-extrabold text-gray-900 dark:text-white">
-                        {suggestion.suggestedName}
-                      </h5>
-                      <span className="text-xs text-gray-500 bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded mt-1 inline-block">
-                        분류: {suggestion.suggestedCategory}
-                      </span>
-                      <p className="mt-2.5 text-xs sm:text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 p-3 rounded-lg">
-                        {suggestion.suggestedDescription}
-                      </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-gray-100 dark:border-neutral-800">
+                      <div className="flex items-center flex-wrap gap-2">
+                        {/* 1. 유입 채널 배지 */}
+                        {getChannelBadge(log.channel)}
+
+                        {/* 2. 자동 분류된 의도(Intent) 배지 */}
+                        {log.intentLabel && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            🏷️ [{log.category || '일반'}] {log.intentLabel}
+                          </span>
+                        )}
+
+                        {/* 3. 감정/상태 배지 */}
+                        {log.isResolved ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            ✅ 상담원 확인·학습 완료
+                          </span>
+                        ) : isSorry ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                            <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+                            {log.sentimentLabel || 'AI 답변 미흡 / 상담원 확인 필요'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-300">
+                            {log.sentimentLabel || '🙂 정상 자동 응대'}
+                          </span>
+                        )}
+
+                        {log.callerPhone && (
+                          <span className="text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded-md">
+                            발신: {log.callerPhone}
+                          </span>
+                        )}
+
+                        <span className="text-xs text-gray-400">
+                          {new Date(log.timestamp).toLocaleString('ko-KR')}
+                        </span>
+                      </div>
+
+                      {/* 우측 액션 버튼 2종 */}
+                      <div className="flex items-center gap-2 self-start sm:self-center">
+                        <button
+                          onClick={() => openTeachModal(log)}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors shadow-2xs ${
+                            isSorry && !log.isResolved
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                          }`}
+                        >
+                          <PlusCircle className="w-3.5 h-3.5 mr-1" />
+                          AI에게 정답 가르치기
+                        </button>
+                        <button
+                          onClick={() => {
+                            setNoteLog(log);
+                            setStaffNoteText(log.staffNote || '');
+                          }}
+                          className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-neutral-800 dark:text-gray-300"
+                        >
+                          📝 메모/해결체크
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleAddSuggestion(suggestion, idx)}
-                      disabled={addingSuggestionIndex === idx}
-                      className="mt-3 w-full inline-flex justify-center items-center px-4 py-2 text-xs sm:text-sm font-extrabold rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {addingSuggestionIndex === idx ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> AI에 학습 중...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-1.5" /> 이 지식 바로 추가하기
-                        </>
+
+                    {/* 질문 & 답변 본문 */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-start space-x-2.5">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 shrink-0 mt-0.5">
+                          고객 질문
+                        </span>
+                        <p className="text-base font-bold text-gray-900 dark:text-white">
+                          {log.question}
+                        </p>
+                      </div>
+
+                      <div className="flex items-start space-x-2.5 bg-gray-50 dark:bg-neutral-800/60 p-3.5 rounded-xl border border-gray-100 dark:border-neutral-800">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 shrink-0 mt-0.5">
+                          AI 답변
+                        </span>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                          {log.answer}
+                        </p>
+                      </div>
+
+                      {log.staffNote && (
+                        <div className="flex items-start space-x-2.5 bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-emerald-600 text-white shrink-0">
+                            상담원 조치
+                          </span>
+                          <p className="text-xs font-medium text-emerald-900 dark:text-emerald-200 whitespace-pre-wrap">
+                            {log.staffNote}
+                          </p>
+                        </div>
                       )}
-                    </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* [탭 2] 카카오톡 채널 실시간 연동 (Webhook) & 카톡 대화파일 흡수기 */}
+      {/* ===================================================================== */}
+      {activeMainTab === 'kakao' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* 좌측 (7칸): 실시간 카카오톡 챗봇 시뮬레이터 & 웹훅 연결 주소 */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* 1. 공식 웹훅 주소 안내 카드 */}
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-amber-200 dark:border-neutral-800 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-amber-300 text-neutral-900">
+                  방법 2 · 실시간 카카오톡 채널 공식 연동 (Webhook)
+                </span>
+                <span className="text-xs font-bold text-green-600 flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+                  웹훅 서버 가동 중
+                </span>
+              </div>
+              <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                카카오톡 채널과 우리 앱을 연결하는 전용 주소 (Skill URL)
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                카카오 비즈니스(카카오 i 오픈빌더) 관리자 화면의 <strong>[스킬(Skill) URL]</strong> 칸에 아래 주소를 복사해서 붙여넣기만 하면, 고객이 카카오톡으로 질문할 때 우리 AI가 1초 만에 대답하고 모든 대화가 <strong>[1. 통합 상담 인박스]</strong>에 실시간 저장됩니다.
+              </p>
+
+              <div className="mt-4 flex items-center gap-2 bg-gray-50 dark:bg-neutral-800 p-3 rounded-xl border border-gray-200 dark:border-neutral-700">
+                <code className="text-xs sm:text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400 flex-1 truncate">
+                  {originUrl}/api/kakao/webhook
+                </code>
+                <button
+                  onClick={() => handleCopyUrl(`${originUrl}/api/kakao/webhook`, 'kakao')}
+                  className="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-extrabold bg-amber-400 hover:bg-amber-500 text-neutral-950 shrink-0 transition-colors"
+                >
+                  {copiedUrl === 'kakao' ? (
+                    <>
+                      <Check className="w-4 h-4 mr-1" /> 복사 완료!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-1" /> 주소 복사하기
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* 2. 실시간 카카오톡 챗봇 라이브 체험기 */}
+            <div className="bg-[#B2C7DA] dark:bg-neutral-900 rounded-2xl p-5 border border-amber-300 dark:border-neutral-800 shadow-sm">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-black/10 dark:border-neutral-800">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-300 flex items-center justify-center font-extrabold text-neutral-900 shadow-2xs">
+                    카톡
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-neutral-900 dark:text-white">
+                      벨포레 리조트 카카오톡 채널 (실시간 연동 테스트)
+                    </h3>
+                    <p className="text-xs text-neutral-700 dark:text-gray-400">
+                      여기서 메시지를 보내면 실제 카카오톡 웹훅 서버가 작동하며 [통합 인박스]에 즉시 기록됩니다!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 카톡 대화창 영역 */}
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1 mb-4">
+                {kakaoSimMessages.map((msg, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <div
+                      className={`flex ${
+                        msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-2xs whitespace-pre-wrap leading-relaxed ${
+                          msg.sender === 'user'
+                            ? 'bg-[#FEE500] text-neutral-900 font-semibold rounded-tr-xs'
+                            : 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-tl-xs'
+                        }`}
+                      >
+                        {msg.text}
+                        <div className="text-[10px] opacity-60 mt-1 text-right">
+                          {msg.timestamp}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 퀵리플라이 버튼들 */}
+                    {msg.sender === 'bot' && msg.quickReplies && msg.quickReplies.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pl-1">
+                        {msg.quickReplies.map((qr, qIdx) => (
+                          <button
+                            key={qIdx}
+                            onClick={() => sendKakaoSimMessage(qr.messageText)}
+                            disabled={kakaoSimSending}
+                            className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/90 hover:bg-amber-300 text-neutral-800 shadow-2xs border border-black/10 transition-colors"
+                          >
+                            {qr.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
+                {kakaoSimSending && (
+                  <div className="flex justify-start">
+                    <div className="bg-white dark:bg-neutral-800 rounded-2xl px-4 py-2.5 text-xs font-bold text-gray-500">
+                      💬 벨포레 AI가 카카오톡 답변을 작성하고 있습니다...
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 카톡 입력창 */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendKakaoSimMessage();
+                }}
+                className="flex gap-2 bg-white dark:bg-neutral-800 p-2 rounded-xl shadow-xs"
+              >
+                <input
+                  type="text"
+                  value={kakaoSimInput}
+                  onChange={(e) => setKakaoSimInput(e.target.value)}
+                  placeholder="카카오톡으로 물어볼 질문을 입력하세요 (예: 애견 동반 가능한가요?)"
+                  className="flex-1 px-3 py-2 text-sm bg-transparent text-gray-900 dark:text-white focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={kakaoSimSending || !kakaoSimInput.trim()}
+                  className="inline-flex items-center px-4 py-2 rounded-lg text-xs font-extrabold bg-[#FEE500] hover:bg-amber-400 text-neutral-950 disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5 mr-1.5" />
+                  카톡 전송
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* 우측 (5칸): 방법 1 — 카카오톡 대화 내보내기 파일(.txt) 자동 흡수기 */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800 shadow-xs">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 mb-2">
+                방법 1 · 과거 카카오톡 상담 내역 자동 흡수기
+              </span>
+              <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                카카오톡 [대화 내보내기] 텍스트 붙여넣기
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                기존에 직원들이 카카오톡으로 상담했던 대화방에서 <strong>[대화 내용 내보내기]</strong> 한 텍스트를 아래에 붙여넣으면, AI가 <strong>고객 전화번호(010-****-****)를 자동 마스킹</strong>하고 핵심 질문·답변만 발라내어 우리 DB에 자동으로 쌓아줍니다!
+              </p>
+
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={loadSampleKakaoExport}
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5 mr-1.5" />
+                  샘플 카카오톡 대화 불러오기 (1초 테스트)
+                </button>
+
+                <label className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 cursor-pointer">
+                  <Upload className="w-3.5 h-3.5 mr-1.5" />
+                  .txt 파일 선택
+                  <input
+                    type="file"
+                    accept=".txt,.csv"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const text = await file.text();
+                        setRawKakaoText(text);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              <textarea
+                rows={8}
+                value={rawKakaoText}
+                onChange={(e) => setRawKakaoText(e.target.value)}
+                placeholder="여기에 카카오톡 대화 내용을 붙여넣으세요..."
+                className="mt-3 block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-xs font-mono bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+              />
+
+              <label className="flex items-center space-x-2 mt-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveExtractedToRag}
+                  onChange={(e) => setSaveExtractedToRag(e.target.checked)}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>추출된 상담 Q&A를 AI 지식창고(RAG)에도 즉시 학습시키기</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleIngestKakaoExport}
+                disabled={ingestingKakao || !rawKakaoText.trim()}
+                className="mt-4 w-full py-3 px-4 rounded-xl text-sm font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm transition-colors flex items-center justify-center"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {ingestingKakao
+                  ? '개인정보 비식별화 및 Q&A 추출 중...'
+                  : '카카오톡 대화 분석해서 우리 DB에 넣기'}
+              </button>
+
+              {ingestResult && (
+                <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
+                  <div className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">
+                    ✅ {ingestResult.message}
+                  </div>
+                  {ingestResult.extractedPairs.map((pair, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-emerald-100 dark:border-neutral-800 text-xs space-y-1"
+                    >
+                      <div className="font-bold text-indigo-600">
+                        [{pair.category}] {pair.intentLabel}
+                      </div>
+                      <div className="font-bold text-gray-900 dark:text-white">
+                        Q. {pair.question}
+                      </div>
+                      <div className="text-gray-600 dark:text-gray-400">
+                        A. {pair.answer}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* [탭 3] AI 전화 콜센터 체험 & 보이스 게이트웨이 연동 */}
+      {/* ===================================================================== */}
+      {activeMainTab === 'voice' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* 좌측 (7칸): 브라우저 실시간 AI 전화 통화 체험기 */}
+          <div className="lg:col-span-7 bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-purple-200 dark:border-neutral-800 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-neutral-800">
+              <div>
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 mb-1.5">
+                  AI 보이스 컨시어지 (STT ➔ 초고속 RAG ➔ TTS 음성 응답)
+                </span>
+                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center">
+                  📞 벨포레 AI 전화 콜센터 실시간 체험기
+                </h2>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  스피커 볼륨을 켜고 <strong>[전화 걸기]</strong>나 아래 <strong>[원클릭 음성 질문]</strong>을 눌러보세요! AI 상담원이 실제 목소리로 대답하고 알림톡 문자까지 준비합니다.
+                </p>
+              </div>
+
+              <button
+                onClick={togglePhoneCall}
+                className={`inline-flex items-center px-5 py-3 rounded-2xl text-sm font-extrabold shadow-sm transition-all shrink-0 ${
+                  isCallActive
+                    ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+              >
+                <PhoneCall className="w-4 h-4 mr-2" />
+                {isCallActive ? '통화 종료하기' : '벨포레 AI 콜센터 전화 걸기'}
+              </button>
+            </div>
+
+            {/* 원클릭 음성 질문 테스트 버튼 */}
+            <div>
+              <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                👇 마이크가 없어도 아래 버튼을 누르면 고객이 전화로 말한 것처럼 즉시 AI 목소리로 대답합니다:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  '오늘 비가 오는데 루지랑 마운틴카트 타나요?',
+                  '남도예담 식당 운영시간이랑 전화번호 알려주세요',
+                  '강아지 데리고 갈 건데 목장 입장 가능한가요?',
+                  '블랙스톤 골프장 주말 그린피랑 캐디피 얼마예요?',
+                ].map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendVoiceQuestion(q)}
+                    disabled={voiceSending}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200 border border-purple-200 dark:border-purple-800 transition-colors"
+                  >
+                    🎙️ &ldquo;{q}&rdquo;
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 통화 대화창 */}
+            <div className="bg-gray-50 dark:bg-neutral-800/70 rounded-2xl p-4 min-h-64 max-h-96 overflow-y-auto space-y-3 border border-gray-200 dark:border-neutral-800">
+              {voiceTranscripts.length === 0 ? (
+                <div className="text-center py-14 text-gray-400 text-sm">
+                  <PhoneCall className="w-10 h-10 mx-auto mb-2 text-purple-400 opacity-70" />
+                  위쪽의 <strong>[벨포레 AI 콜센터 전화 걸기]</strong> 또는 <strong>[🎙️ 원클릭 질문 버튼]</strong>을 눌러 통화를 시작해 보세요!
+                </div>
+              ) : (
+                voiceTranscripts.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex flex-col ${
+                      item.speaker === 'guest' ? 'items-end' : 'items-start'
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-2xl p-3.5 text-sm shadow-2xs ${
+                        item.speaker === 'guest'
+                          ? 'bg-purple-600 text-white font-semibold'
+                          : 'bg-white dark:bg-neutral-900 text-gray-900 dark:text-white border border-purple-100 dark:border-neutral-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="text-[11px] font-extrabold opacity-75">
+                          {item.speaker === 'guest' ? '👤 전화 건 고객님' : '👩‍💼 벨포레 AI 보이스 컨시어지'}
+                        </span>
+                        {item.speaker === 'ai' && (
+                          <button
+                            type="button"
+                            onClick={() => speakKoreanText(item.text)}
+                            className="inline-flex items-center text-[11px] font-bold text-purple-600 hover:underline"
+                          >
+                            <Volume2 className="w-3.5 h-3.5 mr-0.5" /> 다시 듣기
+                          </button>
+                        )}
+                      </div>
+                      <p className="leading-relaxed">{item.text}</p>
+
+                      {item.smsPreview && (
+                        <div className="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-neutral-800 text-xs text-gray-600 dark:text-gray-400 bg-amber-50/70 dark:bg-neutral-800 p-2.5 rounded-xl">
+                          <div className="font-extrabold text-amber-800 dark:text-amber-300 mb-1">
+                            📲 통화 종료 후 고객 휴대폰({callerPhoneSim})으로 자동 발송할 요약 문자:
+                          </div>
+                          <div className="whitespace-pre-wrap text-[11px]">{item.smsPreview}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              {voiceSending && (
+                <div className="text-xs font-bold text-purple-600 animate-pulse">
+                  📞 AI 콜센터가 지식을 검색하여 음성 답변을 생성하고 있습니다...
+                </div>
+              )}
+            </div>
+
+            {/* 마이크 버튼 + 직접 입력창 */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendVoiceQuestion();
+              }}
+              className="flex gap-2"
+            >
+              <button
+                type="button"
+                onClick={startMicrophoneRecognition}
+                className={`inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shrink-0 ${
+                  isListeningMic
+                    ? 'bg-red-600 text-white animate-pulse'
+                    : 'bg-purple-100 hover:bg-purple-200 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200'
+                }`}
+              >
+                {isListeningMic ? (
+                  <>
+                    <MicOff className="w-4 h-4 mr-1.5" /> 듣고 있습니다...
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4 mr-1.5" /> 마이크로 말하기
+                  </>
+                )}
+              </button>
+              <input
+                type="text"
+                value={voiceInputText}
+                onChange={(e) => setVoiceInputText(e.target.value)}
+                placeholder="전화로 물어볼 내용을 입력하거나 [마이크로 말하기]를 누르세요..."
+                className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-sm text-gray-900 dark:text-white"
+              />
+              <button
+                type="submit"
+                disabled={voiceSending || !voiceInputText.trim()}
+                className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-extrabold bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 shrink-0"
+              >
+                음성 응답 듣기
+              </button>
+            </form>
+          </div>
+
+          {/* 우측 (5칸): 실제 전화망(SIP / Twilio / AI 보이스봇) 연동 규격 */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800 shadow-xs space-y-4">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800">
+                실제 리조트 대표전화 연동 규격 (Twilio / SIP / KT AI콜센터 호환)
+              </span>
+              <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
+                오는 전화를 AI가 직접 받는 공식 Voice Webhook
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                우리 앱에는 이미 통신사 보이스 게이트웨이(Twilio Voice, SIP Trunking, 클라우드 콜센터)와 직결할 수 있는 <strong>양방향 음성 웹훅(TwiML XML 및 JSON 동시 지원)</strong>이 탑재되어 있습니다.
+              </p>
+
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800 p-3 rounded-xl border border-gray-200 dark:border-neutral-700">
+                <code className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 flex-1 truncate">
+                  {originUrl}/api/voice/webhook
+                </code>
+                <button
+                  onClick={() => handleCopyUrl(`${originUrl}/api/voice/webhook`, 'voice')}
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-extrabold bg-purple-600 hover:bg-purple-700 text-white shrink-0"
+                >
+                  {copiedUrl === 'voice' ? '복사됨!' : '주소 복사'}
+                </button>
+              </div>
+
+              <div className="space-y-2.5 pt-2 text-xs text-gray-600 dark:text-gray-400">
+                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-neutral-800 border border-purple-100 dark:border-neutral-700">
+                  <div className="font-extrabold text-purple-900 dark:text-purple-300">
+                    1단계: 고객 전화 수신 & 음성 인식 (STT)
+                  </div>
+                  <p className="mt-0.5">
+                    고객이 리조트로 전화를 걸어 말하면 통신사 게이트웨이가 음성을 텍스트로 변환해 위 주소로 전달합니다.
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-neutral-800 border border-purple-100 dark:border-neutral-700">
+                  <div className="font-extrabold text-purple-900 dark:text-purple-300">
+                    2단계: 0.8초 초고속 RAG 검색 & 구어체 변환
+                  </div>
+                  <p className="mt-0.5">
+                    특수기호나 표를 제거하고 귀로 듣기 가장 편한 2~3문장 호텔리어 구어체로 답변을 만들어 읽어줍니다.
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-neutral-800 border border-purple-100 dark:border-neutral-700">
+                  <div className="font-extrabold text-purple-900 dark:text-purple-300">
+                    3단계: 불만/예약변경 감지 시 즉시 인간 상담원 연결
+                  </div>
+                  <p className="mt-0.5">
+                    환불·컴플레인 등 민감한 전화는 AI가 자동 감지하여 내선 상담원에게 즉시 호전환(Call Transfer)하고 통합 인박스에 🚨긴급 표시를 남깁니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* [탭 4] CS 로봇 개발용 DB 현대화 & 표준 데이터셋 추출 센터 */}
+      {/* ===================================================================== */}
+      {activeMainTab === 'robot' && (
+        <div className="space-y-6">
+          {/* 상단: 로봇 DB 현대화 & 2대 표준 파일 다운로드 */}
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-emerald-200 dark:border-neutral-800 shadow-xs">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-neutral-800">
+              <div>
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 mb-2">
+                  Robotics & Embodied AI Standard Schema v2.0
+                </span>
+                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center">
+                  <Bot className="w-6 h-6 mr-2 text-emerald-600" />
+                  CS 안내 로봇 개발 기업 납품용 데이터베이스 센터
+                </h2>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 max-w-3xl leading-relaxed">
+                  로봇 전문 기업(LG 클로이, 베어로보틱스 등)이 벨포레 전용 CS 로봇을 제작할 때는 줄글 텍스트가 아닌 <strong>① 정형 시설 스펙(숫자형 요금, 키 제한 cm, 우천 운행 코드, 자율주행 구역 Zone)</strong>과 <strong>② 의도(Intent)가 분류된 Golden Q&A 학습셋(.jsonl)</strong>이 필요합니다. 아래 버튼으로 언제든 최신 로봇 데이터셋을 추출하세요.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 shrink-0">
+                <button
+                  onClick={handleUpgradeAllDbForRobot}
+                  disabled={upgradingDb}
+                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm disabled:opacity-50 transition-colors"
+                >
+                  <Cpu className="w-4 h-4 mr-1.5" />
+                  {upgradingDb
+                    ? '전체 DB 로봇 규격 변환 중...'
+                    : '⚡ 전체 DB 로봇 규격으로 원클릭 동기화'}
+                </button>
+
+                <a
+                  href="/api/admin/robot-dataset?format=jsonl"
+                  download
+                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  1. 로봇 학습용 Q&A 데이터셋 (.jsonl) 다운로드
+                </a>
+
+                <a
+                  href="/api/admin/robot-dataset?format=specs"
+                  download
+                  className="inline-flex items-center px-4 py-3 rounded-xl text-xs font-extrabold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 shadow-sm transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  2. 로봇 자율주행·요금 정형 스펙 (.json) 다운로드
+                </a>
+              </div>
+            </div>
+
+            {/* 로봇 데이터 준비 현황 KPI */}
+            {loadingRobot || !robotData ? (
+              <div className="py-8 text-center text-sm text-gray-500">
+                로봇 데이터베이스 현황을 분석하고 있습니다...
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+                <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-neutral-800 border border-emerald-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    🤖 로봇 정형스펙 완비 시설
+                  </div>
+                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                    {robotData.summary.robotReadyFacilitiesCount} / {robotData.summary.totalFacilities}개
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-1">
+                    자율주행 Zone · 숫자요금 · 키제한 자동 구조화
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-neutral-800 border border-indigo-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                    🧠 로봇 파인튜닝 Golden 대화셋
+                  </div>
+                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                    {robotData.summary.goldenLogsCount}건
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-1">
+                    검증 완료된 고품질 고객 질문·답변 쌍
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-neutral-800 border border-amber-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                    🏷️ 자동 분류된 고객 질문 카테고리
+                  </div>
+                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                    {Object.keys(robotData.summary.categoryCounts || {}).length}개 분야
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-1 truncate">
+                    {Object.entries(robotData.summary.categoryCounts || {})
+                      .map(([k, v]) => `${k}(${v})`)
+                      .join(', ') || '집계 중'}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-neutral-800 border border-blue-200 dark:border-neutral-700">
+                  <div className="text-xs font-bold text-blue-800 dark:text-blue-300 flex items-center">
+                    <ShieldCheck className="w-4 h-4 mr-1" /> 개인정보 비식별화 보호
+                  </div>
+                  <div className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+                    100% 적용
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-1">
+                    전화번호·계좌·이메일 자동 마스킹 완료
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 하단: 시설별 로봇 정형 스펙(Robot Specs) 실시간 미리보기 테이블 */}
+          {robotData && robotData.sampleFacilities && (
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800 shadow-xs">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-1">
+                🔍 시설별 로봇 정형 데이터(Robot-Ready Structured Specs) 미리보기
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                시설 설명글을 수정하거나 홈페이지 동기화가 돌 때마다 AI가 아래의 로봇 전용 정형 필드를 자동으로 추출·갱신합니다.
+              </p>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-neutral-800 text-gray-500 font-extrabold bg-gray-50 dark:bg-neutral-800/60">
+                      <th className="py-3 px-3 rounded-tl-xl">시설명</th>
+                      <th className="py-3 px-3">로봇 주행구역 (Zone)</th>
+                      <th className="py-3 px-3">성인 요금(숫자)</th>
+                      <th className="py-3 px-3">소인 요금(숫자)</th>
+                      <th className="py-3 px-3">신장 제한</th>
+                      <th className="py-3 px-3">우천 시 운행</th>
+                      <th className="py-3 px-3">반려견 동반</th>
+                      <th className="py-3 px-3 rounded-tr-xl">운영시간 / 연락처</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
+                    {robotData.sampleFacilities.map((fac) => {
+                      const s = fac.robotSpecs || {};
+                      return (
+                        <tr key={fac.id} className="hover:bg-gray-50/80 dark:hover:bg-neutral-800/40">
+                          <td className="py-3 px-3 font-extrabold text-gray-900 dark:text-white">
+                            [{fac.category}] {fac.title}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                            {s.navigationZone || '-'}
+                          </td>
+                          <td className="py-3 px-3 font-bold">
+                            {s.priceAdult != null ? `${s.priceAdult.toLocaleString()}원` : '-'}
+                          </td>
+                          <td className="py-3 px-3">
+                            {s.priceChild != null ? `${s.priceChild.toLocaleString()}원` : '-'}
+                          </td>
+                          <td className="py-3 px-3">
+                            {s.minHeightCm != null ? `${s.minHeightCm}cm 이상` : '제한없음'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
+                              {s.rainOperation || 'WEATHER_DEPENDENT'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            {s.petAllowed === true || s.petAllowed === '동반가능'
+                              ? '🐶 동반가능'
+                              : s.petAllowed === '케이지/유모차필수'
+                              ? '🐶 케이지/유모차필수'
+                              : s.petAllowed === false || s.petAllowed === '동반불가'
+                              ? '🚫 동반불가'
+                              : s.petAllowed || '-'}
+                          </td>
+                          <td className="py-3 px-3 text-gray-500">
+                            {s.operatingHours || '-'} {s.contactPhone ? `(${s.contactPhone})` : ''}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* 차트 요약 */}
-      {!loading && logs.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-xs">
-            <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-1 flex items-center">
-              <BarChart2 className="w-5 h-5 mr-2 text-green-600" />
-              날짜별 고객 질문 횟수 (최근 2주)
-            </h3>
-            <p className="text-xs text-gray-500 mb-4">어느 날에 손님들이 가장 많이 질문했는지 보여줍니다.</p>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <BarChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="질문 수" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-xs">
-            <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-1 flex items-center">
-              <PieChartIcon className="w-5 h-5 mr-2 text-blue-600" />
-              손님들이 가장 많이 찾은 단어 Top 5
-            </h3>
-            <p className="text-xs text-gray-500 mb-4">가장 문의가 많은 인기 시설이나 키워드입니다.</p>
-            <div className="h-56 flex items-center justify-center">
-              {keywordData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <PieChart>
-                    <Pie
-                      data={keywordData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                      }
-                      labelLine={false}
-                    >
-                      {keywordData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-sm">데이터가 충분하지 않습니다.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 대화 목록 테이블 */}
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xs border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        <div className="p-4 sm:px-6 border-b border-gray-200 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50/50 dark:bg-neutral-900">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
-              {filterMode === 'failed'
-                ? `🚨 AI가 대답 못한 질문 목록 (${filteredLogs.length}건)`
-                : filterMode === 'good'
-                ? `👍 고객이 만족한 대화 목록 (${filteredLogs.length}건)`
-                : `전체 대화 기록 (${filteredLogs.length}건)`}
-            </h3>
-            {filterMode !== 'all' && (
-              <button
-                onClick={() => setFilterMode('all')}
-                className="text-xs text-blue-600 hover:underline font-bold"
-              >
-                [전체 보기로 돌아가기]
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="질문이나 답변 내용 검색..."
-                className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 pl-9 pr-8 py-1.5 text-sm focus:border-green-500 focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            {selectedIds.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                disabled={isDeleting}
-                className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-100 shrink-0"
-              >
-                선택 삭제 ({selectedIds.length})
-              </button>
-            )}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
-          </div>
-        ) : filteredLogs.length === 0 ? (
-          <div className="text-center py-16">
-            <AlertCircle className="mx-auto h-10 w-10 text-gray-400 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">
-              해당하는 대화 내역이 없습니다
-            </h3>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-              <thead className="bg-gray-50 dark:bg-neutral-800">
-                <tr>
-                  <th className="px-4 py-3 text-left w-10">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 text-green-600"
-                      checked={
-                        filteredLogs.length > 0 &&
-                        selectedIds.length === filteredLogs.length
-                      }
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(
-                            filteredLogs.map((l) => l.id as string).filter(Boolean)
-                          );
-                        } else {
-                          setSelectedIds([]);
-                        }
-                      }}
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 w-36">
-                    질문 시각
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 w-1/3">
-                    손님이 물어본 질문
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">
-                    AI 챗봇의 답변
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 w-36">
-                    관리 / 정답 가르치기
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800">
-                {filteredLogs.map((log) => {
-                  const failed = isFailedLog(log);
-                  return (
-                    <tr
-                      key={log.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors align-top ${
-                        failed ? 'bg-red-50/20 dark:bg-red-900/5' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300 text-green-600"
-                          checked={log.id ? selectedIds.includes(log.id) : false}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              if (log.id)
-                                setSelectedIds((prev) => [...prev, log.id as string]);
-                            } else {
-                              setSelectedIds((prev) =>
-                                prev.filter((id) => id !== log.id)
-                              );
-                            }
-                          }}
-                        />
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                          {formatDate(log.timestamp)}
-                        </div>
-                        {failed && (
-                          <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800">
-                            🚨 보완 필요
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white bg-green-50/70 dark:bg-green-900/10 p-3 rounded-xl border border-green-100 dark:border-green-900/30 whitespace-pre-wrap">
-                          {log.question}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 p-3 rounded-xl border border-gray-100 dark:border-neutral-700">
-                          <div className="max-h-32 overflow-y-auto whitespace-pre-wrap">
-                            {log.answer}
-                          </div>
-                          {log.feedback && (
-                            <div className="mt-2 flex items-center pt-2 border-t border-gray-200 dark:border-neutral-700">
-                              {log.feedback === 'up' ? (
-                                <span className="flex items-center text-xs text-green-600 font-bold">
-                                  <ThumbsUp className="w-3.5 h-3.5 mr-1" /> 고객이 &apos;도움돼요&apos;를 눌렀습니다
-                                </span>
-                              ) : (
-                                <span className="flex items-center text-xs text-red-600 font-bold">
-                                  <ThumbsDown className="w-3.5 h-3.5 mr-1" /> 고객이 &apos;아쉬워요&apos;를 눌렀습니다
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-xs font-medium space-y-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTeachModal({
-                              question: log.question,
-                              name: log.question.slice(0, 30),
-                              category: '기타',
-                              description: '',
-                              saving: false,
-                            })
-                          }
-                          className="w-full inline-flex items-center justify-center px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg font-bold transition-colors"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 mr-1" /> 정답 가르치기
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => log.id && handleDelete(log.id)}
-                          className="w-full inline-flex items-center justify-center px-2.5 py-1 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
-                        >
-                          기록 삭제
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* ✏️ 초보자용 "이 질문 정답 바로 가르쳐주기" 모달 */}
-      {teachModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-          <div className="flex items-center justify-center min-h-screen px-4">
+      {/* ===================================================================== */}
+      {/* [모달 1] 원클릭 [AI에게 정답 가르치기] */}
+      {/* ===================================================================== */}
+      {teachingLog && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div
-              className="fixed inset-0 bg-gray-900/50 backdrop-blur-xs"
-              onClick={() => !teachModal.saving && setTeachModal(null)}
+              className="fixed inset-0 bg-black/60 transition-opacity"
+              onClick={() => setTeachingLog(null)}
             />
-            <div className="relative w-full max-w-lg p-6 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border dark:border-neutral-800 z-10">
-              <div className="flex justify-between items-center border-b dark:border-neutral-800 pb-3 mb-4">
-                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">
-                  ✏️ AI에게 이 질문의 정답 가르쳐주기
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => !teachModal.saving && setTeachModal(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 text-xs text-green-900 dark:text-green-200">
-                <span className="font-bold block mb-1">💬 손님이 실제로 물어본 질문:</span>
-                &quot;{teachModal.question}&quot;
-              </div>
-
-              <form onSubmit={handleSaveTeachModal} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      1. 지식 제목 (시설명 또는 주제)
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={teachModal.name}
-                      onChange={(e) =>
-                        setTeachModal((prev) =>
-                          prev ? { ...prev, name: e.target.value } : null
-                        )
-                      }
-                      placeholder="예: 유모차 대여 안내"
-                      className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      2. 분류
-                    </label>
-                    <select
-                      value={teachModal.category}
-                      onChange={(e) =>
-                        setTeachModal((prev) =>
-                          prev ? { ...prev, category: e.target.value } : null
-                        )
-                      }
-                      className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+            <div className="relative inline-block bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-gray-200 dark:border-neutral-800">
+              <form onSubmit={handleTeachSubmit}>
+                <div className="px-6 pt-6 pb-4">
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-neutral-800">
+                    <div>
+                      <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">
+                        원클릭 AI 정답 학습 & 로봇 데이터셋 등록
+                      </span>
+                      <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mt-0.5">
+                        ✏️ 이 질문의 정확한 정답을 AI에게 알려주세요
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTeachingLog(null)}
+                      className="text-gray-400 hover:text-gray-500"
                     >
-                      {['레저', '숙박', '식음', '편의', '기타'].map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        어느 분야의 지식인가요?
+                      </label>
+                      <select
+                        value={teachCategory}
+                        onChange={(e) => setTeachCategory(e.target.value)}
+                        className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-2.5 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                      >
+                        <option value="자주묻는질문(FAQ)">자주묻는질문(FAQ)</option>
+                        <option value="액티비티/레저">액티비티/레저</option>
+                        <option value="식음료/다이닝">식음료/다이닝</option>
+                        <option value="숙박/객실">숙박/객실</option>
+                        <option value="골프">골프</option>
+                        <option value="펫/반려동물">펫/반려동물</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        고객 질문 제목
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={teachTitle}
+                        onChange={(e) => setTeachTitle(e.target.value)}
+                        className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-2.5 text-sm bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center justify-between">
+                        <span>앞으로 AI가 대답할 정확한 안내 내용</span>
+                        <span className="text-[11px] text-indigo-600 font-normal flex items-center">
+                          <HelpCircle className="w-3 h-3 mr-1" />
+                          웹·카톡·전화·로봇 모두에 즉시 반영됩니다
+                        </span>
+                      </label>
+                      <textarea
+                        rows={6}
+                        required
+                        value={teachAnswer}
+                        onChange={(e) => setTeachAnswer(e.target.value)}
+                        className="block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white leading-relaxed"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    3. 앞으로 이렇게 대답해 주세요 (정답 내용)
-                  </label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={teachModal.description}
-                    onChange={(e) =>
-                      setTeachModal((prev) =>
-                        prev ? { ...prev, description: e.target.value } : null
-                      )
-                    }
-                    placeholder="예: 유모차는 웰컴센터 프런트에서 신분증 보관 후 무료로 대여하실 수 있습니다."
-                    className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-2 pt-3 border-t dark:border-neutral-800">
+                <div className="bg-gray-50 dark:bg-neutral-800/60 px-6 py-4 flex justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => setTeachModal(null)}
-                    disabled={teachModal.saving}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold text-gray-700"
+                    onClick={() => setTeachingLog(null)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 dark:border-neutral-700 text-xs font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
-                    disabled={teachModal.saving}
-                    className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-xs font-extrabold text-white"
+                    disabled={teachSubmitting}
+                    className="px-5 py-2 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
                   >
-                    {teachModal.saving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> 저장 중...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-1.5" /> AI 지식창고에 저장하기
-                      </>
-                    )}
+                    {teachSubmitting ? 'AI 지식창고에 저장 중...' : '✅ AI 지식창고에 정답 등록하기'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* [모달 2] 상담원 조치 메모 & 해결 완료 체크 */}
+      {/* ===================================================================== */}
+      {noteLog && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-black/60 transition-opacity" onClick={() => setNoteLog(null)} />
+            <div className="relative inline-block bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full border border-gray-200 dark:border-neutral-800">
+              <form onSubmit={handleSaveStaffNote}>
+                <div className="px-6 pt-6 pb-4">
+                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                    📝 상담원 조치 메모 및 [해결 완료] 체크
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    전화 콜백 완료 여부나 특이사항을 적어두면 다른 직원들과 공유되며 [해결 완료] 상태로 변경됩니다.
+                  </p>
+                  <textarea
+                    rows={4}
+                    value={staffNoteText}
+                    onChange={(e) => setStaffNoteText(e.target.value)}
+                    placeholder="예: 고객님께 전화드려 루지 탑승 규정 상세 안내 완료함 (담당: 김벨포레)"
+                    className="mt-3 block w-full rounded-xl border border-gray-300 dark:border-neutral-700 p-3 text-sm bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div className="bg-gray-50 dark:bg-neutral-800/60 px-6 py-3.5 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNoteLog(null)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 bg-white"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={noteSaving}
+                    className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {noteSaving ? '저장 중...' : '✅ 메모 저장 및 해결 완료'}
                   </button>
                 </div>
               </form>
