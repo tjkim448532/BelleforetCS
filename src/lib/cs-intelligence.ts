@@ -368,17 +368,25 @@ export async function answerGuestQuestion(params: {
     processedQuestion = processedQuestion.replace(new RegExp(shortName, 'g'), fullName);
   });
 
-  if (nowMs - cacheTimestamp >= CACHE_TTL || !cachedNotices || !cachedSettings) {
-    const [nSnap, sSnap] = await Promise.all([
-      adminDb.collection('operational_notices').where('isActive', '==', true).get(),
-      adminDb.collection('settings').doc('system').get(),
-    ]);
-    cachedNotices = nSnap;
-    cachedSettings = sSnap;
+  // 1. Pinecone 검색, 중복 질문 조회, 긴급 공지, 설정 조회를 모두 병렬 실행 (카카오톡 5초 타임아웃 방어)
+  const needCacheRefresh = nowMs - cacheTimestamp >= CACHE_TTL || !cachedNotices || !cachedSettings;
+
+  const [similarDocs, dedupTarget, freshNotices, freshSettings] = await Promise.all([
+    querySimilarDocuments(processedQuestion, 3),
+    resolveDeduplicatedLogTarget(question),
+    needCacheRefresh
+      ? adminDb.collection('operational_notices').where('isActive', '==', true).get()
+      : Promise.resolve(cachedNotices),
+    needCacheRefresh
+      ? adminDb.collection('settings').doc('system').get()
+      : Promise.resolve(cachedSettings),
+  ]);
+
+  if (needCacheRefresh) {
+    cachedNotices = freshNotices;
+    cachedSettings = freshSettings;
     cacheTimestamp = nowMs;
   }
-
-  const similarDocs = await querySimilarDocuments(processedQuestion, 3);
 
   let context = similarDocs
     .map((doc, idx) => `[문서 ${idx + 1}]\n${doc.metadata?.text || ''}`)
@@ -397,6 +405,7 @@ export async function answerGuestQuestion(params: {
     });
 
   // 긴급 공지 최우선 주입
+  let hasActiveNotices = false;
   if (cachedNotices && cachedNotices.docs) {
     const now = new Date();
     const activeNotices = cachedNotices.docs
@@ -409,6 +418,7 @@ export async function answerGuestQuestion(params: {
       .slice(0, 5);
 
     if (activeNotices.length > 0) {
+      hasActiveNotices = true;
       const noticesText = activeNotices
         .map((n: any) => `- ${n.title}: ${n.content}`)
         .join('\n');
@@ -424,10 +434,37 @@ export async function answerGuestQuestion(params: {
       ? `${question}\n(※ 현재 전화 음성 통화 중입니다. 특수문자나 URL 주소를 읽지 말고, 호텔 컨시어지가 전화로 말하듯 2~3문장 이내로 또렷하고 친절하게 핵심만 답변해 주세요.)`
       : question;
 
-  let rawAnswer =
-    similarDocs.length === 0
-      ? '현재 시스템에 관련 상세 정보가 확인되지 않습니다. 담당 직원이 확인 후 안내해 드리겠습니다.'
-      : await generateAnswer(effectiveQuestion, context, persona, 'ko', []);
+  const { logRef, normalizedQuestion, nextAskCount, existingData } = dedupTarget;
+
+  let rawAnswer = '';
+  // 이미 검증된 동일 질문 답변이 있고 긴급 공지가 없으면 0.3초 만에 즉시 캐시 응답 반환
+  if (
+    channel !== 'voice' &&
+    !hasActiveNotices &&
+    existingData?.answer &&
+    existingData?.isResolved === true &&
+    !existingData?.needsHumanHandoff
+  ) {
+    rawAnswer = existingData.answer;
+  } else if (similarDocs.length === 0) {
+    rawAnswer =
+      '현재 시스템에 관련 상세 정보가 확인되지 않습니다. 담당 직원이 확인 후 안내해 드리겠습니다.';
+  } else {
+    // 카카오 i 오픈빌더 5초 타임아웃 절대 방어 (3.5초 내 LLM 미응답 시 1순위 RAG 문서 즉시 반환)
+    const topDocFallback = String(similarDocs[0]?.metadata?.text || '').trim();
+    rawAnswer = await Promise.race([
+      generateAnswer(effectiveQuestion, context, persona, 'ko', []),
+      new Promise<string>((resolve) =>
+        setTimeout(() => {
+          resolve(
+            topDocFallback
+              ? `🌲 벨포레 리조트 안내입니다.\n\n${topDocFallback.slice(0, 600)}`
+              : '잠시 문의가 많아 벨포레 고객센터(1566-0162)로 문의 부탁드립니다.'
+          );
+        }, 3500)
+      ),
+    ]);
+  }
 
   const cleanAnswer = rawAnswer
     .replace(/\*\*/g, '')
@@ -436,31 +473,30 @@ export async function answerGuestQuestion(params: {
 
   const classification = classifyConversation(question, cleanAnswer, channel);
 
-  // 통합 인박스(chat_logs)에 중복 없이 병합(Upsert) 기록 및 질문 횟수(askCount) 누적
-  const { logRef, normalizedQuestion, nextAskCount, existingData } =
-    await resolveDeduplicatedLogTarget(question);
-
-  await logRef.set(
-    {
-      question,
-      normalizedQuestion,
-      askCount: nextAskCount,
-      answer: cleanAnswer,
-      contextUsed: similarDocs.map((d) => d.id),
-      channel,
-      externalUserId: externalUserId || existingData?.externalUserId || null,
-      callerPhone: callerPhone || existingData?.callerPhone || null,
-      category: classification.category,
-      intentCode: classification.intentCode,
-      intentLabel: classification.intentLabel,
-      sentiment: classification.sentiment,
-      sentimentLabel: classification.sentimentLabel,
-      needsHumanHandoff: classification.needsHumanHandoff,
-      isResolved: existingData?.isResolved ?? classification.isResolved,
-      timestamp: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+  // 통합 인박스(chat_logs) 백그라운드 비동기 병합 기록 (카카오 웹훅 응답 지연 0ms)
+  logRef
+    .set(
+      {
+        question,
+        normalizedQuestion,
+        askCount: nextAskCount,
+        answer: cleanAnswer,
+        contextUsed: similarDocs.map((d) => d.id),
+        channel,
+        externalUserId: externalUserId || existingData?.externalUserId || null,
+        callerPhone: callerPhone || existingData?.callerPhone || null,
+        category: classification.category,
+        intentCode: classification.intentCode,
+        intentLabel: classification.intentLabel,
+        sentiment: classification.sentiment,
+        sentimentLabel: classification.sentimentLabel,
+        needsHumanHandoff: classification.needsHumanHandoff,
+        isResolved: existingData?.isResolved ?? classification.isResolved,
+        timestamp: new Date().toISOString(),
+      },
+      { merge: true }
+    )
+    .catch((err) => console.error('Failed to save chat log:', err));
 
   // 카카오톡 하단 빠른 질문 버튼(Quick Replies) 추천
   const quickReplies = [
