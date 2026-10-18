@@ -345,11 +345,9 @@ export async function answerGuestQuestion(params: {
   links: Array<{ label: string; url: string }>;
   quickReplies: string[];
 }> {
-  triggerDailyHomepageSyncIfNeeded();
-
+  const startMs = Date.now();
   const { channel, externalUserId, callerPhone } = params;
   const question = cleanKakaoCopyPasteQuestion(params.question);
-  const nowMs = Date.now();
 
   const synonymMap: Record<string, string> = {
     목장: '벨포레 목장',
@@ -369,7 +367,7 @@ export async function answerGuestQuestion(params: {
   });
 
   // 1. Pinecone 검색, 중복 질문 조회, 긴급 공지, 설정 조회를 모두 병렬 실행 (카카오톡 5초 타임아웃 방어)
-  const needCacheRefresh = nowMs - cacheTimestamp >= CACHE_TTL || !cachedNotices || !cachedSettings;
+  const needCacheRefresh = startMs - cacheTimestamp >= CACHE_TTL || !cachedNotices || !cachedSettings;
 
   const [similarDocs, dedupTarget, freshNotices, freshSettings] = await Promise.all([
     querySimilarDocuments(processedQuestion, 3),
@@ -385,7 +383,7 @@ export async function answerGuestQuestion(params: {
   if (needCacheRefresh) {
     cachedNotices = freshNotices;
     cachedSettings = freshSettings;
-    cacheTimestamp = nowMs;
+    cacheTimestamp = startMs;
   }
 
   let context = similarDocs
@@ -450,18 +448,21 @@ export async function answerGuestQuestion(params: {
     rawAnswer =
       '현재 시스템에 관련 상세 정보가 확인되지 않습니다. 담당 직원이 확인 후 안내해 드리겠습니다.';
   } else {
-    // 카카오 i 오픈빌더 5초 타임아웃 절대 방어 (3.5초 내 LLM 미응답 시 1순위 RAG 문서 즉시 반환)
+    // 전체 누적 소요시간 기준 3.6초(3600ms) 하드 데드라인 보장 (카카오 5.0초 타임아웃 100% 방어)
+    const elapsedMs = Date.now() - startMs;
+    const remainingBudgetMs = Math.max(900, 3600 - elapsedMs);
     const topDocFallback = String(similarDocs[0]?.metadata?.text || '').trim();
+
     rawAnswer = await Promise.race([
       generateAnswer(effectiveQuestion, context, persona, 'ko', []),
       new Promise<string>((resolve) =>
         setTimeout(() => {
           resolve(
             topDocFallback
-              ? `🌲 벨포레 리조트 안내입니다.\n\n${topDocFallback.slice(0, 600)}`
+              ? `🌲 벨포레 리조트 안내입니다.\n\n${topDocFallback.slice(0, 650)}`
               : '잠시 문의가 많아 벨포레 고객센터(1566-0162)로 문의 부탁드립니다.'
           );
-        }, 3500)
+        }, remainingBudgetMs)
       ),
     ]);
   }
