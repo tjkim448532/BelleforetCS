@@ -375,3 +375,60 @@ export async function analyzeFailedLogs(logs: any[]): Promise<any[]> {
     throw new Error('Failed to analyze failed logs');
   }
 }
+
+/**
+ * 여러 개의 중복/파편화된 시설 문서들을 하나의 정제된 마스터 문서로 통합(Synthesize)합니다.
+ */
+export async function synthesizeMultipleFacilities(
+  items: Array<{ name: string; description: string; seasonalDescription?: string; tags?: string[] }>,
+  masterName: string,
+  currentDate: string
+): Promise<{ description: string; seasonalDescription: string; tags: string[]; summary: string }> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-flash-latest',
+      systemInstruction: `당신은 벨포레 리조트 공식 CS 지식베이스 마스터 편집자입니다.
+주어진 여러 개의 중복 또는 질문형으로 파편화된 시설 문서들을 "${masterName}"이라는 단일 마스터 시설 문서로 완벽하게 통합하세요.
+오늘 기준 날짜는 "${currentDate}"입니다.
+
+[통합 및 정제 원칙]
+1. "안녕하세요 고객님:-)" 등 불필요한 상담원 인사말/구어체 표현은 모두 제거하고, 깔끔하고 전문적인 안내 문체로 통일하세요.
+2. 운영시간, 이용요금, 신장/연령 기준, 할인 혜택, 대여 규정, 주의사항 등 핵심 사실(Fact)은 단 하나도 누락하지 말고 체계적으로 정리하세요.
+3. 오늘 날짜("${currentDate}") 기준으로 이미 기한이 지난 과거의 단기 휴장 안내나 종료된 이벤트 문구는 과감히 제거하세요.
+4. 상시/고정 운영 정보는 "description"에, 현재 진행 중이거나 다가올 시즌/임시 운영 정보는 "seasonalDescription"에 분리하세요.
+5. 마크다운 강조 기호(** 등)는 사용하지 말고 줄바꿈과 하이픈(-) 목록으로 가독성을 높이세요.
+
+응답은 반드시 아래 JSON 형식으로만 반환하세요:
+{
+  "description": "통합 정제된 고정 시설 안내 본문",
+  "seasonalDescription": "유효한 시즌/임시 안내 (없으면 빈 문자열)",
+  "tags": ["추천태그1", "추천태그2"],
+  "summary": "어떤 문서들의 어떤 정보들이 통합 및 정제되었는지 1~2줄 요약"
+}`
+    });
+
+    const rawInput = items.map((it, idx) => (
+      `[문서 ${idx + 1}: ${it.name}]\n고정설명: ${it.description || '(없음)'}\n시즌설명: ${it.seasonalDescription || '(없음)'}\n태그: ${(it.tags || []).join(', ')}`
+    )).join('\n\n---\n\n');
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: rawInput }] }],
+      generationConfig: {
+        temperature: 0.15,
+        responseMimeType: "application/json",
+      }
+    });
+
+    const parsed = JSON.parse(result.response.text());
+    return {
+      description: (parsed.description || '').replace(/\*\*/g, ''),
+      seasonalDescription: (parsed.seasonalDescription || '').replace(/\*\*/g, ''),
+      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+      summary: parsed.summary || `${items.length}개 문서가 "${masterName}" 마스터 문서로 통합되었습니다.`
+    };
+  } catch (error: any) {
+    console.error('Error in synthesizeMultipleFacilities:', error);
+    throw new Error(`AI 문서 통합 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+  }
+}
+

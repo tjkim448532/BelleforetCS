@@ -21,7 +21,7 @@ export default function FacilitiesAdmin() {
   const [showAdvancedBulk, setShowAdvancedBulk] = useState(false);
   
   // Bulk Upload State
-  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage' | 'categories'>('single');
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'manage' | 'categories' | 'audit'>('single');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [bulkProgress, setBulkProgress] = useState({ total: 0, current: 0, failed: 0 });
   const [bulkErrors, setBulkErrors] = useState<{row: number, error: string}[]>([]);
@@ -49,12 +49,160 @@ export default function FacilitiesAdmin() {
   const [smartEditResult, setSmartEditResult] = useState<{summary: string, updatedText: string} | null>(null);
   const [isSmartEditing, setIsSmartEditing] = useState(false);
 
-  // Export Bible State
-
+  // RAG Audit & Cleaner State
+  const [auditData, setAuditData] = useState<any | null>(null);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [isSyncingVectors, setIsSyncingVectors] = useState(false);
+  const [isExpiringItems, setIsExpiringItems] = useState(false);
+  const [mergeModal, setMergeModal] = useState<{
+    group: any;
+    masterId: string;
+    name: string;
+    category: string;
+    location: string;
+    description: string;
+    seasonalDescription: string;
+    tags: string;
+    summary: string;
+    isGenerating: boolean;
+    isExecuting: boolean;
+  } | null>(null);
 
   useEffect(() => {
     fetchCategories();
+    fetchFacilities();
   }, []);
+
+  const runRagAudit = async () => {
+    setLoadingAudit(true);
+    try {
+      const res = await fetch('/api/admin/facility/audit');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '진단 실패');
+      setAuditData(data);
+    } catch (e: any) {
+      alert(e.message || 'RAG 데이터 진단 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const handleSyncVectors = async () => {
+    setIsSyncingVectors(true);
+    try {
+      const res = await fetch('/api/admin/facility/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_vectors' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '동기화 실패');
+      alert(`동기화 완료! (유령 벡터 ${data.deletedGhostCount}건 삭제, 누락 벡터 ${data.upsertedMissingCount}건 복구)`);
+      await runRagAudit();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSyncingVectors(false);
+    }
+  };
+
+  const handleOpenMergeModal = async (group: any) => {
+    const masterItem = group.items.find((it: any) => it.id === group.masterId) || group.items[0];
+    setMergeModal({
+      group,
+      masterId: group.masterId,
+      name: group.masterName,
+      category: group.category,
+      location: masterItem?.location || '',
+      description: '',
+      seasonalDescription: '',
+      tags: (masterItem?.tags || []).join(', '),
+      summary: '',
+      isGenerating: true,
+      isExecuting: false,
+    });
+
+    try {
+      const res = await fetch('/api/admin/facility/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'preview_merge',
+          ids: group.items.map((it: any) => it.id),
+          masterName: group.masterName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'AI 통합 초안 생성 실패');
+
+      setMergeModal(prev =>
+        prev
+          ? {
+              ...prev,
+              description: data.preview.description,
+              seasonalDescription: data.preview.seasonalDescription || '',
+              tags: (data.preview.tags || []).join(', '),
+              summary: data.preview.summary,
+              isGenerating: false,
+            }
+          : null
+      );
+    } catch (e: any) {
+      alert(e.message);
+      setMergeModal(null);
+    }
+  };
+
+  const handleExecuteMerge = async () => {
+    if (!mergeModal) return;
+    setMergeModal(prev => (prev ? { ...prev, isExecuting: true } : null));
+    try {
+      const res = await fetch('/api/admin/facility/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'execute_merge',
+          masterId: mergeModal.masterId,
+          sourceIds: mergeModal.group.items.map((it: any) => it.id),
+          name: mergeModal.name,
+          category: mergeModal.category,
+          location: mergeModal.location,
+          description: mergeModal.description,
+          seasonalDescription: mergeModal.seasonalDescription,
+          tags: mergeModal.tags.split(',').map(t => t.trim()).filter(Boolean),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '병합 실행 실패');
+
+      alert(`통합 완료! "${mergeModal.name}" 마스터 문서로 병합되었으며, 파편 문서 ${data.deletedCount}건이 정리되었습니다.`);
+      setMergeModal(null);
+      await Promise.all([runRagAudit(), fetchFacilities()]);
+    } catch (e: any) {
+      alert(e.message);
+      setMergeModal(prev => (prev ? { ...prev, isExecuting: false } : null));
+    }
+  };
+
+  const handleExpireAction = async (payload: { facilityIds?: string[]; clearSeasonalIds?: string[]; noticeIds?: string[] }) => {
+    setIsExpiringItems(true);
+    try {
+      const res = await fetch('/api/admin/facility/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'expire_items', ...payload }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '만료 처리 실패');
+
+      alert('정리가 완료되었습니다. (AI 검색 대상에서 즉시 제외되었습니다)');
+      await Promise.all([runRagAudit(), fetchFacilities()]);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsExpiringItems(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -469,8 +617,27 @@ export default function FacilitiesAdmin() {
     );
   });
 
+  // 입구 방어 (Input-Time Prevention Guard): 입력 중인 시설명과 유사/동일한 기존 마스터 시설 감지
+  const matchedMasterFacility = (() => {
+    const typed = formData.name.trim();
+    if (typed.length < 2 || editingId) return null;
+    const normTyped = typed.replace(/\s+/g, '').toLowerCase();
+    const genericWords = new Set(['이벤트', '패키지', 'pkg', '숙박', '레저', '식음', '기타', '할인', '요금']);
+
+    return facilities.find(f => {
+      if (f.status === 'expired' || !f.name) return false;
+      const normExist = f.name.replace(/\([^)]*\)/g, '').replace(/\s+/g, '').toLowerCase().trim();
+      if (!normExist || genericWords.has(normExist)) return false;
+      if (normTyped === normExist) return true;
+      if (normExist.length >= 2 && (normTyped.startsWith(normExist) || normTyped.includes(normExist))) {
+        return true;
+      }
+      return false;
+    }) || null;
+  })();
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8 border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">시설 정보 관리 (CMS)</h1>
         <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
@@ -486,7 +653,7 @@ export default function FacilitiesAdmin() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-4 mb-6 border-b dark:border-neutral-800">
+      <div className="flex flex-wrap gap-2 sm:space-x-4 mb-6 border-b dark:border-neutral-800">
         <button
           onClick={() => setActiveTab('single')}
           className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
@@ -531,6 +698,19 @@ export default function FacilitiesAdmin() {
         >
           카테고리 관리
         </button>
+        <button
+          onClick={() => {
+            setActiveTab('audit');
+            runRagAudit();
+          }}
+          className={`pb-3 px-2 text-sm font-bold border-b-2 transition-colors flex items-center ${
+            activeTab === 'audit'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-indigo-600/80 hover:text-indigo-700 dark:text-indigo-400'
+          }`}
+        >
+          🧹 RAG 데이터 진단 / 자동 정리
+        </button>
       </div>
 
       <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6">
@@ -548,6 +728,54 @@ export default function FacilitiesAdmin() {
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                 placeholder="예: 목장, 미디어아트센터"
               />
+              {matchedMasterFacility && (
+                <div className="mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-2">
+                  <p className="font-semibold flex items-center">
+                    <span className="mr-1.5">💡</span>
+                    파편화 방지 가드: 이미 마스터 시설 [{matchedMasterFacility.name}] 항목이 등록되어 있습니다!
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-400 leading-relaxed">
+                    예: <code>&quot;{matchedMasterFacility.name} 요금&quot;</code>처럼 별도 항목으로 쪼개어 등록하면 AI 검색 정확도가 떨어집니다. 기존 <strong>[{matchedMasterFacility.name}]</strong>에 내용을 합치시겠습니까?
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {formData.name.trim() !== matchedMasterFacility.name && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            name: matchedMasterFacility.name,
+                            category: matchedMasterFacility.category || prev.category,
+                            location: prev.location || matchedMasterFacility.location || '',
+                          }));
+                          setDuplicateAction('merge');
+                        }}
+                        className="px-2.5 py-1 bg-amber-600 text-white rounded font-medium hover:bg-amber-700 transition-colors"
+                      >
+                        시설명을 &apos;{matchedMasterFacility.name}&apos;(으)로 맞추고 AI 자동 병합하기
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          name: matchedMasterFacility.name,
+                          category: matchedMasterFacility.category || '레저',
+                          location: matchedMasterFacility.location || '',
+                          description: matchedMasterFacility.description || '',
+                          seasonalDescription: matchedMasterFacility.seasonalDescription || '',
+                          tags: Array.isArray(matchedMasterFacility.tags)
+                            ? matchedMasterFacility.tags.join(', ')
+                            : (matchedMasterFacility.tags || ''),
+                        });
+                      }}
+                      className="px-2.5 py-1 bg-white dark:bg-neutral-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 rounded font-medium hover:bg-amber-100 transition-colors"
+                    >
+                      기존 &apos;{matchedMasterFacility.name}&apos; 전체 내용 불러오기
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">카테고리</label>
@@ -971,10 +1199,23 @@ export default function FacilitiesAdmin() {
                             }}
                           />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{fac.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="flex items-center space-x-2">
+                            <span>{fac.name}</span>
+                            {fac.status === 'expired' ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-neutral-800 dark:text-gray-400 border border-gray-200 dark:border-neutral-700">
+                                만료보관(RAG제외)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800/40">
+                                활성(RAG)
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fac.category}</td>
                         <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="max-w-xs line-clamp-2" title={fac.description}>
+                          <div className="max-w-md line-clamp-2" title={fac.description}>
                             {fac.description || '-'}
                           </div>
                         </td>
@@ -988,7 +1229,7 @@ export default function FacilitiesAdmin() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(fac.createdAt as string | undefined)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                           <button
                             onClick={() => {
                               setFormData({
@@ -1004,10 +1245,22 @@ export default function FacilitiesAdmin() {
                               setSmartEditInstruction('');
                               setIsEditModalOpen(true);
                             }}
-                            className="text-blue-600 hover:text-blue-900 mr-4"
+                            className="text-blue-600 hover:text-blue-900"
                           >
-                            수정
+                            {fac.status === 'expired' ? '수정/재활성화' : '수정'}
                           </button>
+                          {fac.status !== 'expired' && fac.id && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`'${fac.name}' 항목을 기한 만료(보관) 처리하시겠습니까?\n(기록은 남고 AI 챗봇 검색 대상에서만 제외됩니다)`)) {
+                                  handleExpireAction({ facilityIds: [fac.id as string] });
+                                }
+                              }}
+                              className="text-amber-600 hover:text-amber-900"
+                            >
+                              만료보관
+                            </button>
+                          )}
                           <button
                             onClick={() => fac.id && handleDelete(fac.id)}
                             className="text-red-600 hover:text-red-900"
@@ -1112,7 +1365,362 @@ export default function FacilitiesAdmin() {
             </div>
           </div>
         )}
+
+        {/* 🧹 RAG 데이터 진단 및 자동 정리 시스템 탭 */}
+        {activeTab === 'audit' && (
+          <div className="space-y-8">
+            {/* 상단 직관적 안내 및 예시 배너 */}
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-indigo-900 dark:text-indigo-200 flex items-center">
+                  <span className="mr-2">🧹</span> RAG 데이터 무결성 진단 &amp; 원클릭 클리너란?
+                </h3>
+                <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                  AI 챗봇이 엉뚱한 옛날 공지를 말하거나 중복 문서 때문에 헷갈리지 않도록, <strong>① DB↔벡터 일치 여부</strong>, <strong>② 쪼개진 중복 시설</strong>, <strong>③ 기한 지난 패키지/공지</strong>를 자동으로 찾아내어 정리하는 시스템입니다.
+                </p>
+                <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                  💡 <strong>예시:</strong> 직원이 <code>&quot;원더풀 수온&quot;</code>, <code>&quot;원더풀 요금&quot;</code>을 따로 등록했더라도 여기서 <strong>[AI 통합 미리보기]</strong> 버튼만 누르면 <code>&quot;원더풀&quot;</code> 마스터 문서 하나로 깔끔하게 합쳐줍니다.
+                </p>
+              </div>
+              <button
+                onClick={runRagAudit}
+                disabled={loadingAudit}
+                className="inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm disabled:opacity-50 shrink-0 transition-colors"
+              >
+                {loadingAudit ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <span className="mr-1.5">🔍</span>}
+                {loadingAudit ? '전체 DB 스캔 중...' : '전체 정밀 재진단 실행'}
+              </button>
+            </div>
+
+            {loadingAudit && !auditData ? (
+              <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+                <p className="text-sm text-gray-500">Firestore 원천 DB와 Pinecone 벡터 DB를 1:1 전수 대조하고 있습니다...</p>
+              </div>
+            ) : auditData ? (
+              <>
+                {/* 3대 핵심 지표 요약 카드 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* 카드 1: 동기화 */}
+                  <div className={`p-5 rounded-xl border ${auditData.sync?.isSynced ? 'bg-green-50/60 border-green-200 dark:bg-green-900/10 dark:border-green-800' : 'bg-red-50/60 border-red-200 dark:bg-red-900/10 dark:border-red-800'}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">1. DB ↔ Pinecone 벡터 동기화</p>
+                        <h4 className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">
+                          {auditData.sync?.approvedFirestoreCount}건 : {auditData.sync?.pineconeCount}개
+                        </h4>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${auditData.sync?.isSynced ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {auditData.sync?.isSynced ? '🟢 100% 완벽 일치' : '🔴 불일치 감지'}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                      유령 벡터 {auditData.sync?.ghostVectorIds?.length || 0}건 / 누락 벡터 {auditData.sync?.missingVectors?.length || 0}건 (만료보관 {auditData.sync?.expiredFirestoreCount || 0}건)
+                    </p>
+                    {!auditData.sync?.isSynced && (
+                      <button
+                        onClick={handleSyncVectors}
+                        disabled={isSyncingVectors}
+                        className="mt-3 w-full py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {isSyncingVectors ? '동기화 복구 중...' : '⚡ 원클릭 1:1 동기화 복구 실행'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 카드 2: 중복/파편화 */}
+                  <div className={`p-5 rounded-xl border ${auditData.duplicateGroups?.length === 0 ? 'bg-green-50/60 border-green-200 dark:bg-green-900/10 dark:border-green-800' : 'bg-amber-50/60 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800'}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">2. 중복 / 파편화 의심 그룹</p>
+                        <h4 className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">
+                          {auditData.duplicateGroups?.length || 0}개 그룹
+                        </h4>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${auditData.duplicateGroups?.length === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {auditData.duplicateGroups?.length === 0 ? '🟢 파편화 없음' : '⚠️ 통합 권장'}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                      동일하거나 유사한 이름으로 쪼개져 있는 시설 문서 묶음입니다.
+                    </p>
+                  </div>
+
+                  {/* 카드 3: 기한 만료 의심 */}
+                  <div className={`p-5 rounded-xl border ${(auditData.stale?.facilities?.length || 0) + (auditData.stale?.notices?.length || 0) === 0 ? 'bg-green-50/60 border-green-200 dark:bg-green-900/10 dark:border-green-800' : 'bg-orange-50/60 border-orange-200 dark:bg-orange-900/10 dark:border-orange-800'}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">3. 과거 날짜 / 기한 만료 의심</p>
+                        <h4 className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">
+                          {(auditData.stale?.facilities?.length || 0) + (auditData.stale?.notices?.length || 0)}건
+                        </h4>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${(auditData.stale?.facilities?.length || 0) + (auditData.stale?.notices?.length || 0) === 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                        {(auditData.stale?.facilities?.length || 0) + (auditData.stale?.notices?.length || 0) === 0 ? '🟢 최신 상태' : '⏰ 점검 필요'}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                      시설/패키지 {auditData.stale?.facilities?.length || 0}건, 긴급 운영 공지 {auditData.stale?.notices?.length || 0}건
+                    </p>
+                  </div>
+                </div>
+
+                {/* 섹션 A: 중복 및 파편화 그룹 상세 */}
+                <div className="border dark:border-neutral-700 rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 dark:bg-neutral-800 px-5 py-3.5 border-b dark:border-neutral-700 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                        📌 중복 및 파편화 시설 통합 대상 ({auditData.duplicateGroups?.length || 0}건)
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        여러 개로 쪼개진 문서를 AI가 내용 손실 없이 하나의 마스터 문서로 합치고 나머지 조각을 정리합니다.
+                      </p>
+                    </div>
+                  </div>
+                  {(!auditData.duplicateGroups || auditData.duplicateGroups.length === 0) ? (
+                    <div className="p-8 text-center text-sm text-gray-500">
+                      ✅ 현재 중복되거나 파편화된 시설 문서가 없습니다. 모든 시설이 깔끔한 마스터 문서로 유지되고 있습니다!
+                    </div>
+                  ) : (
+                    <div className="divide-y dark:divide-neutral-700">
+                      {auditData.duplicateGroups.map((group: any) => (
+                        <div key={group.masterId} className="p-5 bg-white dark:bg-neutral-900 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 text-xs font-bold rounded bg-amber-100 text-amber-800">
+                                {group.count}개 문서 묶음
+                              </span>
+                              <span className="text-base font-bold text-gray-900 dark:text-white">
+                                대표 마스터 후보: &quot;{group.masterName}&quot;
+                              </span>
+                              <span className="text-xs text-gray-500">({group.category})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {group.items.map((it: any) => (
+                                <span
+                                  key={it.id}
+                                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-neutral-700"
+                                  title={it.description}
+                                >
+                                  📄 {it.name} <span className="ml-1 text-gray-400">({(it.description || '').length}자)</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleOpenMergeModal(group)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm shrink-0 transition-colors"
+                          >
+                            ✨ AI 통합 미리보기 및 병합
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 섹션 B: 기한 만료 의심 (과거 날짜 포함) 항목 */}
+                <div className="border dark:border-neutral-700 rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 dark:bg-neutral-800 px-5 py-3.5 border-b dark:border-neutral-700 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                        ⏰ 과거 날짜(기한 만료 의심) 패키지 및 공지 ({(auditData.stale?.facilities?.length || 0) + (auditData.stale?.notices?.length || 0)}건)
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        오늘 날짜보다 이전의 종료일이 적혀 있는 항목입니다. 만료 처리하면 기록은 보관되고 AI 챗봇 검색에서만 제외됩니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  {(auditData.stale?.facilities?.length || 0) + (auditData.stale?.notices?.length || 0) === 0 ? (
+                    <div className="p-8 text-center text-sm text-gray-500">
+                      ✅ 기한이 지난 과거 패키지나 만료된 운영 공지가 없습니다!
+                    </div>
+                  ) : (
+                    <div className="divide-y dark:divide-neutral-700">
+                      {(auditData.stale?.notices || []).map((notice: any) => (
+                        <div key={notice.id} className="p-4 bg-red-50/30 dark:bg-red-900/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 text-xs font-bold rounded bg-red-100 text-red-800">긴급 운영공지</span>
+                              <span className="font-bold text-sm text-gray-900 dark:text-white">{notice.title}</span>
+                              <span className="text-xs text-red-600">종료일: {notice.endDate}</span>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{notice.content}</p>
+                          </div>
+                          <button
+                            onClick={() => handleExpireAction({ noticeIds: [notice.id] })}
+                            disabled={isExpiringItems}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-md shrink-0 disabled:opacity-50"
+                          >
+                            공지 비활성화
+                          </button>
+                        </div>
+                      ))}
+
+                      {(auditData.stale?.facilities || []).map((fac: any) => (
+                        <div key={fac.id} className="p-4 bg-white dark:bg-neutral-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 text-xs font-bold rounded bg-orange-100 text-orange-800">{fac.category}</span>
+                              <span className="font-bold text-sm text-gray-900 dark:text-white">{fac.name}</span>
+                              <span className="text-xs text-orange-600 font-medium">감지된 마지막 날짜: {fac.lastDate}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 line-clamp-2">{fac.descriptionPreview}...</p>
+                          </div>
+                          <div className="flex space-x-2 shrink-0">
+                            {fac.hasSeasonal && (
+                              <button
+                                onClick={() => handleExpireAction({ clearSeasonalIds: [fac.id] })}
+                                disabled={isExpiringItems}
+                                className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs font-medium rounded-md disabled:opacity-50"
+                              >
+                                시즌 안내만 비우기
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleExpireAction({ facilityIds: [fac.id] })}
+                              disabled={isExpiringItems}
+                              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white text-xs font-medium rounded-md disabled:opacity-50"
+                            >
+                              기한만료 보관 (RAG 제외)
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
       </div>
+
+      {/* AI 중복/파편화 통합 미리보기 모달 (100% HITL) */}
+      {mergeModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => !mergeModal.isExecuting && setMergeModal(null)} />
+            <div className="relative inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border dark:border-neutral-800 z-10">
+              <div className="flex justify-between items-center border-b dark:border-neutral-800 pb-3 mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    ✨ AI 마스터 문서 통합 미리보기 ({mergeModal.group.count}개 문서 ➔ 1개 마스터)
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    통합 결과를 확인하고 필요 시 수정한 뒤 [승인 및 병합 실행]을 누르면 파편 문서들이 정리됩니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !mergeModal.isExecuting && setMergeModal(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {mergeModal.isGenerating ? (
+                <div className="py-16 flex flex-col items-center justify-center space-y-3">
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    AI가 {mergeModal.group.count}개 문서의 핵심 팩트를 하나로 통합하고 과거 날짜/인사말을 정제하고 있습니다...
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {mergeModal.summary && (
+                    <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-300">
+                      <strong>📋 AI 통합 요약:</strong> {mergeModal.summary}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">통합 마스터 시설명</label>
+                      <input
+                        type="text"
+                        value={mergeModal.name}
+                        onChange={e => setMergeModal(prev => (prev ? { ...prev, name: e.target.value } : null))}
+                        className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">카테고리</label>
+                      <select
+                        value={mergeModal.category}
+                        onChange={e => setMergeModal(prev => (prev ? { ...prev, category: e.target.value } : null))}
+                        className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                      >
+                        {categories.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">통합된 고정 정보 (Description)</label>
+                    <textarea
+                      rows={10}
+                      value={mergeModal.description}
+                      onChange={e => setMergeModal(prev => (prev ? { ...prev, description: e.target.value } : null))}
+                      className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">시즌/임시 정보 (Seasonal Description)</label>
+                    <textarea
+                      rows={2}
+                      value={mergeModal.seasonalDescription}
+                      onChange={e => setMergeModal(prev => (prev ? { ...prev, seasonalDescription: e.target.value } : null))}
+                      placeholder="현재 유효한 시즌/임시 안내가 있을 경우만 표시됩니다."
+                      className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">검색 태그 (쉼표 구분)</label>
+                    <input
+                      type="text"
+                      value={mergeModal.tags}
+                      onChange={e => setMergeModal(prev => (prev ? { ...prev, tags: e.target.value } : null))}
+                      className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4 border-t dark:border-neutral-800">
+                    <button
+                      type="button"
+                      onClick={() => setMergeModal(null)}
+                      disabled={mergeModal.isExecuting}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExecuteMerge}
+                      disabled={mergeModal.isExecuting}
+                      className="inline-flex items-center px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm font-bold text-white shadow-sm disabled:opacity-50"
+                    >
+                      {mergeModal.isExecuting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 통합 및 벡터 갱신 중...
+                        </>
+                      ) : (
+                        '✅ 승인 및 마스터 통합 실행'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {isEditModalOpen && (

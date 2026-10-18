@@ -72,3 +72,25 @@ export async function deleteDocument(id: string) {
   const index = await getIndex();
   await index.deleteOne({ id });
 }
+
+/**
+ * Pinecone 인덱스 내의 모든 벡터 ID 목록을 페이지네이션으로 조회합니다.
+ */
+export async function listAllVectorIds(): Promise<string[]> {
+  const index = await getIndex();
+  const vectorIds: string[] = [];
+  let paginationToken: string | undefined = undefined;
+
+  do {
+    const listResult = await index.listPaginated({ paginationToken });
+    if (listResult && listResult.vectors) {
+      for (const v of listResult.vectors) {
+        if (v.id) vectorIds.push(v.id);
+      }
+    }
+    paginationToken = listResult?.pagination?.next;
+  } while (paginationToken);
+
+  return vectorIds;
+}
+

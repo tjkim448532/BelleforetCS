@@ -9,7 +9,7 @@ export interface Facility {
   seasonalDescription?: string; // 시즌/시기별 정보
   location: string;
   tags: string[];
-  status: 'pending' | 'approved';
+  status: 'pending' | 'approved' | 'expired';
   type?: string;
   createdAt?: unknown;
   updatedAt?: unknown;

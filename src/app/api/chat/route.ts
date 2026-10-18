@@ -49,11 +49,11 @@ export async function POST(req: Request) {
       "목장": "벨포레 목장",
       "미디어": "미디어아트센터",
       "아트센터": "미디어아트센터",
-      "루지": "익스트림 루지",
+      "루지": "마운틴카트 루지",
       "콘도": "벨포레 리조트",
       "수영장": "원더풀",
-      "사계절썰매": "사계절 썰매장",
-      "썰매장": "사계절 썰매장",
+      "사계절썰매": "사계절 썰매",
+      "썰매장": "사계절 썰매",
       "놀이공원": "놀이동산"
     };
 
@@ -122,16 +122,21 @@ export async function POST(req: Request) {
       return `[문서 ${index + 1}]\n${doc.metadata?.text || ''}`;
     }).join('\n\n');
 
-    // --- 동적 운영 정보 (Operational Notices) 주입 ---
+    // --- 동적 운영 정보 (Operational Notices) 주입 및 만료 공지 자동 비활성화 ---
     if (noticesSnapshot.status === 'fulfilled' && noticesSnapshot.value) {
       const now = new Date();
       const activeNotices = noticesSnapshot.value.docs
-        .map((doc: any) => doc.data())
-        .filter((notice: any) => {
+        .filter((doc: any) => {
+          const notice = doc.data();
+          if (notice.endDate && new Date(notice.endDate) < now) {
+            // 종료일이 지난 공지는 백그라운드에서 자동 비활성화 (Auto-Expire)
+            doc.ref.update({ isActive: false }).catch(() => {});
+            return false;
+          }
           if (notice.startDate && new Date(notice.startDate) > now) return false;
-          if (notice.endDate && new Date(notice.endDate) < now) return false;
           return true;
         })
+        .map((doc: any) => doc.data())
         .sort((a: any, b: any) => {
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
