@@ -13,22 +13,22 @@ import {
   Lock,
   RefreshCw,
   CalendarClock,
-  Users,
-  PartyPopper,
-  AlertTriangle,
-  Megaphone,
   ArrowLeft,
+  Trash2,
+  Database,
 } from 'lucide-react';
 
 interface StaffNotice {
   id: string;
   title: string;
   content: string;
+  rawTitle?: string;
   rawContent?: string;
   category?: string;
   location?: string;
   department?: string;
   isActive: boolean;
+  aiSyncEnabled?: boolean;
   startDate?: string | null;
   endDate?: string | null;
   createdAt?: string;
@@ -98,6 +98,7 @@ export default function StaffMobileInputApp() {
   const [recentEndedNotices, setRecentEndedNotices] = useState<StaffNotice[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [endingId, setEndingId] = useState<string | null>(null);
+  const [isResettingAll, setIsResettingAll] = useState(false);
 
   // 초기 기본 시작(현재) ~ 완료(+2시간) 세팅
   const applyDurationPreset = useCallback((mode: '1h' | '2h' | '3h' | 'today14_16' | 'until18' | 'until22') => {
@@ -294,7 +295,7 @@ export default function StaffMobileInputApp() {
           location: effectiveLocation,
           title: previewResult?.polishedTitle || title.trim(),
           rawContent: previewResult?.polishedContent || rawContent.trim() || title.trim(),
-          autoPolish: !previewResult, // 미리보기를 이미 했으면 그대로 저장, 안 했으면 서버에서 자동 AI 정제
+          autoPolish: !previewResult,
           startDate: startDate ? new Date(startDate).toISOString() : null,
           endDate: endDate ? new Date(endDate).toISOString() : null,
         }),
@@ -303,7 +304,7 @@ export default function StaffMobileInputApp() {
       if (!res.ok) throw new Error(data.error);
 
       setSubmitSuccessMsg(
-        `✅ 등록 완료! 지금부터 완료 시간(${formatReadableTime(data.notice?.endDate)})까지 AI가 손님들에게 자동으로 안내합니다.`
+        `✅ 전용 DB(staff_field_events) 저장 완료! (테스트 모드이므로 고객용 AI에는 전달되지 않았습니다)`
       );
       setTitle('');
       setRawContent('');
@@ -317,9 +318,6 @@ export default function StaffMobileInputApp() {
   };
 
   const handleEndNow = async (notice: StaffNotice) => {
-    if (!confirm(`'${notice.title}' 일정을 지금 바로 종료하시겠습니까?\n(종료 즉시 AI 답변에서 제외되며 DB 기록으로만 보관됩니다)`)) {
-      return;
-    }
     setEndingId(notice.id);
     try {
       const res = await fetch('/api/staff/notices', {
@@ -339,6 +337,61 @@ export default function StaffMobileInputApp() {
       }
     } finally {
       setEndingId(null);
+    }
+  };
+
+  const handleDeleteOne = async (id: string) => {
+    try {
+      const res = await fetch('/api/staff/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-staff-pin': pin },
+        body: JSON.stringify({
+          action: 'delete_one',
+          pin,
+          id,
+        }),
+      });
+      if (res.ok) {
+        await fetchStaffNotices(pin);
+      }
+    } catch {
+      alert('삭제 실패');
+    }
+  };
+
+  const handleResetAllTestData = async () => {
+    const totalCount = activeNotices.length + recentEndedNotices.length;
+    if (totalCount === 0) {
+      alert('삭제할 테스트 데이터가 없습니다.');
+      return;
+    }
+    if (
+      !confirm(
+        `전용 DB(staff_field_events)에 저장된 테스트 데이터 ${totalCount}건을 모두 깨끗하게 비우시겠습니까?`
+      )
+    ) {
+      return;
+    }
+    setIsResettingAll(true);
+    try {
+      const res = await fetch('/api/staff/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-staff-pin': pin },
+        body: JSON.stringify({
+          action: 'reset_all_test_data',
+          pin,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`🧹 테스트 데이터 ${data.deletedCount}건이 모두 삭제되어 DB가 깨끗하게 초기화되었습니다.`);
+        setSubmitSuccessMsg('');
+        await fetchStaffNotices(pin);
+      } else {
+        alert(data.error || '초기화 실패');
+      }
+    } finally {
+      setIsResettingAll(false);
     }
   };
 
@@ -366,9 +419,7 @@ export default function StaffMobileInputApp() {
               벨포레 현장 인포메이션 앱
             </h1>
             <p className="text-xs text-slate-600 leading-relaxed">
-              현장 단체행사·공연·혼잡·운휴 시간을 입력하면
-              <br />
-              <strong>웹·카카오톡·AI전화</strong>가 즉시 손님에게 안내합니다.
+              현장 단체행사·공연·혼잡·운휴 시간을 입력하는 직원 전용 모바일 앱입니다.
             </p>
           </div>
 
@@ -411,6 +462,7 @@ export default function StaffMobileInputApp() {
   }
 
   const now = new Date();
+  const totalSavedCount = activeNotices.length + recentEndedNotices.length;
 
   return (
     <div className="min-h-screen bg-slate-100 pb-16">
@@ -426,7 +478,7 @@ export default function StaffMobileInputApp() {
                 벨포레 직원 현장 입력앱
               </h1>
               <p className="text-[11px] text-slate-300 mt-1">
-                시작·완료 시간만 넣으면 AI가 자동 안내 후 자동 종료합니다
+                전용 DB(staff_field_events) 구축 완료 · 안전 테스트 모드
               </p>
             </div>
           </div>
@@ -441,6 +493,14 @@ export default function StaffMobileInputApp() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 pt-4 space-y-5">
+        {/* 안전 테스트 모드 안내 배너 */}
+        <div className="bg-white rounded-2xl p-3.5 border border-slate-300 shadow-2xs flex items-start gap-2.5">
+          <Database className="w-4 h-4 text-slate-800 shrink-0 mt-0.5" />
+          <div className="text-xs text-slate-700 leading-relaxed">
+            <strong className="text-slate-900 font-extrabold">🧪 안전 테스트 모드 작동 중:</strong> 지금 입력하시는 내용은 <strong>전용 DB(<code>staff_field_events</code>)</strong>에 정상 저장 및 AI 문장 교정까지 모두 작동하지만, <strong>실제 고객용 AI 챗봇에는 전달되지 않습니다.</strong> 테스트 후 하단 <strong>[전체 비우기]</strong> 버튼으로 한 번에 초기화할 수 있습니다.
+          </div>
+        </div>
+
         {/* 원터치 예시 버튼 바 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between">
@@ -719,7 +779,7 @@ export default function StaffMobileInputApp() {
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
                 <div className="font-extrabold text-slate-900 flex items-center">
                   <Sparkles className="w-3.5 h-3.5 mr-1" />
-                  AI가 손님에게 안내할 표준 문장:
+                  AI가 다듬은 DB 저장 표준 문장:
                 </div>
                 <div className="font-bold text-slate-900">{previewResult.polishedTitle}</div>
                 <div className="text-slate-700 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200">
@@ -744,42 +804,55 @@ export default function StaffMobileInputApp() {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                AI가 문장을 다듬어 DB에 등록 중...
+                AI가 문장을 다듬어 전용 DB에 저장 중...
               </>
             ) : (
               <>
                 <Send className="w-4 h-4" />
-                현장 일정 등록 (AI 즉시 답변 시작)
+                전용 DB에 현장 일정 저장하기 (테스트)
               </>
             )}
           </button>
         </form>
 
-        {/* 현재 진행·예정 중인 현장 일정 리스트 */}
+        {/* 전용 DB에 저장된 현장 일정 리스트 & 전체 초기화 버튼 */}
         <section className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
               <h2 className="text-sm font-black text-slate-900">
-                📋 현재 AI가 안내 중인 현장 일정 ({activeNotices.length}건)
+                📋 전용 DB 저장 목록 (진행/예정 {activeNotices.length}건 · 완료 {recentEndedNotices.length}건)
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                행사가 일찍 끝났다면 [지금 완료] 버튼을 눌러주세요
+                테스트 후 우측 [전체 비우기]를 누르면 DB가 초기 상태로 비워집니다
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => fetchStaffNotices(pin)}
-              disabled={loadingList}
-              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-              title="새로고침"
-            >
-              <RefreshCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {totalSavedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetAllTestData}
+                  disabled={isResettingAll}
+                  className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-extrabold"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  {isResettingAll ? '비우는 중...' : '전체 비우기'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => fetchStaffNotices(pin)}
+                disabled={loadingList}
+                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                title="새로고침"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
 
-          {activeNotices.length === 0 ? (
+          {totalSavedCount === 0 ? (
             <div className="py-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
-              현재 진행 중이거나 예정된 현장 특이사항/행사가 없습니다.
+              현재 전용 DB(<code>staff_field_events</code>)에 저장된 일정이 없습니다. 위에서 테스트로 등록해 보세요!
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -800,7 +873,7 @@ export default function StaffMobileInputApp() {
                                 : 'bg-emerald-100 text-emerald-900'
                             }`}
                           >
-                            {isUpcoming ? '⏳ 시작 대기(예정)' : '🟢 현재 AI 안내 중'}
+                            {isUpcoming ? '⏳ 시작 대기(예정)' : '🟢 진행 중 (DB 보관)'}
                           </span>
                           {item.location && (
                             <span className="inline-flex items-center text-[11px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">
@@ -817,15 +890,25 @@ export default function StaffMobileInputApp() {
                         <div className="text-sm font-extrabold text-slate-900">{item.title}</div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleEndNow(item)}
-                        disabled={endingId === item.id}
-                        className="shrink-0 inline-flex items-center px-2.5 py-1.5 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-red-200 text-xs font-extrabold transition-colors"
-                      >
-                        <StopCircle className="w-3.5 h-3.5 mr-1" />
-                        {endingId === item.id ? '종료 중' : '지금 완료'}
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleEndNow(item)}
+                          disabled={endingId === item.id}
+                          className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-extrabold transition-colors"
+                        >
+                          <StopCircle className="w-3.5 h-3.5 mr-1" />
+                          {endingId === item.id ? '종료 중' : '지금 완료'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOne(item.id)}
+                          className="p-1.5 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-red-200"
+                          title="삭제"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-slate-700 leading-relaxed">{item.content}</p>
@@ -841,6 +924,35 @@ export default function StaffMobileInputApp() {
                   </div>
                 );
               })}
+
+              {recentEndedNotices.length > 0 && (
+                <div className="pt-2 space-y-2">
+                  <div className="text-xs font-extrabold text-slate-500">
+                    종료(완료) 보관된 이력 ({recentEndedNotices.length}건)
+                  </div>
+                  {recentEndedNotices.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-xl border border-slate-200 bg-white opacity-75 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-700 truncate">
+                          [완료] {item.title}
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate">{item.content}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOne(item.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 shrink-0"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>
