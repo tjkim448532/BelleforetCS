@@ -141,6 +141,16 @@ export default function AdminLayout({
               </button>
 
               <Link
+                href="/staff"
+                target="_blank"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-900 text-sm font-bold rounded-lg text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+                title="현장 직원이 스마트폰으로 행사·단체일정·혼잡 시작/종료 시간을 넣는 전용 모바일 앱입니다"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>직원용 현장입력 앱</span>
+              </Link>
+
+              <Link
                 href="/"
                 target="_blank"
                 className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-300 text-sm font-semibold rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"

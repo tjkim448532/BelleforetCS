@@ -8,7 +8,12 @@ import * as admin from 'firebase-admin';
 let cachedNotices: any = null;
 let cachedSettings: any = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 60000; // 60 seconds
+const CACHE_TTL = 10000; // 10 seconds for near-instant field notice reflection
+
+export function invalidateChatNoticeCache() {
+  cachedNotices = null;
+  cacheTimestamp = 0;
+}
 
 export async function POST(req: Request) {
   try {
@@ -99,21 +104,14 @@ export async function POST(req: Request) {
     }
 
     const similarDocs = hybridDocsResult.value.docs;
-    
-    // 검색된 문서가 없으면 스트리밍 형태로 기본 응답
-    if (similarDocs.length === 0) {
-      const fallback = '현재 시스템에 관련 정보가 등록되어 있지 않습니다. 프론트 데스크에 문의해주세요.';
-      return new Response(fallback, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-      });
-    }
 
     // 2. 컨텍스트 구성
     let context = similarDocs.map((doc, index) => {
       return `[문서 ${index + 1}]\n${doc.metadata?.text || ''}`;
     }).join('\n\n');
 
-    // --- 동적 운영 정보 (Operational Notices) 주입 및 만료 공지 자동 비활성화 ---
+    // --- 동적 운영 정보 (Operational Notices & 현장 직원 실시간 행사/일정) 주입 및 만료 공지 자동 비활성화 ---
+    let activeNoticesCount = 0;
     if (noticesSnapshot.status === 'fulfilled' && noticesSnapshot.value) {
       const { extractNoticeMaxDate } = await import('@/app/api/admin/operations/route');
       const now = new Date();
@@ -134,7 +132,6 @@ export async function POST(req: Request) {
               return false;
             }
           }
-          if (notice.startDate && new Date(notice.startDate) > now) return false;
           return true;
         })
         .map((doc: any) => doc.data())
@@ -143,12 +140,28 @@ export async function POST(req: Request) {
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
         })
-        .slice(0, 5);
+        .slice(0, 15);
 
+      activeNoticesCount = activeNotices.length;
       if (activeNotices.length > 0) {
-        const noticesText = activeNotices.map((n: any, i: any) => `- ${n.title}: ${n.content}`).join('\n');
-        context = `[🚨 현재 리조트 긴급/운영 상황 (최우선 적용 사항)]\n${noticesText}\n\n[기본 시설/운영 정보]\n${context}`;
+        const noticesText = activeNotices
+          .map((n: any) => {
+            const isUpcoming = n.startDate && new Date(n.startDate) > now;
+            const statusTag = isUpcoming ? '[예정 일정]' : '[현재 진행/적용 중]';
+            const locTag = n.location ? ` (장소: ${n.location})` : '';
+            return `- ${statusTag} ${n.title}${locTag}: ${n.content}`;
+          })
+          .join('\n');
+        context = `[🚨 현재 리조트 실시간 행사·단체일정·운휴 공지 (최우선 적용 사항)]\n${noticesText}\n\n[기본 시설/운영 정보]\n${context}`;
       }
+    }
+
+    // 검색된 시설 문서도 없고 활성 공지/행사도 없을 때만 기본 폴백 반환
+    if (similarDocs.length === 0 && activeNoticesCount === 0) {
+      const fallback = '현재 시스템에 관련 정보가 등록되어 있지 않습니다. 프론트 데스크에 문의해주세요.';
+      return new Response(fallback, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
     }
 
     // --- AI 페르소나 설정 ---

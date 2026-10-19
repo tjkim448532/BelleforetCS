@@ -333,6 +333,7 @@ const CACHE_TTL = 60000;
 
 export function invalidateFacilityCache() {
   cachedFacilities = null;
+  cachedNotices = null;
   cacheTimestamp = 0;
 }
 
@@ -603,8 +604,9 @@ export async function answerGuestQuestion(params: {
       });
     });
 
-  // 긴급 공지 최우선 주입
+  // 긴급 공지 및 현장 직원 실시간 행사/운휴 일정 최우선 주입
   let latestNoticeTimeMs = 0;
+  let activeNoticesCount = 0;
   if (cachedNotices && cachedNotices.docs) {
     const { extractNoticeMaxDate } = await import('@/app/api/admin/operations/route');
     const now = new Date();
@@ -612,7 +614,6 @@ export async function answerGuestQuestion(params: {
     const activeNotices = cachedNotices.docs
       .filter((d: any) => {
         const n = d.data();
-        if (n.startDate && new Date(n.startDate) > now) return false;
         if (n.endDate && new Date(n.endDate) < now) {
           d.ref.update({ isActive: false }).catch(() => {});
           return false;
@@ -627,17 +628,23 @@ export async function answerGuestQuestion(params: {
         return true;
       })
       .map((d: any) => d.data())
-      .slice(0, 5);
+      .slice(0, 15);
 
+    activeNoticesCount = activeNotices.length;
     if (activeNotices.length > 0) {
       for (const n of activeNotices) {
         const t = new Date(n.updatedAt || n.createdAt || 0).getTime();
         if (t > latestNoticeTimeMs) latestNoticeTimeMs = t;
       }
       const noticesText = activeNotices
-        .map((n: any) => `- ${n.title}: ${n.content}`)
+        .map((n: any) => {
+          const isUpcoming = n.startDate && new Date(n.startDate) > now;
+          const statusTag = isUpcoming ? '[예정 일정]' : '[현재 진행/적용 중]';
+          const locTag = n.location ? ` (장소: ${n.location})` : '';
+          return `- ${statusTag} ${n.title}${locTag}: ${n.content}`;
+        })
         .join('\n');
-      context = `[🚨 현재 리조트 긴급/운영 상황 (최우선 적용 사항)]\n${noticesText}\n\n[기본 시설/운영 정보]\n${context}`;
+      context = `[🚨 현재 리조트 실시간 행사·단체일정·운휴 공지 (최우선 적용 사항)]\n${noticesText}\n\n[기본 시설/운영 정보]\n${context}`;
     }
   }
 
@@ -662,7 +669,7 @@ export async function answerGuestQuestion(params: {
     !existingData?.needsHumanHandoff
   ) {
     rawAnswer = existingData.answer;
-  } else if (similarDocs.length === 0) {
+  } else if (similarDocs.length === 0 && activeNoticesCount === 0) {
     rawAnswer =
       '현재 시스템에 관련 상세 정보가 확인되지 않습니다. 담당 직원이 확인 후 안내해 드리겠습니다.';
   } else {
