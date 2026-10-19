@@ -304,18 +304,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: 'success' });
     }
 
-    // 3. 직원이 입력한 정답을 기존 승인 DB(facilities)와 대조하여 사실 여부·충돌 여부를 AI로 사전 검증
+    // 3. 직원이 입력한 정답/설명을 기존 승인 DB(facilities)와 대조하여 사실 여부·충돌 여부를 AI로 사전 검증 + 표준 제목/문장/태그 자동 정제
     if (action === 'verify_staff_answer') {
-      const { question = '', draftAnswer = '' } = body;
-      if (!question.trim() || !draftAnswer.trim()) {
+      const rawQuestionOrName = (body.question || body.name || '').trim();
+      const rawAnswerOrDesc = (body.draftAnswer || body.description || '').trim();
+      const rawCategory = (body.category || '').trim();
+      const rawLocation = (body.location || '').trim();
+
+      if (!rawQuestionOrName || !rawAnswerOrDesc) {
         return NextResponse.json(
-          { error: '질문과 검증할 답변 내용을 모두 입력해 주세요.' },
+          { error: '질문(제목)과 검증할 답변(상세 설명) 내용을 모두 입력해 주세요.' },
           { status: 400 }
         );
       }
 
-      const processed = expandBelleforetSynonyms(question);
-      const { docs } = await searchHybridFacilityDocs(processed, question, {
+      const processed = expandBelleforetSynonyms(`${rawQuestionOrName} ${rawAnswerOrDesc}`);
+      const { docs } = await searchHybridFacilityDocs(processed, rawQuestionOrName, {
         topK: 3,
         fastMode: true,
       });
@@ -328,21 +332,26 @@ export async function POST(req: Request) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
       const model = genAI.getGenerativeModel({
         model: 'gemini-flash-lite-latest',
-        generationConfig: { responseMimeType: 'application/json' },
+        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
       });
 
-      const prompt = `당신은 벨포레 리조트의 CS 품질 감사관(Fact-Checker)입니다.
-직원이 고객 질문에 대해 새로 등록하려는 [직원 작성 답변]을 [기존 공식 DB 문서]와 대조하여 팩트체크하세요.
+      const prompt = `당신은 벨포레 리조트의 CS 품질 감사관(Fact-Checker) 겸 공식 지식베이스 수석 에디터입니다.
+직원이 새로 등록/수정하려는 [질문/제목]과 [직원 작성 답변/본문]을 [기존 공식 DB 문서]와 대조하여 팩트체크하고,
+동시에 개인 예약 날짜("10/24 에 예약햇는데요" 등), 오타, 줄바꿈, "[상담학습]" 접두사를 제거하고 끝이 잘린 질문을 복원하여 공식 표준 문서 형태로 정제하세요.
 
 반드시 아래 JSON 형식으로만 응답하세요:
 {
   "verdict": "PASS" | "WARN" | "NEW",
   "conflictSummary": "검증 결과 요약 (요금, 시간, 규정 등이 기존 DB와 일치하면 '✅ 기존 공식 DB 정보와 정확히 일치합니다.' / 기존 DB 수치와 충돌하면 '⚠️ [시설명]의 기존 DB 정보(수치)와 다릅니다. 확인이 필요합니다.' / 기존 DB에 없던 새로운 세부 정보면 '💡 기존 DB에 없던 새로운 세부 안내 정보입니다.')",
-  "polishedAnswer": "직원이 작성한 답변의 핵심 사실을 유지하면서 호텔리어 표준 존댓말과 깔끔한 목록(- 기호)으로 다듬은 추천 답변"
+  "standardizedTitle": "[상담학습]이나 개인 날짜(10/24 등), 물음표 없이 리조트 공식 규정집 목차처럼 깔끔한 표준 제목 (예: '패키지 입장권 체크인(입실) 전 사전 이용 안내')",
+  "standardizedQuestion": "고객 질문의 날짜/오타를 빼고, 잘린 문장이라면 직원 답변의 맥락을 결합해 완벽히 복원한 표준 질문 문장 (예: '객실 패키지(놀이동산, 목장, 미디어아트, 사계절썰매 등)에 포함된 입장권을 체크인(입실) 전에도 미리 사용할 수 있나요?')",
+  "polishedAnswer": "직원이 작성한 답변의 핵심 사실을 100% 유지하면서, 질문에 언급된 구체적 시설/대상을 포함하여 문맥이 완결되게 다듬은 호텔리어 표준 존댓말 답변 (마크다운 ** 기호 사용 금지)",
+  "suggestedCategory": "레저" | "숙박" | "식음" | "편의" | "기타",
+  "suggestedTags": ["검색태그1", "검색태그2", "검색태그3", "검색태그4", "검색태그5"]
 }
 
-[고객 질문]: ${question}
-[직원 작성 답변]: ${draftAnswer}
+[원본 질문/제목]: ${rawQuestionOrName}
+[직원 작성 답변/본문]: ${rawAnswerOrDesc}
 
 [기존 공식 DB 문서]:
 ${refText}`;
@@ -350,11 +359,69 @@ ${refText}`;
       const result = await model.generateContent(prompt);
       const parsed = JSON.parse(result.response.text());
 
+      const cleanTitle = (parsed.standardizedTitle || rawQuestionOrName)
+        .replace(/^\[상담학습\]\s*/, '')
+        .replace(/\*\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const cleanQuestion = (parsed.standardizedQuestion || rawQuestionOrName)
+        .replace(/^\[상담학습\]\s*/, '')
+        .replace(/\*\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const cleanAnswer = (parsed.polishedAnswer || rawAnswerOrDesc)
+        .replace(/\*\*/g, '')
+        .trim();
+      const validCategories = ['레저', '숙박', '식음', '편의', '기타'];
+      const suggestedCategory = validCategories.includes(parsed.suggestedCategory)
+        ? parsed.suggestedCategory
+        : rawCategory && validCategories.includes(rawCategory)
+        ? rawCategory
+        : '기타';
+      const suggestedTags = Array.isArray(parsed.suggestedTags)
+        ? parsed.suggestedTags.map((t: any) => String(t).trim()).filter(Boolean)
+        : [];
+
+      const standardizedDescription = `[고객 자주 묻는 질문]\n질문: ${cleanQuestion}\n\n[공식 답변 및 안내]\n${cleanAnswer}`;
+
+      // 로봇/콜봇용 7대 정형 슬롯 추출 (facilities 페이지 미리보기 호환)
+      const rawSpecs = extractRobotSpecsFromText({
+        name: cleanTitle,
+        category: suggestedCategory,
+        location: rawLocation,
+        description: rawAnswerOrDesc,
+      });
+      const extractedSpecs = {
+        operatingHours: rawSpecs.operatingHours,
+        closedDays: rawSpecs.closedDay,
+        priceInfo:
+          rawSpecs.priceAdult !== null
+            ? `성인 ${rawSpecs.priceAdult.toLocaleString()}원` +
+              (rawSpecs.priceChild !== null ? ` / 소인 ${rawSpecs.priceChild.toLocaleString()}원` : '')
+            : '상세 설명 참조',
+        location: rawSpecs.navigationZone,
+        ageHeightLimit:
+          rawSpecs.minHeightCm !== null ? `${rawSpecs.minHeightCm}cm 이상` : '제한 없음/상세 참조',
+        rainPolicy: rawSpecs.rainOperation,
+        petAllowed: rawSpecs.petAllowed,
+      };
+
+      const rawVerdict = parsed.verdict || 'NEW';
+      const facilityVerdict =
+        rawVerdict === 'WARN' ? 'CONFLICT' : rawVerdict === 'PASS' ? 'MATCH' : 'NEW_KNOWLEDGE';
+
       return NextResponse.json({
         status: 'success',
-        verdict: parsed.verdict || 'NEW',
+        verdict: body.name ? facilityVerdict : rawVerdict,
+        hasConflict: rawVerdict === 'WARN',
         conflictSummary: parsed.conflictSummary || '검증이 완료되었습니다.',
-        polishedAnswer: parsed.polishedAnswer || draftAnswer,
+        standardizedTitle: cleanTitle,
+        standardizedQuestion: cleanQuestion,
+        polishedAnswer: cleanAnswer,
+        standardizedDescription,
+        suggestedCategory,
+        suggestedTags,
+        extractedSpecs,
         matchedFacilities: docs.map((d) => d.metadata?.name).filter(Boolean),
       });
     }

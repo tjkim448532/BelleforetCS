@@ -79,7 +79,13 @@ export default function FacilitiesAdmin() {
     verdict: 'MATCH' | 'NEW_KNOWLEDGE' | 'CONFLICT';
     hasConflict: boolean;
     conflictSummary: string;
-    matchedFacilities: Array<{ id: string; name: string; category: string; description: string }>;
+    standardizedTitle?: string;
+    standardizedQuestion?: string;
+    polishedAnswer?: string;
+    standardizedDescription?: string;
+    suggestedCategory?: string;
+    suggestedTags?: string[];
+    matchedFacilities: Array<any>;
     extractedSpecs: {
       operatingHours: string;
       closedDays: string;
@@ -626,11 +632,14 @@ export default function FacilitiesAdmin() {
           description: fac.description || '',
           seasonalDescription: fac.seasonalDescription || '',
           tags: Array.isArray(fac.tags) ? fac.tags : [],
+          type: fac.type || 'facility',
           status: 'approved',
         }),
       });
       if (!response.ok) throw new Error('승인 처리에 실패했습니다.');
-      alert(`✅ '${fac.name}' 지식이 승인되어 지금부터 AI가 즉시 안내합니다!`);
+      const resData = await response.json();
+      const finalName = resData.facility?.name || fac.name;
+      alert(`✅ '${finalName}' 지식이 승인되어 지금부터 AI가 즉시 안내합니다!`);
       fetchFacilities();
     } catch (e: any) {
       alert(e.message || '승인 처리 중 오류가 발생했습니다.');
@@ -2678,7 +2687,51 @@ export default function FacilitiesAdmin() {
                 </div>
 
                 {factCheckResult && (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
+                    {factCheckResult.conflictSummary && (
+                      <div className="font-extrabold text-slate-900">
+                        {factCheckResult.conflictSummary}
+                      </div>
+                    )}
+                    {factCheckResult.standardizedTitle && (
+                      <div className="p-2.5 rounded-lg bg-white border border-slate-200 space-y-1.5 text-slate-800">
+                        <div>
+                          <span className="font-extrabold text-slate-900">📌 AI 추천 표준 제목:</span>{' '}
+                          <span className="font-bold">{factCheckResult.standardizedTitle}</span>
+                        </div>
+                        {factCheckResult.standardizedDescription && (
+                          <div className="whitespace-pre-wrap text-slate-700 bg-slate-50 p-2 rounded border border-slate-100">
+                            {factCheckResult.standardizedDescription}
+                          </div>
+                        )}
+                        {factCheckResult.suggestedTags && factCheckResult.suggestedTags.length > 0 && (
+                          <div>
+                            <span className="font-bold text-slate-900">🏷️ 추천 검색 태그:</span>{' '}
+                            {factCheckResult.suggestedTags.join(', ')}
+                          </div>
+                        )}
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                name: factCheckResult.standardizedTitle || prev.name,
+                                category: factCheckResult.suggestedCategory || prev.category,
+                                description: factCheckResult.standardizedDescription || prev.description,
+                                tags:
+                                  factCheckResult.suggestedTags && factCheckResult.suggestedTags.length > 0
+                                    ? factCheckResult.suggestedTags.join(', ')
+                                    : prev.tags,
+                              }));
+                            }}
+                            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs"
+                          >
+                            ✨ AI 표준 제목·본문·태그 한 번에 적용하기
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div className="font-extrabold text-slate-900">
                       🤖 수정된 본문에서 AI가 자동으로 인식한 7대 핵심 슬롯:
                     </div>

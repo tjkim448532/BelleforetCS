@@ -271,24 +271,34 @@ export default function OmnichannelAndRobotCenterPage() {
   const [teachVerifyResult, setTeachVerifyResult] = useState<{
     verdict: 'PASS' | 'WARN' | 'NEW';
     conflictSummary: string;
+    standardizedTitle: string;
+    standardizedQuestion: string;
     polishedAnswer: string;
+    suggestedCategory: string;
+    suggestedTags: string[];
     matchedFacilities: string[];
   } | null>(null);
 
   // [정답 가르치기] 모달 열기
   const openTeachModal = (log: ChatLog) => {
     setTeachingLog(log);
-    setTeachCategory(log.category || '자주묻는질문(FAQ)');
-    setTeachTitle(log.question);
+    const catMap: Record<string, string> = {
+      '액티비티/레저': '레저',
+      '숙박/객실': '숙박',
+      '식음료/다이닝': '식음',
+      '편의/규정': '편의',
+    };
+    setTeachCategory(catMap[log.category || ''] || '기타');
+    setTeachTitle(log.question.replace(/\s+/g, ' ').trim());
     setTeachVerifyResult(null);
     setTeachAnswer(
       isUnansweredOrSorry(log)
-        ? `네, 고객님! 문의하신 "${log.question}"에 대해 안내해 드립니다.\n\n- 상세 내용: `
+        ? `네, 고객님! 문의하신 내용에 대해 안내해 드립니다.\n\n- 상세 내용: `
         : log.answer
     );
   };
 
-  // [정답 가르치기] 사전 AI 팩트체크 (기존 승인 DB와 충돌 여부 검증)
+  // [정답 가르치기] 사전 AI 팩트체크 및 표준 제목·질문·답변 자동 정제
   const handleVerifyTeachAnswer = async () => {
     if (!teachTitle.trim() || !teachAnswer.trim() || teachVerifying) return;
     setTeachVerifying(true);
@@ -299,16 +309,27 @@ export default function OmnichannelAndRobotCenterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'verify_staff_answer',
-          question: teachTitle.trim(),
+          question: teachingLog?.question || teachTitle.trim(),
           draftAnswer: teachAnswer.trim(),
+          category: teachCategory,
         }),
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.standardizedTitle) {
+          setTeachTitle(data.standardizedTitle);
+        }
+        if (data.suggestedCategory) {
+          setTeachCategory(data.suggestedCategory);
+        }
         setTeachVerifyResult({
           verdict: data.verdict || 'NEW',
           conflictSummary: data.conflictSummary || '',
+          standardizedTitle: data.standardizedTitle || teachTitle.trim(),
+          standardizedQuestion: data.standardizedQuestion || teachTitle.trim(),
           polishedAnswer: data.polishedAnswer || teachAnswer,
+          suggestedCategory: data.suggestedCategory || teachCategory,
+          suggestedTags: data.suggestedTags || [],
           matchedFacilities: data.matchedFacilities || [],
         });
       } else {
@@ -328,20 +349,28 @@ export default function OmnichannelAndRobotCenterPage() {
 
     setTeachSubmitting(true);
     try {
+      const isAlreadyStandardized =
+        teachVerifyResult && teachTitle.trim() === teachVerifyResult.standardizedTitle;
+      const stdQuestion = teachVerifyResult?.standardizedQuestion || teachTitle.trim();
+
       const res = await fetch('/api/admin/facility', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `[상담학습] ${teachTitle.trim()}`,
+          name: isAlreadyStandardized ? teachTitle.trim() : `[상담학습] ${teachTitle.trim()}`,
           category: teachCategory,
           type: 'faq',
           status: approvalStatus,
           duplicateAction: 'overwrite',
-          description: `[고객 자주 묻는 질문]\n질문: ${teachTitle.trim()}\n\n[공식 답변 및 안내]\n${teachAnswer.trim()}`,
+          tags: teachVerifyResult?.suggestedTags || [],
+          description: `[고객 자주 묻는 질문]\n질문: ${stdQuestion}\n\n[공식 답변 및 안내]\n${teachAnswer.trim()}`,
         }),
       });
 
+      const resData = await res.json();
+
       if (res.ok && teachingLog) {
+        const savedTitle = resData.facility?.name || teachTitle.trim();
         await fetch('/api/admin/robot-dataset', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -351,22 +380,21 @@ export default function OmnichannelAndRobotCenterPage() {
             updatedAnswer: teachAnswer.trim(),
             staffNote:
               approvalStatus === 'approved'
-                ? `[AI 지식창고 즉시반영 완료] ${teachAnswer.trim()}`
-                : `[관리자 승인대기(pending) 등록] ${teachAnswer.trim()}`,
+                ? `[AI 지식창고 즉시반영: ${savedTitle}] ${teachAnswer.trim()}`
+                : `[관리자 승인대기 등록: ${savedTitle}] ${teachAnswer.trim()}`,
             isResolved: approvalStatus === 'approved',
           }),
         });
         alert(
           approvalStatus === 'approved'
-            ? '🎉 검증 완료! AI 지식창고(RAG)와 로봇 학습 DB에 즉시 반영되었습니다.\n이제부터 웹·카카오톡·AI전화 어디서든 이 질문이 들어오면 방금 등록하신 정답으로 대답합니다.'
-            : '⏳ [시설/지식 관리(/admin/facilities)]의 검수 대기열(pending)에 등록되었습니다.\n책임자가 내용을 최종 확인 후 [승인]을 누르면 AI가 답변을 시작합니다.'
+            ? `🎉 검증 완료! '${savedTitle}' 표준 제목으로 AI 지식창고(RAG)와 로봇 학습 DB에 즉시 반영되었습니다.`
+            : `⏳ '${savedTitle}' 표준 제목으로 [지식 찾아보고 고치기(/admin/facilities)]의 검수 대기열에 등록되었습니다.\n책임자가 내용을 최종 확인 후 [승인]을 누르면 AI가 답변을 시작합니다.`
         );
         setTeachingLog(null);
         fetchLogs();
         fetchRobotSummary();
       } else {
-        const data = await res.json();
-        alert(`오류: ${data.error}`);
+        alert(`오류: ${resData.error}`);
       }
     } catch (error) {
       console.error('Failed to teach AI:', error);
@@ -1807,26 +1835,32 @@ export default function OmnichannelAndRobotCenterPage() {
                   <div className="mt-4 space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-gray-300 mb-1">
-                        어느 분야의 지식인가요?
+                        어느 분야의 지식인가요? (표준 5대 분류)
                       </label>
                       <select
                         value={teachCategory}
                         onChange={(e) => setTeachCategory(e.target.value)}
                         className="block w-full rounded-xl border border-slate-300 dark:border-neutral-700 p-2.5 text-sm bg-white dark:bg-neutral-800 text-slate-900 dark:text-white"
                       >
-                        <option value="자주묻는질문(FAQ)">자주묻는질문(FAQ)</option>
-                        <option value="액티비티/레저">액티비티/레저</option>
-                        <option value="식음료/다이닝">식음료/다이닝</option>
-                        <option value="숙박/객실">숙박/객실</option>
-                        <option value="골프">골프</option>
-                        <option value="펫/반려동물">펫/반려동물</option>
+                        <option value="레저">레저 (액티비티/놀이시설)</option>
+                        <option value="숙박">숙박 (객실/체크인/패키지)</option>
+                        <option value="식음">식음 (식당/카페/할인)</option>
+                        <option value="편의">편의 (반려견/셔틀/부대시설)</option>
+                        <option value="기타">기타 (일반 규정/기타 FAQ)</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-gray-300 mb-1">
-                        고객 질문 제목
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-gray-300">
+                          지식 표준 제목 (저장 시 개인 날짜·오타는 AI가 자동 제거합니다)
+                        </label>
+                        {teachingLog && teachTitle !== teachingLog.question.replace(/\s+/g, ' ').trim() && (
+                          <span className="text-[11px] font-bold text-slate-500">
+                            원본 질문: {teachingLog.question.replace(/\s+/g, ' ').slice(0, 32)}...
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         required
@@ -1848,7 +1882,9 @@ export default function OmnichannelAndRobotCenterPage() {
                           className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-amber-900/40 dark:text-amber-300 transition-colors disabled:opacity-50"
                         >
                           <Sparkles className="w-3.5 h-3.5 mr-1" />
-                          {teachVerifying ? '기존 DB와 대조 검증 중...' : '🔍 기존 DB 충돌/정답 AI 팩트체크'}
+                          {teachVerifying
+                            ? 'AI 표준 제목·문장 정제 및 검증 중...'
+                            : '✨ AI 표준 제목·문장 자동 다듬기 & 팩트체크'}
                         </button>
                       </div>
                       <textarea
@@ -1875,10 +1911,26 @@ export default function OmnichannelAndRobotCenterPage() {
                               대조한 공식 문서: {teachVerifyResult.matchedFacilities.join(', ')}
                             </div>
                           )}
+                          <div className="pt-2 border-t border-black/10 dark:border-white/10 space-y-1.5">
+                            <div>
+                              <span className="font-bold">📌 자동 정제된 표준 제목:</span>{' '}
+                              <span className="font-extrabold">{teachVerifyResult.standardizedTitle}</span>
+                            </div>
+                            <div>
+                              <span className="font-bold">❓ 복원된 표준 질문:</span>{' '}
+                              <span>{teachVerifyResult.standardizedQuestion}</span>
+                            </div>
+                            {teachVerifyResult.suggestedTags.length > 0 && (
+                              <div>
+                                <span className="font-bold">🏷️ 자동 추출 검색 태그:</span>{' '}
+                                <span>{teachVerifyResult.suggestedTags.join(', ')}</span>
+                              </div>
+                            )}
+                          </div>
                           {teachVerifyResult.polishedAnswer &&
                             teachVerifyResult.polishedAnswer !== teachAnswer && (
                               <div className="pt-2 border-t border-black/10 dark:border-white/10">
-                                <div className="font-bold mb-1">✨ AI 교정 표준 문장 제안:</div>
+                                <div className="font-bold mb-1">✨ AI 교정 공식 답변 제안:</div>
                                 <div className="p-2 rounded-lg bg-white/80 dark:bg-neutral-900/80 text-slate-800 dark:text-gray-200 whitespace-pre-wrap">
                                   {teachVerifyResult.polishedAnswer}
                                 </div>
@@ -1887,7 +1939,7 @@ export default function OmnichannelAndRobotCenterPage() {
                                   onClick={() => setTeachAnswer(teachVerifyResult.polishedAnswer)}
                                   className="mt-2 inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-900 text-white hover:bg-slate-800"
                                 >
-                                  이 다듬어진 문장으로 바꾸기
+                                  이 다듬어진 공식 답변으로 적용하기
                                 </button>
                               </div>
                             )}

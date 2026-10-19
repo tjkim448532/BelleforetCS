@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { adminDb, verifyAdminSession } from '@/lib/firebase/admin';
 import { upsertDocument, deleteDocument } from '@/lib/pinecone';
-import { mergeFacilityDescription } from '@/lib/gemini';
+import { mergeFacilityDescription, standardizeKnowledgeEntry } from '@/lib/gemini';
 import { extractRobotSpecsFromText, invalidateFacilityCache } from '@/lib/cs-intelligence';
+
+function needsChatStandardization(name: string, type?: string): boolean {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('[상담학습]')) return true;
+  if (trimmed.includes('\n')) return true;
+  if (/\d{1,2}\s*\/\s*\d{1,2}/.test(trimmed)) return true;
+  if (type === 'faq' && trimmed.length > 36) return true;
+  return false;
+}
+
+const VALID_FACILITY_CATEGORIES = ['레저', '숙박', '식음', '편의', '기타'];
 
 export async function POST(req: Request) {
   try {
@@ -14,8 +26,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Name and at least one description are required' }, { status: 400 });
     }
 
+    let finalName = String(name).trim();
+    let finalCategory = VALID_FACILITY_CATEGORIES.includes(category) ? category : '기타';
+    let finalDescription = description || '';
+    let finalSeasonalDescription = seasonalDescription || '';
+    let finalTags: string[] = Array.isArray(tags) ? tags : [];
+
+    // [상담학습] 또는 날짜·줄바꿈이 섞인 날것의 고객 질문인 경우 AI로 표준 제목·표준 질문·공식 답변·태그 자동 정제
+    if (needsChatStandardization(finalName, type)) {
+      const standardized = await standardizeKnowledgeEntry({
+        rawTitleOrQuestion: finalName,
+        rawAnswerOrDescription: finalDescription,
+        currentCategory: category,
+      });
+      finalName = standardized.standardizedTitle || finalName.replace(/^\[상담학습\]\s*/, '').trim();
+      finalDescription = standardized.standardizedDescription || finalDescription;
+      if (!VALID_FACILITY_CATEGORIES.includes(category)) {
+        finalCategory = standardized.suggestedCategory;
+      }
+      if (finalTags.length === 0 && standardized.suggestedTags.length > 0) {
+        finalTags = standardized.suggestedTags;
+      }
+    }
+
     // 이름으로 중복 검사
-    const snapshot = await adminDb.collection('facilities').where('name', '==', name).limit(1).get();
+    const snapshot = await adminDb.collection('facilities').where('name', '==', finalName).limit(1).get();
     let docRef;
     let isUpdate = false;
     let existingData: any = null;
@@ -29,13 +64,9 @@ export async function POST(req: Request) {
     }
 
     // 설명(Description) 병합 로직 (CQRS Read Model 업데이트)
-    let finalDescription = description || '';
-    let finalSeasonalDescription = seasonalDescription || '';
-    
     if (isUpdate && existingData) {
       if (duplicateAction === 'overwrite') {
-        finalDescription = description || '';
-        finalSeasonalDescription = seasonalDescription || '';
+        // 정제된 finalDescription 유지
       } else {
         if (existingData.description) {
           finalDescription = await mergeFacilityDescription(existingData.description, finalDescription);
@@ -47,20 +78,20 @@ export async function POST(req: Request) {
     }
 
     const robotSpecs = extractRobotSpecsFromText({
-      name,
-      category: category || '기타',
+      name: finalName,
+      category: finalCategory,
       location: location || '',
       description: finalDescription,
       seasonalDescription: finalSeasonalDescription,
     });
 
     const facilityData: Record<string, unknown> = {
-      name,
-      category: category || '기타',
+      name: finalName,
+      category: finalCategory,
       description: finalDescription,
       seasonalDescription: finalSeasonalDescription,
       location: location || '',
-      tags: tags || [],
+      tags: finalTags,
       status: status || 'pending',
       type: type || 'facility',
       robotSpecs,
@@ -74,7 +105,7 @@ export async function POST(req: Request) {
     // 1. Write DB에 로그 남기기 (Append-Only Event Store)
     const editLog = {
       facilityId: docRef.id,
-      facilityName: name,
+      facilityName: finalName,
       action: isUpdate ? 'update' : 'create',
       method: 'POST',
       submittedData: { name, category, description, seasonalDescription, location, tags, status, type },
@@ -89,7 +120,7 @@ export async function POST(req: Request) {
 
     // 바로 활성화(승인) 상태로 요청이 왔다면 벡터화 진행
     if (facilityData.status === 'approved') {
-      let textToVectorize = `시설명: ${name}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${finalDescription}\n`;
+      let textToVectorize = `시설명: ${finalName}\n카테고리: ${facilityData.category}\n위치: ${facilityData.location}\n설명: ${finalDescription}\n`;
       if (finalSeasonalDescription) {
         textToVectorize += `시즌/임시안내: ${finalSeasonalDescription}\n`;
       }
@@ -101,7 +132,7 @@ export async function POST(req: Request) {
           text: textToVectorize,
           metadata: {
             type: (facilityData.type as string) || 'facility',
-            name,
+            name: finalName,
             category: facilityData.category,
           }
         });
@@ -147,38 +178,59 @@ export async function PUT(req: Request) {
 
     const docRef = adminDb.collection('facilities').doc(id);
     const docSnap = await docRef.get();
+    const existingDocData = docSnap.exists ? docSnap.data() : null;
     
+    let finalName = String(name).trim();
+    let finalCategory = VALID_FACILITY_CATEGORIES.includes(category) ? category : '기타';
     let finalDescription = description || '';
     let finalSeasonalDescription = seasonalDescription || '';
+    let finalTags: string[] = Array.isArray(tags) ? tags : [];
+    const effectiveType = type || existingDocData?.type || 'facility';
+
+    // [상담학습] 접두사나 날짜/줄바꿈이 남아있는 상태에서 [승인] 또는 [저장]을 누른 경우 AI가 자동으로 표준 제목·질문·답변·태그로 정제
+    if (needsChatStandardization(finalName, effectiveType)) {
+      const standardized = await standardizeKnowledgeEntry({
+        rawTitleOrQuestion: finalName,
+        rawAnswerOrDescription: finalDescription,
+        currentCategory: category,
+      });
+      finalName = standardized.standardizedTitle || finalName.replace(/^\[상담학습\]\s*/, '').trim();
+      finalDescription = standardized.standardizedDescription || finalDescription;
+      if (!VALID_FACILITY_CATEGORIES.includes(category) || category === '기타') {
+        finalCategory = standardized.suggestedCategory;
+      }
+      if (finalTags.length === 0 && standardized.suggestedTags.length > 0) {
+        finalTags = standardized.suggestedTags;
+      }
+    }
 
     // 명시적으로 duplicateAction === 'merge'를 요청한 경우에만 기존 설명과 AI 병합 수행 (모달 직접 수정 시에는 직원이 수정한 텍스트를 그대로 보존)
     if (docSnap.exists && duplicateAction === 'merge') {
-      const existingData = docSnap.data();
-      if (existingData && existingData.description && existingData.description !== description) {
-        finalDescription = await mergeFacilityDescription(existingData.description, finalDescription);
+      if (existingDocData && existingDocData.description && existingDocData.description !== finalDescription) {
+        finalDescription = await mergeFacilityDescription(existingDocData.description, finalDescription);
       }
-      if (existingData && existingData.seasonalDescription !== undefined && existingData.seasonalDescription !== seasonalDescription) {
-        finalSeasonalDescription = await mergeFacilityDescription(existingData.seasonalDescription, finalSeasonalDescription);
+      if (existingDocData && existingDocData.seasonalDescription !== undefined && existingDocData.seasonalDescription !== seasonalDescription) {
+        finalSeasonalDescription = await mergeFacilityDescription(existingDocData.seasonalDescription, finalSeasonalDescription);
       }
     }
 
     const robotSpecs = extractRobotSpecsFromText({
-      name,
-      category: category || '기타',
+      name: finalName,
+      category: finalCategory,
       location: location || '',
       description: finalDescription,
       seasonalDescription: finalSeasonalDescription,
     });
 
     const updatedFacility = {
-      name,
-      category: category || '기타',
+      name: finalName,
+      category: finalCategory,
       description: finalDescription,
       seasonalDescription: finalSeasonalDescription,
       location: location || '',
-      tags: tags || [],
+      tags: finalTags,
       status: status || 'approved',
-      type: type || 'facility',
+      type: effectiveType,
       robotSpecs,
       updatedAt: new Date().toISOString(),
     };
@@ -186,7 +238,7 @@ export async function PUT(req: Request) {
     // 1. Write DB에 로그 남기기 (이벤트 소싱)
     const editLog = {
       facilityId: id,
-      facilityName: name,
+      facilityName: finalName,
       action: 'update',
       method: 'PUT',
       submittedData: { name, category, description, seasonalDescription, location, tags, status, type },
@@ -201,7 +253,7 @@ export async function PUT(req: Request) {
 
     // Pinecone 벡터 덮어쓰기 (upsert) 또는 비승인/만료 전환 시 벡터 제거
     if (updatedFacility.status === 'approved') {
-      let textToVectorize = `시설명: ${name}\n카테고리: ${updatedFacility.category}\n위치: ${updatedFacility.location}\n설명: ${finalDescription}\n`;
+      let textToVectorize = `시설명: ${finalName}\n카테고리: ${updatedFacility.category}\n위치: ${updatedFacility.location}\n설명: ${finalDescription}\n`;
       if (finalSeasonalDescription) {
         textToVectorize += `시즌/임시안내: ${finalSeasonalDescription}\n`;
       }
@@ -213,7 +265,7 @@ export async function PUT(req: Request) {
           text: textToVectorize,
           metadata: {
             type: 'facility',
-            name,
+            name: finalName,
             category: updatedFacility.category,
           }
         });

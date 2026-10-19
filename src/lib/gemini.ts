@@ -432,3 +432,129 @@ export async function synthesizeMultipleFacilities(
   }
 }
 
+export interface StandardizedKnowledgeResult {
+  standardizedTitle: string;
+  standardizedQuestion: string;
+  polishedAnswer: string;
+  standardizedDescription: string;
+  suggestedCategory: '레저' | '숙박' | '식음' | '편의' | '기타';
+  suggestedTags: string[];
+}
+
+/**
+ * 고객의 날것 질문(날짜/오타/잘린 문장 포함)과 직원의 답변을 분석하여
+ * 개인정보·예약일자·오타를 제거하고, 잘린 질문 의도를 복원하여
+ * 벨포레 공식 표준 지식(제목, 표준 질문, 공식 답변, 분류, 검색 태그)으로 정제합니다.
+ */
+export async function standardizeKnowledgeEntry(input: {
+  rawTitleOrQuestion: string;
+  rawAnswerOrDescription: string;
+  currentCategory?: string;
+}): Promise<StandardizedKnowledgeResult> {
+  const rawTitle = (input.rawTitleOrQuestion || '').replace(/^\[상담학습\]\s*/, '').trim();
+  const rawBody = (input.rawAnswerOrDescription || '').trim();
+
+  // 기존 description이 "[고객 자주 묻는 질문]\n질문: ...\n\n[공식 답변 및 안내]\n..." 형태인 경우 분리 추출
+  let extractedQuestion = rawTitle;
+  let extractedAnswer = rawBody;
+  const faqMatch = rawBody.match(
+    /\[고객 자주 묻는 질문\]\s*질문:\s*([\s\S]*?)\s*\[공식 답변 및 안내\]\s*([\s\S]*)/
+  );
+  if (faqMatch) {
+    extractedQuestion = faqMatch[1].trim() || rawTitle;
+    extractedAnswer = faqMatch[2].trim();
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-flash-lite-latest',
+      systemInstruction: `당신은 벨포레 리조트의 공식 CS 지식베이스(RAG) 수석 에디터입니다.
+고객이 채팅으로 남긴 날것의 질문(개인 예약 날짜, 오타, 줄바꿈, 끝이 잘린 불완전한 문장 포함)과 직원이 작성한 답변을 읽고,
+누구나 검색하기 쉽고 AI가 가장 정확하게 인식할 수 있는 [공식 표준 지식 문서]로 정제하세요.
+
+[핵심 정제 규칙]
+1. 개인 맥락 및 오타 완전 제거:
+   - "10/24 에 예약햇는데요", "내일 가는데요", "저희 애기가" 같은 개인적 날짜·상황·오타·줄바꿈 및 "[상담학습]" 머리말을 모두 제거하세요.
+2. 불완전/잘린 질문의 완벽 복원:
+   - 고객 질문이 "...입장권 포함인데요"처럼 끝이 잘려 있더라도, [직원 답변]("체크인 전에도 구매한 티켓으로 놀이시설 이용 가능합니다")의 맥락을 결합하여 고객이 진짜 물어본 핵심 의도를 완전한 표준 의문문으로 복원하세요.
+   - 예: "객실 패키지(놀이동산, 목장, 미디어아트, 사계절썰매 등)에 포함된 입장권을 체크인(입실) 전에도 미리 사용할 수 있나요?"
+3. 표준 제목(standardizedTitle) 생성:
+   - "[상담학습]" 같은 접두사나 물음표 없이, 리조트 공식 규정집 목차처럼 명확한 명사구 제목(15~28자 내외)으로 작성하세요.
+   - 예: "패키지 입장권 체크인(입실) 전 사전 이용 안내"
+4. 공식 답변(polishedAnswer) 다듬기:
+   - 직원이 작성한 답변의 핵심 사실(Fact)은 100% 보존하고 없는 사실을 지어내지 마세요.
+   - 고객 질문에 등장한 구체적인 대상(예: 놀이동산, 목장, 미디어아트, 사계절썰매 등)을 답변 문장에 자연스럽게 포함시켜 문서 단독으로도 문맥이 완결되게 하세요.
+   - 마크다운 굵게(**) 기호는 절대 쓰지 말고, 호텔리어 표준 존댓말 평문으로 작성하세요.
+5. 표준 분류(suggestedCategory):
+   - 반드시 "레저", "숙박", "식음", "편의", "기타" 5개 중 가장 적합한 하나만 선택하세요.
+6. 검색 키워드 태그(suggestedTags):
+   - 고객들이 검색할 만한 핵심 명사/동의어를 5~7개 배열로 추출하세요.
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{
+  "standardizedTitle": "정제된 공식 제목",
+  "standardizedQuestion": "복원된 완전한 표준 질문 문장",
+  "polishedAnswer": "문맥이 완결된 호텔리어 표준 존댓말 공식 답변",
+  "suggestedCategory": "레저" | "숙박" | "식음" | "편의" | "기타",
+  "suggestedTags": ["태그1", "태그2", "태그3", "태그4", "태그5"]
+}`,
+    });
+
+    const prompt = `[원본 제목/질문]\n${extractedQuestion}\n\n[직원 답변/본문]\n${extractedAnswer}\n\n[현재 분류]\n${input.currentCategory || '미지정'}`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const parsed = JSON.parse(result.response.text());
+    const cleanTitle = (parsed.standardizedTitle || rawTitle)
+      .replace(/^\[상담학습\]\s*/, '')
+      .replace(/\*\*/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const cleanQuestion = (parsed.standardizedQuestion || extractedQuestion)
+      .replace(/\*\*/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const cleanAnswer = (parsed.polishedAnswer || extractedAnswer)
+      .replace(/\*\*/g, '')
+      .trim();
+
+    const validCategories = ['레저', '숙박', '식음', '편의', '기타'] as const;
+    const suggestedCategory = validCategories.includes(parsed.suggestedCategory)
+      ? parsed.suggestedCategory
+      : '기타';
+
+    const suggestedTags = Array.isArray(parsed.suggestedTags)
+      ? parsed.suggestedTags.map((t: any) => String(t).trim()).filter(Boolean)
+      : [];
+
+    const standardizedDescription = `[고객 자주 묻는 질문]\n질문: ${cleanQuestion}\n\n[공식 답변 및 안내]\n${cleanAnswer}`;
+
+    return {
+      standardizedTitle: cleanTitle,
+      standardizedQuestion: cleanQuestion,
+      polishedAnswer: cleanAnswer,
+      standardizedDescription,
+      suggestedCategory,
+      suggestedTags,
+    };
+  } catch (error) {
+    console.error('Error in standardizeKnowledgeEntry:', error);
+    const fallbackTitle = rawTitle.replace(/\s+/g, ' ').slice(0, 40);
+    return {
+      standardizedTitle: fallbackTitle,
+      standardizedQuestion: extractedQuestion.replace(/\s+/g, ' '),
+      polishedAnswer: extractedAnswer,
+      standardizedDescription: `[고객 자주 묻는 질문]\n질문: ${extractedQuestion.replace(/\s+/g, ' ')}\n\n[공식 답변 및 안내]\n${extractedAnswer}`,
+      suggestedCategory: '기타',
+      suggestedTags: [],
+    };
+  }
+}
+
+
